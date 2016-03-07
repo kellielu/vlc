@@ -3,46 +3,83 @@
 ##### [1. Introduction](#introduction)
 ##### [2. Types and Declarations](#types-and-declarations)
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[2a. Primitives](#primitives)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[2b. Non-primitives](#non-primitives)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[- Strings](#strings)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[- Arrays](#arrays)
 ##### [3. Lexical conventions](#lexical-conventions)
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[3a. Whitespace](#whitespace)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[3b. Comments](#comments)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[3c. Identifiers](#identifiers)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[3d. Keywords](#keywords)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[3e. Literals](#literals)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[- Integer Literal](#integer-literals)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[- Floating Point Literal](#floating-point-literals)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[- Boolean Literals](#boolean-literals)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[- Character Literals](#character-literals)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[- String Literals](#string-literals)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[3e. Separators](#separators)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[3f. Functions](#functions)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[- Regular Functions](#regular-functions)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[- GPU Functions](#gpu-functions)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[- Higher Order Functions](#higher-order-functions)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[-Map](#map)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[-Reduce](#reduce)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[3g. Casting](#casting)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[-Primitive Types](#primitive-types)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[-Non-Primitive Types](#non-primitive-types)
+
 ##### [4. Syntax](#syntax)
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[4a. Control Flow](#control-flow)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[- If, Elif, and Else Statements](#if,-elif,-and-else-statements)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[-Ternary Operator](#ternary-operator)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[-While Loops](#while-loops)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[-For Loops](#for-loops)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[4b. Scope](#scope)
+
 ##### [5. Expressions](#expressions)
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[5a. Arithmetic Operators](#arithmetic-operators)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[-Traditional Arithmetic Operators](#traditional-arithmetic-operators)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[-Array Arithmetic Operators](#array-arithmetic-operators)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[-Scalar Array Arithmetic Operators](#scalar-array-arithmetic-operators)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[5b. Logic Operators](#logic-operators)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[5c. Operator Precedence and Associativity](#operator-precedence-and-asociativity)
+
 ##### [6. External Declarations](#external-declarations)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[6a. `main` function and Code Execution](#`main`-function`-and-code-execution)
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[6b. `import` Statements](#`import`-statements)
 
 # Introduction
