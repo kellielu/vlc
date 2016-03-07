@@ -9,6 +9,7 @@
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[- Strings](#strings)
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[- Arrays](#arrays)
+
 ##### [3. Lexical conventions](#lexical-conventions)
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[3a. Whitespace](#whitespace)
 
