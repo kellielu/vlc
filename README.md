@@ -3,7 +3,7 @@
 ##### [1. Introduction](#introduction)
 ##### [2. Types and Declarations](#types-and-declarations)
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[2a. Primitives](#primitives)
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[2b. Non-primitives](#non-primitives)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[2b. Non-primitives](#non-primitives)
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[- Strings](#strings)
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[- Arrays](#arrays)
 ##### [3. Lexical conventions](#lexical-conventions)
