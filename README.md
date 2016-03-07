@@ -112,6 +112,7 @@ A primitive cannot be *null*.
 Declared but uninitialized non-primitives assume a `null` value. Non-primitives cannot be declared `null`, but can only take on the `null` value if they have not been initialized. 
 
 ### Strings
+
 | Non-Primitive  | Description 
 ---              |---
 | `string`       | A sequence that can be made of characters, valid escape `"\"` characters, or punctuation, immutable. 
@@ -203,6 +204,7 @@ A boolean has two possible values, true or false. These are denoted by the ident
 
 #### Character Literals
 A character literal is denoted by enclosing single quotes ' ', and can be constructed from alphanumeric characters, traditional punctuation characters, and the specified valid escape characters. 
+
 | Valid Escape Sequence | Description
 ---| ---
 | `\’` | Single quote
@@ -385,6 +387,7 @@ Variables defined at the top level of a program are available in the global scop
 ### Traditional Arithmetic Operators
 
 Traditional arithmetic operators can be used between two primitives of type `byte` `int` `long` `float` or `double` . Operators must be used between two elements of the same primitive type. 
+
 | Traditional Arithmetic Operators  | Description 
 |---   | ---
 | `+`  | Addition operator
@@ -399,6 +402,7 @@ Traditional arithmetic operators can be used between two primitives of type `byt
 
 ### Array Arithmetic Operators
 Array arithmetic operators can be used between two arrys consisting of primitive types `byte` `int` `long` `float` or `double`. Operators must be used between two arrays that are of equal length and that contain the same primitive type.
+
 | Array Arithmetic Operators | Description
 | ---| ---
 | `arr1+arr2` | Pairwise element addition on two arrays of equal length, returns array of equal length
@@ -422,6 +426,7 @@ Scalar array arithmetic operators can be used between an array that contains pri
 
 ## Logic Operators
 VLC supports the following logic operators, which are most often used in control statements `if` `elif` `else` `while` and `for`.
+
 | Logic Operators 
 |---
 |`and` `or` `not` `xor` `!=` `==` `>=` `<=` `>` `<`|
