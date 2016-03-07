@@ -82,14 +82,14 @@
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[6a. `main` function and Code Execution](#`main`-function`-and-code-execution)
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[6b. `import` Statements](#`import`-statements)
-
+<div style="page-break-after: always;"></div>
 # Introduction
 VLC is a Python-like high level language for GPU(Graphical Processing Unit) programming on Nvidia GPUs.
 
 VLC is primarily intended for numerical computation, which can be performed orders of magnitude faster on parallelizable GPU architecture than on traditional x86 architecture. VLC is intended to provide convenient and safe access to the GPU’s computational power by abstracting common lower level operations - for example, data transfer between the CPU and the GPU - from the user.  
 
 Other functionality provided by VLC include built-in higher order `map` and `reduce` functions that utilize the parallel capabilities of a GPU.
-
+<div style="page-break-after: always;"></div>
 # Types and Declarations
 
 The VLC language has two data types: primitives and non-primitives. 
@@ -136,7 +136,7 @@ For any array A, A[i][j]...[z] retrieves the element at the ith index of the fir
 | ` <primitive_type> [10] myArray = {0}`                | Initializes `myArray` with 10 zeros
 | ` <primitive_type> [10] myArray = {*}`                | Initializes `myArray` with 10 random *primitive_type* 
 
-
+<div style="page-break-after: always;"></div>
 # Lexical Conventions
 ## Whitespace
 Whitespace refers to the space, horizontal tab, form feed and new line characters. White space is used to separate tokens as well as determine scope. Other than in these uses, it is ignored.
@@ -382,7 +382,7 @@ In essence, VLC supports traditional `for` loops that follow the below structure
 Scoping in VLC is static, and follows the conventions of block-level scoping. 
 Variables defined at the top level of a program are available in the global scope of the program.
 
-
+<div style="page-break-after: always;"></div>
 # Expressions
 ## Arithmetic Operators
 ### Traditional Arithmetic Operators
@@ -436,7 +436,7 @@ VLC supports the following logic operators, which are most often used in control
 
 ## Operator Precedence and Associativity
 
-Operators are listed below from highest to lowest precedence, and operators listed on the same level share the same level of precedenc=
+Operators are listed below from highest to lowest precedence, and operators listed on the same level share the same level of precedence
 
 | Operator Hierarchy | Operators
 | ---|---
@@ -448,7 +448,7 @@ Operators are listed below from highest to lowest precedence, and operators list
 |6| Assignment `=`
 
 The `=` assignment operator is right associative. All other operators are left-associative.
-
+<div style="page-break-after: always;"></div>
 # External Declarations
 ## `main` function and Code Execution
 VLC code execution begins at global statements, and then proceeds to execute at a predefined `main` function in the file.
