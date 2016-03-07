@@ -1,12 +1,95 @@
 # VLC : Language Reference Manual
+### Table Of Contents
+##### [1. Introduction](#introduction)
+##### [2. Types and Declarations](#types-and-declarations)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[2a. Primitives](#primitives)
 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[2b. Non-primitives](#non-primitives)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[- Strings](#strings)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[- Arrays](#arrays)
+
+##### [3. Lexical conventions](#lexical-conventions)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[3a. Whitespace](#whitespace)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[3b. Comments](#comments)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[3c. Identifiers](#identifiers)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[3d. Keywords](#keywords)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[3e. Literals](#literals)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[- Integer Literal](#integer-literals)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[- Floating Point Literal](#floating-point-literals)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[- Boolean Literals](#boolean-literals)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[- Character Literals](#character-literals)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[- String Literals](#string-literals)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[3e. Separators](#separators)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[3f. Functions](#functions)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[- Regular Functions](#regular-functions)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[- GPU Functions](#gpu-functions)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[- Higher Order Functions](#higher-order-functions)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[-Map](#map)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[-Reduce](#reduce)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[3g. Casting](#casting)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[-Primitive Types](#primitive-types)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[-Non-Primitive Types](#non-primitive-types)
+
+##### [4. Syntax](#syntax)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[4a. Control Flow](#control-flow)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[- If, Elif, and Else Statements](#if,-elif,-and-else-statements)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[-Ternary Operator](#ternary-operator)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[-While Loops](#while-loops)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[-For Loops](#for-loops)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[4b. Scope](#scope)
+
+##### [5. Expressions](#expressions)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[5a. Arithmetic Operators](#arithmetic-operators)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[-Traditional Arithmetic Operators](#traditional-arithmetic-operators)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[-Array Arithmetic Operators](#array-arithmetic-operators)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[-Scalar Array Arithmetic Operators](#scalar-array-arithmetic-operators)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[5b. Logic Operators](#logic-operators)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[5c. Operator Precedence and Associativity](#operator-precedence-and-asociativity)
+
+##### [6. External Declarations](#external-declarations)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[6a. `main` function and Code Execution](#`main`-function`-and-code-execution)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[6b. `import` Statements](#`import`-statements)
+<div style="page-break-after: always;"></div>
 # Introduction
 VLC is a Python-like high level language for GPU(Graphical Processing Unit) programming on Nvidia GPUs.
 
 VLC is primarily intended for numerical computation, which can be performed orders of magnitude faster on parallelizable GPU architecture than on traditional x86 architecture. VLC is intended to provide convenient and safe access to the GPU’s computational power by abstracting common lower level operations - for example, data transfer between the CPU and the GPU - from the user.  
 
 Other functionality provided by VLC include built-in higher order `map` and `reduce` functions that utilize the parallel capabilities of a GPU.
-
+<div style="page-break-after: always;"></div>
 # Types and Declarations
 
 The VLC language has two data types: primitives and non-primitives. 
@@ -28,7 +111,8 @@ A primitive cannot be *null*.
 ## Non-primitives
 Declared but uninitialized non-primitives assume a `null` value. Non-primitives cannot be declared `null`, but can only take on the `null` value if they have not been initialized. 
 
-### String
+### Strings
+
 | Non-Primitive  | Description 
 ---              |---
 | `string`       | A sequence that can be made of characters, valid escape `"\"` characters, or punctuation, immutable. 
@@ -44,6 +128,7 @@ Arrays are objects hold a fixed number of primitives or non-primitives. All elem
 | ` <type> [][] my2DArray`                       | 2-Dimensional array of type *type*
 | ` <type> [][][]...[] myArray`                         | n-Dimensional array of type *type*
 For any array A, A[i][j]...[z] retrieves the element at the ith index of the first dimension, jth index of the second, etc.
+
 | Array Declarations | Description
 ---     | ---
 | ` <type>[][] my2DArray = block(myArray,n)`            | 2-Dimensional array created from `myArray` by blocking every n-elements of `myArray`
@@ -51,7 +136,7 @@ For any array A, A[i][j]...[z] retrieves the element at the ith index of the fir
 | ` <primitive_type> [10] myArray = {0}`                | Initializes `myArray` with 10 zeros
 | ` <primitive_type> [10] myArray = {*}`                | Initializes `myArray` with 10 random *primitive_type* 
 
-
+<div style="page-break-after: always;"></div>
 # Lexical Conventions
 ## Whitespace
 Whitespace refers to the space, horizontal tab, form feed and new line characters. White space is used to separate tokens as well as determine scope. Other than in these uses, it is ignored.
@@ -86,9 +171,7 @@ VLC comments follow standard comment conventions of C, C++, and Java.
 
 Per C, C++, and Java comment conventions, comments cannot be nested within each other. For example the sequence `/* /* */ */` is not fully recognized as a comment. Only the substring `/* /* */` is recognized as a comment.
 
-*comment* = 
-`'/' '*'+ [^'*']* '*'+ '/'` 
-|  `'/' '/' [^'\n']*`
+*COMMENT* = `'/' '*'+ [^'*']* '*'+ '/' | '/' '/' [^'\n']*`
 
 ## Identifiers
 An identifier is a case-sensitive sequence of characters consisting of letters, numbers, or underscore, and the first character in an identifier cannot be a number. 
@@ -100,27 +183,29 @@ Identifiers may not take the form of reserved keywords.
 `int`  `float` `char` `bool`  `if` `elif` `else` `for`  `while` `continue` `break` `return` `auto`  `map` `reduce` `name` `def` `defg` `string` `null` `import` `map` `reduce` `const` 
 
 ## Literals
-#### Integer Literal
+#### Integer Literals
 An integer constant is an optionally signed sequence of digits.  An integer constant can take the form of a `byte` or `int`primitive. A `byte` primitive ranges from -128 to 127 and an  `int` primitive ranges from -2147483648 to 2147483648.
 
 *INT* = `[‘+’ ‘-’]?[‘0’-’9’]+`
 
-#### Floating Point Literal
+#### Floating Point Literals
 A floating point constant is denoted by an optionally signed integer, a decimal point, a fraction part, an "e" or "E" and an optionally signed exponent. A floating point constant can take the form `float`. A `float` primitive's absolute value ranges from approximately 1.4E-45 to 3.4E38.
 
 Either the fraction part or the integer part must be present, and either the decimal point or the "e" and signed exponent must be present.
 
 *FLOAT* = 
-`['+' '-']?['0'-'9']+'.'['0'-'9']*(['e' 'E']['+' '-']?['0'-'9']+)? `
-| `['+' '-']?['0'-'9']*'.'['0'-'9']+(['e' 'E']['+' '-']?['0'-'9']+)? `
-| `['+' '-']?['0'-'9']['e' 'E']['+' '-']?['0'-'9']+ `
-#### Boolean Literals
-A boolean has two possible values, true or false. These are denoted by the characters "true" and "false".
 
-*BOOL* = "true|false"
+      ['+' '-']?['0'-'9']+'.'['0'-'9']*(['e' 'E']['+' '-']?['0'-'9']+)? 
+    | ['+' '-']?['0'-'9']*'.'['0'-'9']+(['e' 'E']['+' '-']?['0'-'9']+)?
+    | ['+' '-']?['0'-'9']['e' 'E']['+' '-']?['0'-'9']+
+#### Boolean Literals
+A boolean has two possible values, true or false. These are denoted by the identifiers "true" and "false".
+
+*BOOL* = `'true'|'false'`
 
 #### Character Literals
 A character literal is denoted by enclosing single quotes ' ', and can be constructed from alphanumeric characters, traditional punctuation characters, and the specified valid escape characters. 
+
 | Valid Escape Sequence | Description
 ---| ---
 | `\’` | Single quote
@@ -130,7 +215,7 @@ A character literal is denoted by enclosing single quotes ' ', and can be constr
 | `\r` | Carriage Return
 | `\t` | Horizontal Tab
 
-*char* = `''' ([' '-'!' '#'-'&' '('-'[' ']'-'~'] | '\\' [ '\\' '"' 'n' 'r' 't' ''']) '''`
+*CHAR* = `''' ([' '-'!' '#'-'&' '('-'[' ']'-'~'] | '\\' ['\\' '"' 'n' 'r' 't' ''']) '''`
 ### String Literals
 A string constant is denoted by enclosing double quotes " ", and can be constructed from alphanumeric characters, traditional punctuation characters, and the specified valid escape characters. 
 
@@ -143,25 +228,25 @@ A string constant is denoted by enclosing double quotes " ", and can be construc
 | `\r` | Carriage Return
 | `\t` | Horizontal Tab
 
-*string* = `'"' ([' '-'!' '#'-'&' '('-'[' ']'-'~'] | '\\' [ '\\' '"' 'n' 'r' 't' '''])* '"'`
+*STRING* = `'"' ([' '-'!' '#'-'&' '('-'[' ']'-'~'] | '\\' [ '\\' '"' 'n' 'r' 't' '''])* '"'`
 
 ### Separators
-A separator is a character that separates tokens. White space is a separator, but is only a separator when preceeded by a newline.
+A separator is a character that separates tokens. White space is also used as a separator, unless it is defining scope. 
 
 | Character | Separator
 ---| ---
-| '(' | {LPAREN}
-| ')' | {RPAREN}
-|':' | {COLON}
-| '[' | {LBRACKET}
-| ']' | {RBRACKET}
-| '.' | {DOT}
-| ',' | {COMMA}
+| `'('`| {LPAREN}
+| `')'` | {RPAREN}
+| `':'` | {COLON}
+| `'['` | {LBRACKET}
+| `']'` | {RBRACKET}
+| `'.'` | {DOT}
+| `','` | {COMMA}
 
 
 ### Functions
 #### Regular Functions
-Functions are declared using the `def` keyword, and must specify their arguments, return type, and a terminating `:`. The scope of a function is defined by whitespace - that is, all statements that are part of the function cannot be aligned with the function declaration, but must be "indented", or prefaced by at least one whitespace character.  
+Functions are declared using the `def` keyword, and must specify their arguments, return type, and a colon`:`. The scope of a function is defined by whitespace - that is, all statements that are part of the function cannot be aligned with the function declaration, but must be "indented", or prefaced by at least one whitespace character past its current scope.  
 
 All function arguments that are primitive types are passed by value, meaning all arguments are copied to the function, meaning changes to the argument within the function will not change the argument's value outside of the function.
 
@@ -171,29 +256,29 @@ Function declaration:
 `<return type> def <function name>(<type1> arg1, <type2> arg2...):`
 
 #### GPU Functions
-The GPU function `defg` is a user-defined function that meant to be run on the GPU kernel. A `defg` function is declared outside of the main function. These functions will be called by the higher-order functions `map` and `reduce` within the `main` function.
+The GPU function `defg` creates a user-defined function that is meant to be run on the GPU kernel. A `defg` function is declared outside of the main function. These functions will be called by the higher-order functions `map` and `reduce` within the `main` function.
 
 There may be only one or two parameters within a `defg` declaration. These restrictions are for `map` and `reduce` respectively. Each parameter is an identifier for a single element in the array(s) that are being handled by `map` and `reduce`.
 
-Constant non-primitives specified with an input array of constants under the field `const`. These constants can be found in the input array 
+Constant non-primitives are specified with an input array of constants under the field `const`. These constants should also be specified with the same name in `map` or `reduce`.
 
 GPU function declaration:
 `<return type> defg <function name> (<type1> arg_1, <type2> arg_2):`
 
 
-`<return type> defg(<type1> arg, const = const[array1, ...]):`
+`<return type> defg <function name> (<type1> arg, const = const[array1, ...]):`
 
-For convenience, within a `defg` function the index of the element within the index of the input array can be accessed with `ID.x` and `ID.y`. This operation is only available for 1 and 2-D arrays, and the order of a 2-D array will be assumed to be row-major.
+For convenience, within a `defg` function the index of the element within the index of the input array can be accessed with `ID.x` and `ID.y`. This operation is only available for 1- and 2-D arrays, and the order of a 2-D array will be assumed to be row-major.
 
 
 
 #### Higher Order Functions
-VLC contains built-in higher order functions that are optimized to be vailable using `defg`. These built-in higher order functions provide needed abstraction for users who do not wish to be boggled by the specifics of GPU computing but still want to take advantage of parallelism.
+VLC contains built-in higher order which take a `defg` as an argument. These built-in higher order functions provide needed abstraction for users who do not wish to be boggled by the specifics of GPU computing but still want to take advantage of parallelism.
 
-The first parameter in a `map` or `reduce` function must be a `defg`. `reduce` takes in only one 1-D array as the second input, but `map` may take a variable number of N-dimensional arrays. All input arrays may not be `NULL`. If the input arrays are multi-dimensional, each dimension must have fixed-length rows.  The output of `map` is an N-dimensional array of the same size as the inputs, where `defg` has been applied to the element in the corresponding index as the output. The output of `reduce` is an element of the same type as an element of the input array. The result is obtained by performing pair-wise reduction on adjacent members of the input array. In order to receive correct results, the`defg` function applied to the elements of the input should be commutative.
+The first parameter in a `map` or `reduce` function must be a `defg`. For the remaining parameters, `reduce` takes in only one 1-D array as the second input, but `map` may take a variable number of N-dimensional arrays. All input arrays may not be `NULL`. If the input arrays are multi-dimensional, each dimension must have fixed-length rows.  The output of `map` is an N-dimensional array of the same size as the inputs, where `defg` has been applied to the element in the corresponding index as the output. The output of `reduce` is an element of the same type as an element of the input array. The result is obtained by performing pair-wise reduction on adjacent members of the input array. In order to receive correct results, the`defg` function applied to the elements of the input should be commutative.
 
 
-`map` and `reduce` may capture outside variables that must be used in a defg by filling the field `const` with an array of constants.  These will be copied onto the global memory of the device to be used by the threads executing the `defg` on the elements in the input arrays. `map` and `reduce` are also reserved keywords and may not be used by the user to define any other variable, constant, or function.
+`map` and `reduce` may capture outside variables through the field `const`. `const` accepts an array of variables to be used in the `defg`.  These variables will be copied onto the global memory of the device to be used by the threads executing the `defg` on the elements in the input arrays. `map` and `reduce` are also reserved keywords and may not be used by the user to define any other variable, constant, or function.
 
 | Higher Order Function  | Description 
 ---              |---
@@ -297,12 +382,13 @@ In essence, VLC supports traditional `for` loops that follow the below structure
 Scoping in VLC is static, and follows the conventions of block-level scoping. 
 Variables defined at the top level of a program are available in the global scope of the program.
 
-
+<div style="page-break-after: always;"></div>
 # Expressions
 ## Arithmetic Operators
 ### Traditional Arithmetic Operators
 
 Traditional arithmetic operators can be used between two primitives of type `byte` `int` `long` `float` or `double` . Operators must be used between two elements of the same primitive type. 
+
 | Traditional Arithmetic Operators  | Description 
 |---   | ---
 | `+`  | Addition operator
@@ -311,12 +397,13 @@ Traditional arithmetic operators can be used between two primitives of type `byt
 | `*`  | Multiplication operator
 | `%`  | Modulo operator
 | `^`  | Exponent/Power operator
-| `log`| Log operator
+| `log`| Logarithmic operator
 | `<<` | Bitshift left
 | `>>` | Bitshift right
 
 ### Array Arithmetic Operators
 Array arithmetic operators can be used between two arrys consisting of primitive types `byte` `int` `long` `float` or `double`. Operators must be used between two arrays that are of equal length and that contain the same primitive type.
+
 | Array Arithmetic Operators | Description
 | ---| ---
 | `arr1+arr2` | Pairwise element addition on two arrays of equal length, returns array of equal length
@@ -340,22 +427,28 @@ Scalar array arithmetic operators can be used between an array that contains pri
 
 ## Logic Operators
 VLC supports the following logic operators, which are most often used in control statements `if` `elif` `else` `while` and `for`.
+
 | Logic Operators 
 |---
 |`and` `or` `not` `xor` `!=` `==` `>=` `<=` `>` `<`|
 
+`and` and `or` logic operators are evaluated using short circuiting principles.
+
 ## Operator Precedence and Associativity
 
-Operators are listed below from highest to lowest precedence, and operators listed on the same level share the same level of precedence.
+Operators are listed below from highest to lowest precedence, and operators listed on the same level share the same level of precedence
 
 | Operator Hierarchy | Operators
 | ---|---
-|1| `log`(Logarithmic), `^`(Power)
+|1| Logarithmic `log`, Power `^`, Dot Product for Arrays `.`, Matrix Multiplication for 2D Arrays `**`
 |2| `*` (Multiplication), `/`(Division)
-|3| `+` (Addition), `-`(Subtraction)
-|4| Relational Logic Operators `and` `or` `not` `xor` `==`,`>=`, `<=`, `<`, `>` 
-|5| `=`Assignment
+|3| Addition `+`, Subtraction `-`
+|4| Bitshift Operators `<<`, `>>`
+|5| Relational Logic Operators `and` ,`or`, `not` ,`xor`, `==`,`>=`, `<=`, `<`, `>` 
+|6| Assignment `=`
 
+The `=` assignment operator is right associative. All other operators are left-associative.
+<div style="page-break-after: always;"></div>
 # External Declarations
 ## `main` function and Code Execution
 VLC code execution begins at global statements, and then proceeds to execute at a predefined `main` function in the file.
@@ -367,4 +460,8 @@ The `#import` keyword allows VLC to import code from other VLC files.
 When importing other VLC files, `main` functions are ignored in the imported files.
 
 For example, if we have file *a.vlc* that imports *b.vlc* , any `main` function in *b.vlc* will be ignored. 
+
+
+
+
 
