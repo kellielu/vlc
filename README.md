@@ -128,6 +128,7 @@ Arrays are objects hold a fixed number of primitives or non-primitives. All elem
 | ` <type> [][] my2DArray`                       | 2-Dimensional array of type *type*
 | ` <type> [][][]...[] myArray`                         | n-Dimensional array of type *type*
 For any array A, A[i][j]...[z] retrieves the element at the ith index of the first dimension, jth index of the second, etc.
+
 | Array Declarations | Description
 ---     | ---
 | ` <type>[][] my2DArray = block(myArray,n)`            | 2-Dimensional array created from `myArray` by blocking every n-elements of `myArray`
