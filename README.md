@@ -251,7 +251,6 @@ A separator is a character that separates tokens. White space is also used as a 
 Functions are declared using the `def` keyword, and must specify their arguments and argument types, return type, and end in a colon`:`. Functions cannot be declared within other functions.
 
 The scope of a function is defined by whitespace - that is, all statements that are part of the function cannot be aligned with the function declaration, but must be "indented", or prefaced by at least one whitespace character to be defined within the function scope.  
-
 All function arguments that are primitive types are passed by value, meaning all arguments are copied to the function. This means that changes to the argument within the function will not change the argument's value outside of the function.
 
 All function arguments that are non-primitive types are passed by reference, meaning changes to the argument will change the argument's value outside of the function.
@@ -264,20 +263,24 @@ The GPU function `defg` creates a user-defined function that is meant to be run 
 
 There are N array-dependent arguments that must be declared in `defg` that will be called by `map` function taking N arrays as input. There are exactly two array-dependent arguments that must be declared in a `defg` that will be called by the `reduce` function. (See below for a more detailed explanation.) Each array-dependent argument is an identifier for a single element in the array(s) that are being handled by `map` and `reduce`.
 
-Besides array-dependent arguments, `defg` also takes constant arguments as input, which are defined as an argument list into `defg` using the keyword `const`. These `const`arguments cannot be changed by the `defg` function, but can be referenced by the `defg` function. The type of the `const` argument and an `ID` for the argument must be specified in the declaration of a `defg` function, and the values for `const` arguments must be provided in the `defg` function when it is called by `map` or `reduce`. (See the example for `map` to understand how to use `const`) 
-
-Furthermore, these `const` arguments are only copied once to global memory in the GPU kernel so that they can be accessed by all threads. 
+Besides the identifiers of its arguments, `defg` function body may also reference `const` arguments that are passed to the higher order `map` or `reduce` function that takes the `defg` function as an input. (See the example for `map` to understand how to reference `const` arguments in `defg`) 
 
 GPU function declaration:
 `<return type> defg <function name> (<type1> arg_1, <type2> arg_2...):`
 
 
-`<return type> defg <function name> (<type1> arg, const = const[<type1> const_arg1, <type2> const_arg2 ...]):`
-
 #### Higher Order Functions
 VLC contains built-in higher order functions `map` and `reduce` which take a `defg` and arrays as arguments. These built-in higher order functions provide needed abstraction for users who do not wish to be boggled by the specifics of GPU computing but still want to take advantage of GPU parallelism.
 
-The first parameter in a `map` or `reduce` function must be a `defg`. For the remaining parameters, `reduce` takes in only one array as the second input, but `map` may take a variable number of arrays so long as they are the same dimensions. All input arrays may not be `null`. 
+The first parameter in a `map` or `reduce` function must be a `defg`. 
+
+An optional parameter to map is a list of declared constant arguments defined by `const=[<type1> const_arg1=value1, <type2> const_arg2=value2...]`. These `const` arguments define variables that can be referenced by the `defg` function that is input into map; `defg` can reference constant arguments by calling them the same name as they are declared in the `const` list.
+
+Also note that constant arguments must not only be declared, but also assigned a value.
+
+In the GPU, these constant arguments are copied from host to the global memory in the GPU kernel, allowing all threads in the kernel to access these variables.
+
+For the remaining parameters, `reduce` takes in only one array as input, but `map` may take a variable number of arrays so long as they are the same dimensions. All input arrays may not be `null`. 
 
 If the input arrays are multi-dimensional, each dimension must have fixed-length rows.  
 The output of `map` is an N-dimensional array of the same size as all the input arrays to `map`, where `defg` has been applied to the element in the corresponding index as the output. 
@@ -289,8 +292,8 @@ Given the nature of pairwise reduce algorithm, in order to obtain correct result
 
 | Higher Order Function  | Description 
 ---              |---
-| `map(<defg>, <array1>, <array2>...)`    |  Function that takes as input a function `defg` with X open paremeters, and X N-dimensional arrays, performs `defg` on the X arrays and returns one resulting N-dimensional array of the return type of `defg`. 
-| `reduce(<defg>, <array>)` |  Function that takes as input a function `defg` with two open paremeters and one array, performs pairwise reduction on every pair in the array, and returns final reduced result of the return type of `defg`
+| `map(<defg>, const=[<type1> const_arg1=value1,...],<array1>, <array2>...)`    |  Function that takes as input a function `defg` with X open paremeters, and X N-dimensional arrays, performs `defg` on the X arrays and returns one resulting N-dimensional array of the return type of `defg`. 
+| `reduce(<defg>, const=[<type1> const_arg1=value1...], <array>)` |  Function that takes as input a function `defg` with two open paremeters and one array, performs pairwise reduction on every pair in the array, and returns final reduced result of the return type of `defg`
 
 Functions `defg` passed to `map` and `reduce`:
 
@@ -298,17 +301,17 @@ Functions `defg` passed to `map` and `reduce`:
 
 2) Must have arguments that are the same type as the the array(s) passed into map and reduce. In the case of map, the order of the argument types to `defg` should match the order of the arrays inputted into `map`.
 
-3) Must specify any `const` arguments using `const=[arg1, arg2,arg3...]` when passed to `map` or `reduce`
+3) May reference by name any `const` arguments, `const=[<type1>arg1=value1...]`, that are passed to `map` or `reduce` by using their identifier. For example, a `defg` can reference the `arg1` in the above constants list by simply calling `arg1`. If a user defines a variable in `defg` with the same name as a constant argument to map, the defined variable will override the reference to the constant argument. 
 
 ##### Map
-    bool defg inPlane(float x, float y, float z,const=[float a, float b, float c, float d]):
+    bool defg inPlane(float x, float y, float z):
         return a*x + b*y + c*z == d
         
     main(): 
         int [4] x_coords = {3,-2,5,1}
         int [4] y_coords = {4,-1,6,9}
         int [4] z_coords = {6,0,-4,1}
-        bool [4] point_in_plane = map(inPlane(const=[3,-2,3,18]), x_coords, y_coords, z_coords) 
+        bool [4] point_in_plane = map(inPlane, const=[float a=3 ,float b=-2, float c=3,float d=18], x_coords, y_coords, z_coords) 
         print point_in_plane // {false, false, false, true}
 
 
