@@ -308,7 +308,7 @@ Functions `defg` passed to `map` and `reduce`:
         int [4] x_coords = {3,-2,5,1}
         int [4] y_coords = {4,-1,6,9}
         int [4] z_coords = {6,0,-4,1}
-        bool [4] point_in_plane = map(inPlane(const=[3,-2,3,18], x_coords, y_coords, z_coords) 
+        bool [4] point_in_plane = map(inPlane(const=[3,-2,3,18]), x_coords, y_coords, z_coords) 
         print point_in_plane // {false, false, false, true}
 
 
