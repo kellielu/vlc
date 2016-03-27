@@ -4,6 +4,7 @@
 char *helloworld = "Hello world!";
 
 int main(){
-	printf("%s\n",helloworld);
+	printf(helloworld);
+	printf("\n");
 	return 0;
 }
