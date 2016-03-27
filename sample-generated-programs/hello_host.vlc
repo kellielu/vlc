@@ -1,0 +1,5 @@
+string helloworld = "Hello world!"
+
+int def main():
+	print(helloworld)
+	return 0
