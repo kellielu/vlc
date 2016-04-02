@@ -30,32 +30,30 @@ and indent = parse
 	| whitespace* eof 			{ EOF }
 	| whitespace* as indentation
 		{
-			let indent_length = String.length indentation in 
-			let stacktop_length = Stack.top indent_stack in 
-			if indent_length > stacktop_length then
-				begin
-				Stack.push indent_length indent_stack;
-				INDENT
-				end
-			else if indent_length = stacktop_length then
-				TERMINATOR
-			else
-			    let result =
-    				let rec popped_from_stack =  
-    					if(Stack.top indent_stack) > indent_length then
-    						begin
-    						ignore(Stack.pop indent_stack);
-    						ignore(DEDENT);
-    						popped_from_stack 
-    						end
-    					else if (Stack.top indent_stack) < indent_length then -1
-    					else 1
-    				in popped_from_stack
-    			in
-				if result = -1 then raise (Bad_dedent)
-                else TERMINATOR
-
-		}
+	        let indent_length = (String.length indentation) in
+	        let stacktop_length = (Stack.top indent_stack) in
+	        if indent_length > stacktop_length then
+	          begin
+	          Stack.push indent_length indent_stack;
+	          INDENT
+	          end
+	        else if indent_length = stacktop_length then 
+	          TERMINATOR
+	        else
+	          let count = 
+	            let rec popped_from_stack counter =
+	                if (Stack.top indent_stack) > indent_length then
+	                    begin
+	                    ignore(Stack.pop indent_stack);
+	                    popped_from_stack (counter + 1)
+	                    end
+	                else if (Stack.top indent_stack) < indent_length then -1
+	                else counter
+	            in popped_from_stack 0
+	          in 
+	          if count = - 1 then raise (Bad_dedent)
+	          else DEDENT_COUNT(count)
+      }
 	{
 		Stack.push 0 indent_stack
 	}

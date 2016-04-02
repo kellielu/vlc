@@ -11,8 +11,8 @@ type expression =
 type variable_type = 
 	| String
 	| Integer
-(* 	| Array of datatype * int
-	| Struct of datatype list * expression list * int *)
+(* 	| Array of variable_type * int
+	| Struct of variable_type list * expression list * int *)
 
 
 (*STATEMENTS AND DECLARATIONS*)
@@ -21,8 +21,8 @@ type variable_declaration =
 
 type statement = 
 	| Expression of expression
-	| Declaration_Assignment of variable_type * identifier * expression
-	| Assignment of identifier * expression
+	| Variable_Declaration_Assignment of variable_type * identifier * expression
+	| Variable_Assignment of identifier * expression
 	| Variable_Declaration of variable_declaration
 	| Function_Declaration of variable_type * identifier * variable_declaration list * statement list
 	| Return of expression
