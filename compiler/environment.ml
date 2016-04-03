@@ -1,7 +1,7 @@
 open Ast
 
-module Variable_Map = Map.Make(struct type t = identifier let compare = compare end);;
-module Function_Map = Map.Make(struct type t = identifier let compare = compare end);;
+module Variable_Map = Map.Make(String);;
+module Function_Map = Map.Make(String);;
 
 exception Already_declared
 exception Not_found
@@ -32,7 +32,7 @@ let is_var_declared identifier env =
 let set_var_type identifier variable_type env =
   let func_map, scope_stack = env in
   let scope, tail = (match scope_stack with
-                | scope :: tail -> scope, tail
+                | scope :: tail-> scope, tail
                 | [] -> raise Invalid_environment) in
   let new_scope = Variable_Map.add identifier variable_type scope in
   func_map, new_scope :: tail
@@ -45,7 +45,7 @@ let update identifier variable_type (str, env) =
 
 let _ =
   let env = create in
-  update (Identifier("TEST")) Integer
+  update ("TEST") Integer
 
 let combine initial_env components =
   let f (str, env) component =

@@ -75,9 +75,9 @@ let rec generate_nonempty_decl_list decl_list env =
         Verbatim(", ");
         Generator(generate_nonempty_decl_list tail)
       ]
-    | [] -> raise Empty_list
-    
-let generate_decl_list decl_list env =
+    | [] -> raise (Empty_list)
+
+and generate_decl_list decl_list env =
   match decl_list with
     | [] -> Environment.combine env [Verbatim("void")]
     | decl :: tail -> Environment.combine env [Generator(generate_nonempty_decl_list tail)]
@@ -134,7 +134,7 @@ and generate_statement_list statement_list env =
           Generator(generate_statement_list tail)
         ]
 
-let generate_toplevel tree =
+and generate_toplevel tree =
   let env = Environment.create in
   Environment.combine env [
     Verbatim("#include <stdio.h\n\n#include <stdlib.h\n\n#include <stdint.h\n\n#include <libvector.hpp>\n\n#include <string>\n\n");

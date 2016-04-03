@@ -31,27 +31,26 @@ let token_to_string = function
  	in 
  	helper token_list ""
 
-let identifier_to_string = function
-	| Identifier(id) -> id
-
 let rec expression_to_string = function
 	| String_Literal(s) -> s
 	| Integer_Literal(i) -> string_of_int i
-	| Function_Call(id, e_list) -> (identifier_to_string id) ^ "(" ^ (String.concat "," (List.map expression_to_string e_list)) ^ ")" ^ "\n"
+	| Function_Call(id, e_list) -> id ^ "(" ^ (String.concat "," (List.map expression_to_string e_list)) ^ ")" ^ "\n"
+	| Identifier(id) -> id
 
 let variable_type_to_string = function
 	| String -> "string"
 	| Integer -> "int"
 
-let variable_declaration_to_string = function
-	| Variable_Declaration(var_type,id)-> (variable_type_to_string var_type) ^ (identifier_to_string id)
+let vdecl_to_string vdecl = (variable_type_to_string vdecl.v_type) ^ " " ^ vdecl.name
 
 let rec statement_to_string = function
 	| Expression(e) -> (expression_to_string e) ^ "\n"
-	| Variable_Declaration_Assignment(vtype,id,e) -> (variable_type_to_string vtype) ^ (identifier_to_string id) ^ (expression_to_string e) ^ "\n"
- 	| Declaration(vdecl) -> (variable_declaration_to_string vdecl) ^ "\n" 
-	| Function_Declaration(vtype,id,vdecl_list,smtm_list) -> (variable_type_to_string vtype) ^ "def" ^ (identifier_to_string id) ^ "(" ^(String.concat "," (List.map variable_declaration_to_string vdecl_list)) ^ "):\n" ^ (String.concat "\n" (List.map statement_to_string smtm_list)) ^ "\n"
+ 	| Declaration(vdecl) -> (vdecl_to_string vdecl) ^ "\n" 
 	| Return(e) -> (expression_to_string e) ^ "\n"
+	| Assignment(s,e) -> s ^ "=" ^ (expression_to_string e)
+	| Initialization(vdecl,e) -> (vdecl_to_string vdecl) ^ "=" ^ (expression_to_string e)
 
-let program_to_string statements = 
-	String.concat "\n" (List.map statement_to_string statements) ^ "\n"
+let fdecl_to_string fdecl = (variable_type_to_string fdecl.r_type) ^ "def" ^ fdecl.name ^ "(" ^(String.concat "," (List.map vdecl_to_string fdecl.params)) ^ "):\n" ^ (String.concat "\n" (List.map statement_to_string fdecl.body)) ^ "\n"
+
+let program_to_string program = 
+	(String.concat "\n" (List.map vdecl_to_string (fst(program)))) ^ "\n" ^(String.concat "\n" (List.map fdecl_to_string (snd(program))))
