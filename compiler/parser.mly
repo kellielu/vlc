@@ -6,20 +6,16 @@
 	| dtype -> raise (Invalid_type dtype)
 %}
 
-%token TERMINATOR INDENT DEDENT
-%token LPAREN RPAREN COLON COMMA
-%token ASSIGNMENT
+%token LPAREN RPAREN INDENT DEDENT
+%token COLON COMMA TERMINATOR
+%token ASSIGNMENT DEF
 %token RETURN
-%token PRINT
-%token <string> DATATYPE
+%token <int> DEDENT_EOF
 %token <int> DEDENT_COUNT
-
-%token <string> STRING_LITERAL
-%token <int> INTEGER_LITERAL
-
-%token <string> IDENTIFIER
-
 %token EOF
+
+%token <int> INTEGER_LITERAL
+%token <string> IDENTIFIER DATATYPE STRING_LITERAL
 
 %right ASSIGNMENT
 
@@ -34,8 +30,9 @@ top_level:
 
 top_level_statement:
     | variable_declaration TERMINATOR                       { Variable_Declaration($1) }
-    | variable_type identifier LPAREN parameter_list RPAREN COLON TERMINATOR INDENT function_body DEDENT
-                                                            { Function_Declaration($1, $2, $4, $9) }
+    | variable_type identifier ASSIGNMENT expression TERMINATOR         { Variable_Declaration_Assignment($1, $2, $4) }
+    | variable_type DEF identifier LPAREN parameter_list RPAREN COLON TERMINATOR INDENT function_body DEDENT
+                                                            { Function_Declaration($1, $3, $5, $10) }
 parameter_list:
     | { [] }
     | nonempty_parameter_list                                           { $1 }

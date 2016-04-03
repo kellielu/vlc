@@ -1,5 +1,5 @@
-OBJS =  ast.cmo environment.cmo codegen.cmo parser.cmo scanner.cmo vlc.cmo
-# processor.cmo
+OBJS =  ast.cmo environment.cmo  parser.cmo scanner.cmo processor.cmo utils.cmo vlc.cmo 
+# codegen.cmo
 .PHONY:all
 all: clean vlc
 
@@ -25,12 +25,14 @@ ast.cmo:
 ast.cmx:
 environment.cmo: ast.cmo
 environment.cmx: ast.cmx
-vlc.cmo: parser.cmi codegen.cmo environment.cmo ast.cmo
-vlc.cmx: parser.cmx codegen.cmx environment.cmx ast.cmx
-codgen.cmo: parser.cmi environment.cmo ast.cmo
-codegen.cmx: parser.cmx environment.cmx ast.cmx
-# processor.cmo: scanner.cmo parser.cmi
-# processor.cmx: scanner.cmx parser.cmx
+vlc.cmo: parser.cmi  utils.cmo processor.cmo environment.cmo ast.cmo
+vlc.cmx: parser.cmx  utils.cmx processor.cmx environment.cmx ast.cmx
+# codgen.cmo: parser.cmi environment.cmo utils.cmo ast.cmo
+# codegen.cmx: parser.cmx environment.cmx utils.cmx ast.cmx
+processor.cmo: scanner.cmo parser.cmi
+processor.cmx: scanner.cmx parser.cmx
+utils.cmo: ast.cmo parser.cmi
+utils.cmx: ast.cmx parser.cmx
 parser.cmo: ast.cmo parser.cmi
 parser.cmx: ast.cmx parser.cmi
 parser.cmi: ast.cmo

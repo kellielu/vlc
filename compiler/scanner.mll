@@ -2,6 +2,10 @@
 	open Parser 
 	exception Bad_dedent
 	let indent_stack = Stack.create()
+
+	let get_eof () = 
+      let indent_length = Stack.length indent_stack - 1 in 
+      DEDENT_EOF(indent_length)	
 }
 
 let letter = ['a'-'z' 'A'-'Z']
@@ -19,15 +23,15 @@ rule token = parse
 	| '=' { ASSIGNMENT }
 	| ("string" | "int") as input { DATATYPE(input) }
 	| "return" { RETURN }
-	| "print"  { PRINT }
+	| "def"	   { DEF }
 	| (letter | '_')(letter | digit | '_')* as id { IDENTIFIER(id) }
 	| '"' ([' '-'!' '#'-'&' '('-'[' ']'-'~'] | '\\' [ '\\' '"' 'n' 'r' 't' '''])* as stringliteral '"' { STRING_LITERAL(stringliteral) }
 	| digit* as integerliteral { INTEGER_LITERAL(int_of_string integerliteral) }
-	| eof { EOF }
+	| eof { get_eof() }
 
 and indent = parse
 	| whitespace* newline       { indent lexbuf }
-	| whitespace* eof 			{ EOF }
+	| whitespace* eof 			{ get_eof() }
 	| whitespace* as indentation
 		{
 	        let indent_length = (String.length indentation) in
