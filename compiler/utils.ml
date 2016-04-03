@@ -44,12 +44,12 @@ let variable_type_to_string = function
 	| Integer -> "int"
 
 let variable_declaration_to_string = function
-	| Declaration(var_type,id)-> (variable_type_to_string var_type) ^ (identifier_to_string id)
+	| Variable_Declaration(var_type,id)-> (variable_type_to_string var_type) ^ (identifier_to_string id)
 
 let rec statement_to_string = function
 	| Expression(e) -> (expression_to_string e) ^ "\n"
 	| Variable_Declaration_Assignment(vtype,id,e) -> (variable_type_to_string vtype) ^ (identifier_to_string id) ^ (expression_to_string e) ^ "\n"
-	| Variable_Declaration(vdecl) -> (variable_declaration_to_string vdecl) ^ "\n"
+ 	| Declaration(vdecl) -> (variable_declaration_to_string vdecl) ^ "\n" 
 	| Function_Declaration(vtype,id,vdecl_list,smtm_list) -> (variable_type_to_string vtype) ^ "def" ^ (identifier_to_string id) ^ "(" ^(String.concat "," (List.map variable_declaration_to_string vdecl_list)) ^ "):\n" ^ (String.concat "\n" (List.map statement_to_string smtm_list)) ^ "\n"
 	| Return(e) -> (expression_to_string e) ^ "\n"
 

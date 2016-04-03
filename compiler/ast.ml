@@ -1,10 +1,11 @@
+
 type identifier = Identifier of string
 
 type expression =
 	| String_Literal of string
 	| Integer_Literal of int
 	| Function_Call of identifier * expression list
-	(* | Assignment of identifier * expression *)
+	| Assignment of identifier * expression
 
 
 (*DATA TYPES*)
@@ -16,15 +17,14 @@ type variable_type =
 
 
 (*STATEMENTS AND DECLARATIONS*)
-type variable_declaration = 
-	| Declaration of variable_type * identifier
+type declaration =
+    | Variable_Declaration of variable_type * identifier
 
 type statement = 
+    | Declaration of declaration
 	| Expression of expression
 	| Variable_Declaration_Assignment of variable_type * identifier * expression
-	| Variable_Assignment of identifier * expression
-	| Variable_Declaration of variable_declaration
-	| Function_Declaration of variable_type * identifier * variable_declaration list * statement list
+	| Function_Declaration of variable_type * identifier * declaration list * statement list
 	| Return of expression
 
 

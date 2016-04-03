@@ -64,7 +64,7 @@ and generate_declaration d env =
           Generator(generate_identifier i)
         ]
 
-###############################
+//////////////////////////////
 
 let rec generate_nonempty_decl_list decl_list env =
   match decl_list with
@@ -82,7 +82,8 @@ let generate_decl_list decl_list env =
     | [] -> Environment.combine env [Verbatim("void")]
     | decl :: tail -> Environment.combine env [Generator(generate_nonempty_decl_list tail)]
 
-################################
+////////////////////////////////
+
 
 let rec generate_statement statement env =
   match statement with
