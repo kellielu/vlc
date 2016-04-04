@@ -5,7 +5,7 @@ let _ =
 		print_string (
 			"Usage: vlc [mode] <source file>\n" ^
 			"\t-t: Prints token stream\n" ^
-			"\t-a: Pretty prints Ast as a program\n" 
+			"\t-a: Pretty prints Ast as a program\n" ^
  			"\t-c: Compiles to C\n")
 	else
     let action = List.assoc Sys.argv.(1) [ ("-t", Tokens);

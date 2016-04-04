@@ -46,9 +46,14 @@ test: generator
 clean:
 	rm -f parser.ml parser.mli scanner.ml *.cmo *.cmi *.output vlc
 
-.PHONY:ha
-ha:
+.PHONY:ast
+ast:
 	./vlc -a ../sample-generated-programs/hello_host.vlc 
-.PHONY:hot
-hot:
+
+.PHONY:tokens
+tokens:
 	./vlc -t ../sample-generated-programs/hello_host.vlc 
+
+.PHONY:cuda
+cuda:
+	./vlc -c ../sample-generated-programs/hello_host.vlc                             
