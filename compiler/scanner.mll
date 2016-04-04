@@ -25,7 +25,7 @@ rule token = parse
 	| "return" { RETURN }
 	| "def"	   { DEF }
 	| (letter | '_')(letter | digit | '_')* as id { IDENTIFIER(id) }
-	| '"' ([' '-'!' '#'-'&' '('-'[' ']'-'~'] | '\\' [ '\\' '"' 'n' 'r' 't' '''])* as stringliteral '"' { STRING_LITERAL(stringliteral) }
+	| '"' (([' '-'!' '#'-'&' '('-'[' ']'-'~'] | '\\' [ '\\' '"' 'n' 'r' 't' '''])* as stringliteral) '"' { STRING_LITERAL(stringliteral) }
 	| digit* as integerliteral { INTEGER_LITERAL(int_of_string integerliteral) }
 	| eof { get_eof() }
 
