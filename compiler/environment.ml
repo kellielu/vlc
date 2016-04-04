@@ -13,6 +13,9 @@ type 'a sourcecomponent =
 
 let create = (Function_Map.empty, Variable_Map.empty :: []);;
 
+(* TO DO: need identifier type*)
+
+(*
 let get_var_type identifier env =
   let rec check_scope scopes =
     match scopes with
@@ -37,15 +40,12 @@ let set_var_type identifier variable_type env =
   let new_scope = Variable_Map.add identifier variable_type scope in
   func_map, new_scope :: tail
 
-let update identifier variable_type (str, env) =
+let update string variable_type (str, env) =
   if is_var_declared identifier env then
     raise Already_declared
   else
     (str, set_var_type identifier variable_type env)
-
-let _ =
-  let env = create in
-  update ("TEST") Integer
+*)
 
 let combine initial_env components =
   let f (str, env) component =

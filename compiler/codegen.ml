@@ -5,25 +5,7 @@ exception Empty_list
 exception Unknown_type
 exception Type_mismatch
 
-let rec infer_type expression env =
-  let f type1 type2 =
-    match type1 with
-      | Some(t) -> (if t = type2 then Some(t) else raise Type_mismatch)
-      | None -> Some(type2) in
-    let match_type expression_list =
-      let a = List.fold_left f None expression_list in
-        match a with
-          | Some(t) -> t
-          | None -> raise Empty_list in
-    match expression with
-      | Integer_Literal(_) -> Integer
-      | String_Literal(_) -> String
-      | Function_Call(i, es) -> (match i with
-         | Identifier("print") -> Void)
-         
-let generate_identifier identifier env =
-  match identifier with
-    Identifier(s) -> Environment.combine env [Verbatim(s)]
+
 
 let generate_variable_type variable_type env =
   match variable_type with
@@ -31,17 +13,29 @@ let generate_variable_type variable_type env =
     | Integer -> Environment.combine env [Verbatim("int")]
     | _ -> raise Unknown_type
 
-let generate_expression expression env =
+let generate_vdecl d env =
+  Environment.combine env [
+    Generator(generate_variable_type d.v_type);
+    Verbatim(" ");
+    Verbatim(d.name)
+  ]
+
+
+
+
+(*---------------------expressions----------------------------*)
+let rec generate_expression expression env =
   match expression with
     Function_Call(i, exp) ->
       Environment.combine env [
-        Generator(generate_identifier i);
+        Verbatim(i);
         Verbatim("(");
         Generator(generate_expression_list exp);
         Verbatim(")")
       ]
     | String_Literal(s) -> Environment.combine env [Verbatim("\"" ^ s ^ "\"")]
-    | Integer_Literal(i) -> Environment.combine env [Verbatim(Int.to_string i)]
+    | Integer_Literal(i) -> Environment.combine env [Verbatim(string_of_int i)]
+    | Identifier(i) -> Environment.combine env [Verbatim(i)]
 and generate_expression_list expression_list env =
   match expression_list with
     | [] -> Environment.combine env []
@@ -55,89 +49,134 @@ and generate_nonempty_expression_list expression_list env =
         Generator(generate_nonempty_expression_list tail)
       ]
     | [] -> raise Empty_list
-and generate_declaration d env =
-  match d with
-    | Declaration (d, i) ->
-        Environment.combine env [
-          Generator(generate_variable_type d);
-          Verbatim(" ");
-          Generator(generate_identifier i)
-        ]
 
-//////////////////////////////
 
-let rec generate_nonempty_decl_list decl_list env =
-  match decl_list with
-    | decl :: [] -> Environment.combine env [Generator(generate_declaration decl)]
-    | decl :: tail ->
+
+
+(*---------------------parameters----------------------------*)
+let rec generate_nonempty_parameter_list param_list env =
+  match param_list with
+    | param :: [] -> Environment.combine env [Generator(generate_vdecl param)]
+    | param :: tail ->
       Environment.combine env [
-        Generator(generate_declaration decl);
+        Generator(generate_vdecl param);
         Verbatim(", ");
-        Generator(generate_nonempty_decl_list tail)
+        Generator(generate_nonempty_parameter_list tail)
       ]
     | [] -> raise (Empty_list)
-
-and generate_decl_list decl_list env =
-  match decl_list with
-    | [] -> Environment.combine env [Verbatim("void")]
-    | decl :: tail -> Environment.combine env [Generator(generate_nonempty_decl_list tail)]
-
-////////////////////////////////
+and generate_parameter_list param_list env =
+  match param_list with
+    | [] -> Environment.combine env [Verbatim("")]
+    | decl :: tail -> Environment.combine env [Generator(generate_nonempty_parameter_list tail)]
 
 
+
+
+
+(*---------------------statements----------------------------*)
 let rec generate_statement statement env =
   match statement with
-    | Expression(e) ->
-      Environment.combine env [
+    | Declaration(d) -> Environment.combine env [
+	Generator(generate_vdecl d);
+	Verbatim(";")
+      ]
+    | Expression(e) -> Environment.combine env [
         Generator(generate_expression e);
         Verbatim(";")
       ]
-    | Variable_Declaration_Assignment (i, e) ->
-        Environment.update identifier variable_type (
+    | Assignment (s, e) ->
         Environment.combine env [
-          Generator(generate_variable_type t);
+          Verbatim(s);
           Verbatim(" ");
-          Generator(generate_identifier i);
           Verbatim(" = ");
-          Generator(generate_expr e)
-        ])
-    | Variable_Declaration(d) ->
-        Environment.update i d (Environment.combine env [
-          Generator(generate_declaration d);
-          Verbatim(" ");
-          Generator(generate_identifier i)
-        ])
-    | Function_Declaration(t, i, ds, ss) ->
-        Environment.combine env [
-          Generator(generate_variable_type t);
-          Verbatim(" ");
-          Generate(generate_identifier i);
-          Verbatim("(");
-          Generator(generate_declaration ds);
-          Verbatim(") {\n");
-          Generator(generate_statement_list ss);
-          Verbatim("}");
-       ]
+	  Verbatim(" ");
+          Generator(generate_expression e)
+        ]
     | Return(e) ->
       Environment.combine env [
         Verbatim("return ");
         Generator(generate_expression e);
         Verbatim(";")
       ]
+    | Initialization(d, e) -> Environment.combine env [
+	Generator(generate_vdecl d);
+	Verbatim(" ");
+	Generator(generate_expression e);
+	Verbatim(";");
+      ]
 and generate_statement_list statement_list env =
   match statement_list with
     | [] -> Environment.combine env []
     | statement :: tail ->
         Environment.combine env [
-          Generate(generate_statement statement);
+          Generator(generate_statement statement);
           Verbatim("\n");
           Generator(generate_statement_list tail)
         ]
 
-and generate_toplevel tree =
+
+
+
+
+(*---------------------fdecls----------------------------*)
+let generate_fdecl f env =
+  Environment.combine env [
+    Generator(generate_variable_type f.r_type);
+    Verbatim(" ");
+    Verbatim(f.name);
+    Verbatim("(");
+    Generator(generate_parameter_list f.params);
+    Verbatim("){\n");
+    Generator(generate_statement_list f.body);
+    Verbatim("}\n");
+  ]
+
+
+let rec generate_nonempty_fdecl_list fdecl_list env =
+  match fdecl_list with
+    | fdecl :: [] -> Environment.combine env [Generator(generate_fdecl fdecl)]
+    | fdecl :: tail ->
+      Environment.combine env [
+        Generator(generate_fdecl fdecl);
+        Verbatim("\n\n");
+        Generator(generate_nonempty_fdecl_list tail)
+      ]
+    | [] -> raise (Empty_list)
+and generate_fdecl_list fdecl_list env =
+  match fdecl_list with
+    | [] -> Environment.combine env [Verbatim("")]
+    | decl :: tail -> Environment.combine env [Generator(generate_nonempty_fdecl_list tail)]
+
+
+
+
+
+(*---------------------vdecl list----------------------------*)
+let rec generate_nonempty_vdecl_list vdecl_list env =
+  match vdecl_list with
+    | vdecl :: [] -> Environment.combine env [Generator(generate_vdecl vdecl)]
+    | vdecl :: tail ->
+      Environment.combine env [
+        Generator(generate_vdecl vdecl);
+        Verbatim(", ");
+        Generator(generate_nonempty_vdecl_list tail)
+      ]
+    | [] -> raise (Empty_list)
+and generate_vdecl_list vdecl_list env =
+  match vdecl_list with
+    | [] -> Environment.combine env [Verbatim("")]
+    | decl :: tail -> Environment.combine env [Generator(generate_nonempty_vdecl_list tail)]
+
+
+
+
+(*---------------------program----------------------------*)
+let generate_program v_list f_list =
   let env = Environment.create in
   Environment.combine env [
     Verbatim("#include <stdio.h\n\n#include <stdlib.h\n\n#include <stdint.h\n\n#include <libvector.hpp>\n\n#include <string>\n\n");
-    Generator(generate_statement_list tree);
-    Verbatim("\nint main(void) { return 1; }")
+    Generator(generate_vdecl_list v_list);
+    Generator(generate_fdecl_list f_list);
+    Verbatim("\nint main(void) { return vlc_main(); }")
   ]
+

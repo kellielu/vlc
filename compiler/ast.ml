@@ -18,10 +18,10 @@ type expression =
 
 type statement = 
     | Declaration of vdecl
-	| Expression of expression
-	| Assignment of string * expression
-	| Return of expression
-	| Initialization of vdecl * expression
+    | Expression of expression
+    | Assignment of string * expression
+    | Return of expression
+    | Initialization of vdecl * expression
 	
 type fdecl = {
     r_type      : variable_type;
