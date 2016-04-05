@@ -34,7 +34,7 @@ program:
     | program fdecl                                             { fst $1, ($2 :: snd $1) }
 
 fdecl:
-    | variable_type DEF IDENTIFIER LPAREN parameter_list RPAREN COLON INDENT function_body DEDENT
+    | variable_type DEF identifier LPAREN parameter_list RPAREN COLON INDENT function_body DEDENT
                                                                 {{ 
                                                                     r_type = $1;
                                                                     name = $3;
@@ -51,10 +51,13 @@ nonempty_parameter_list:
     | vdecl                                                     { [$1] }
 
 vdecl:
-    | variable_type IDENTIFIER                                  {{ 
+    | variable_type identifier                                  {{ 
                                                                     v_type = $1;
                                                                     name = $2;
                                                                 }}
+
+identifier:
+    | IDENTIFIER                                                { Identifier($1)}
 
 function_body:
     | /* nothing */                                             { [] }
@@ -64,7 +67,7 @@ statement:
     | expression TERMINATOR                                     { Expression($1) }
     | vdecl TERMINATOR                                          { Declaration($1) }  
     | RETURN expression TERMINATOR                              { Return($2) }
-    | IDENTIFIER ASSIGNMENT expression TERMINATOR               { Assignment( $1, $3 ) }
+    | identifier ASSIGNMENT expression TERMINATOR               { Assignment( $1, $3 ) }
     | vdecl ASSIGNMENT expression TERMINATOR                    { Initialization ($1, $3) }
     
 expression_list:
@@ -76,10 +79,10 @@ nonempty_expression_list:
     | expression                                                { [$1] }
 
 expression:
-	| IDENTIFIER LPAREN expression_list RPAREN 			        { Function_Call($1,$3) }
+	| identifier LPAREN expression_list RPAREN 			        { Function_Call($1,$3) }
 	| STRING_LITERAL        							        { String_Literal($1) }
 	| INTEGER_LITERAL									        { Integer_Literal($1) }
-	| IDENTIFIER                                                { Identifier($1) }
+	| identifier                                                { Identifier_Expression($1) }
 
 variable_type:
     | DATATYPE                                                  { string_to_variable_type $1 }

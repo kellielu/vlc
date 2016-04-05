@@ -1,6 +1,7 @@
 string helloworld
 
 int def vlc():
-	helloworld = "Hello world!"
+	helloworld = "Hello world!\n"
 	print(helloworld)
+	int a[5] = {0,1,2,3,4}
 	return 0
