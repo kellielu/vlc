@@ -1,7 +1,7 @@
 void defg print_kernel(string my_string):
 	print "Hello world, %s" % my_string
 
-int main():
+int vlc():
 	string [5] my_strings = ["0", "1", "2", "3","4"]
 	map(print_kernel, my_strings)
 	return 0
