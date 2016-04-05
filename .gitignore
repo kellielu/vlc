@@ -8,3 +8,4 @@ compiler/parser.ml
 compiler/parser.mli
 compiler/scanner.ml
 compiler/parser.output
+output/
