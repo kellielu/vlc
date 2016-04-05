@@ -19,4 +19,4 @@ let file_in = open_in filename in
         | Ast ->
             print_string (Utils.program_to_string program)
         | Compile ->
-            print_string (Codegen.vlc_to_c sast_output ^ "\n")
+            print_string (Codegen.generate_program program ^ "\n")

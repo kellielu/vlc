@@ -1,3 +1,4 @@
+
 open Ast
 
 module Variable_Map = Map.Make(String);;
@@ -23,7 +24,6 @@ let get_var_type identifier env =
       | scope :: tail -> Variable_Map.find identifier scope in
   let _, scope_stack = env in
   check_scope scope_stack
-
 let is_var_declared identifier env =
   let rec check_scope scopes =
     match scopes with
@@ -31,7 +31,6 @@ let is_var_declared identifier env =
       | scope :: tail -> Variable_Map.mem identifier scope in
   let _, scope_stack = env in
   check_scope scope_stack
-
 let set_var_type identifier variable_type env =
   let func_map, scope_stack = env in
   let scope, tail = (match scope_stack with
@@ -39,7 +38,6 @@ let set_var_type identifier variable_type env =
                 | [] -> raise Invalid_environment) in
   let new_scope = Variable_Map.add identifier variable_type scope in
   func_map, new_scope :: tail
-
 let update string variable_type (str, env) =
   if is_var_declared identifier env then
     raise Already_declared
