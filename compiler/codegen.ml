@@ -6,8 +6,12 @@ exception Empty_expression_list
 exception Empty_parameter_list
 exception Empty_fdecl_list
 exception Empty_vdecl_list
+exception Empty_list
 exception Unknown_type
 exception Type_mismatch
+exception Invalid_operation
+exception Not_implemented
+
 
 let generate_id id env = 
   let id_string = Utils.idtos(id) in
@@ -19,6 +23,10 @@ let generate_variable_type variable_type env =
   match variable_type with
     | String -> Environment.combine env [Verbatim("char *")]
     | Integer -> Environment.combine env [Verbatim("int")]
+    | ArrayType(t, n) -> Environment.combine env [Generator(generate_variable_type t);
+				Verbatim("[");
+                                Generator(generate_expression n);
+				Verbatim("]")
     | _ -> raise Unknown_type
 
 let generate_param d env =
@@ -36,17 +44,54 @@ let generate_vdecl d env =
     Verbatim(";\n");
   ]
 
+(*------------------------------------------------------------*)
+(*---------------------Type inference-------------------------*)
+(*------------------------------------------------------------*)
+let rec infer_type expression env =
+  let f type1 type2 =
+    match type1 with
+      | Some(t) -> (if t = type2 then Some(t)
+                    else raise (Type_mismatch "wrong types"))
+      | None -> Some(type2) in
+  let match_type expression_list =
+    let a = List.fold_left f None expression_list in
+      match a with
+        | Some(t) -> t
+        | None -> raise Empty_list in
+  match expression with
+    | String_Literal(_) -> String
+    | Array_Literal(expr_list) ->
+       let f expression = infer_type expr env in
+       ArrayType(match_type (List.map f exprlist))
+    | _ -> raise (Not_implemented)
 
-(*---------------------expressions----------------------------*)
+
+
+
+(*------------------------------------------------------------*)
+(*---------------------Expressions----------------------------*)
+(*------------------------------------------------------------*)
 let rec generate_expression expression env =
   match expression with
-    Function_Call(id, exp) ->
+    | Function_Call(id, exp) ->
       Environment.combine env [
         Generator(generate_id id);
         Verbatim("(");
         Generator(generate_expression_list exp);
         Verbatim(")")
       ]
+    | Binop(e1, op, e2) ->
+      let variable_type = (infer_type e1 env) in
+      (match datatype with
+        | Array ->
+	  let func = match op with
+            | Add -> Environment.combine env [
+		Verbatim("int *d_a;\n\
+			  int *d_b;\n\
+			  int *d_c;\n\
+
+			  cudaMalloc(&d_a, by
+		"
     | String_Literal(s) -> Environment.combine env [Verbatim("\"" ^ s ^ "\"")]
     | Integer_Literal(i) -> Environment.combine env [Verbatim(string_of_int i)]
     | Identifier_Expression(id) -> Environment.combine env [ Generator(generate_id id)]
@@ -67,7 +112,9 @@ and generate_nonempty_expression_list expression_list env =
 
 
 
-(*---------------------parameters----------------------------*)
+(*-----------------------------------------------------------*)
+(*---------------------Parameters----------------------------*)
+(*-----------------------------------------------------------*)
 let rec generate_nonempty_parameter_list param_list env =
   match param_list with
     | param :: [] -> Environment.combine env [Generator(generate_param param)]
@@ -86,8 +133,9 @@ and generate_parameter_list param_list env =
 
 
 
-
-(*---------------------statements----------------------------*)
+(*-----------------------------------------------------------*)
+(*---------------------Statements----------------------------*)
+(*-----------------------------------------------------------*)
 let rec generate_statement statement env =
   match statement with
     | Declaration(d) -> Environment.combine env [
@@ -101,11 +149,9 @@ let rec generate_statement statement env =
     | Assignment (id, e) ->
         Environment.combine env [
           Generator(generate_id id);
-          Verbatim(" ");
           Verbatim(" = ");
-	  Verbatim(" ");
           Generator(generate_expression e);
-          Verbatim(";");
+	  Verbatim(";")
         ]
     | Return(e) ->
       Environment.combine env [
@@ -132,9 +178,10 @@ and generate_statement_list statement_list env =
 
 
 
-
+(*-------------------------------------------------------*)
 (*---------------------fdecls----------------------------*)
-let generate_fdecl f env = 
+(*-------------------------------------------------------*)
+let generate_fdecl f env =
   Environment.combine env [
     Generator(generate_variable_type f.r_type);
     Verbatim(" ");
@@ -165,8 +212,9 @@ and generate_fdecl_list fdecl_list env =
 
 
 
-
+(*-----------------------------------------------------------*)
 (*---------------------vdecl list----------------------------*)
+(*-----------------------------------------------------------*)
 let rec generate_nonempty_vdecl_list vdecl_list env =
   match vdecl_list with
     | vdecl :: [] -> Environment.combine env [Generator(generate_vdecl vdecl)]
@@ -176,7 +224,7 @@ let rec generate_nonempty_vdecl_list vdecl_list env =
         Verbatim(", ");
         Generator(generate_nonempty_vdecl_list tail)
       ]
-    | [] -> print_endline "vdecl"; raise (Empty_vdecl_list)
+    | [] -> raise (Empty_vdecl_list)
 and generate_vdecl_list vdecl_list env =
   match vdecl_list with
     | [] -> Environment.combine env [Verbatim("")]
@@ -185,18 +233,25 @@ and generate_vdecl_list vdecl_list env =
 
 
 
+(*--------------------------------------------------------*)
 (*---------------------program----------------------------*)
+(*--------------------------------------------------------*)
 let generate_program program =
   let v_list = fst(program) in 
   let f_list = snd(program) in
   let env = Environment.create in
   let program, env = 
   Environment.combine env [
-    Verbatim("#include <stdio.h>\n#include <stdlib.h>\n#include <stdint.h>\n\n");
+    Verbatim("#include <stdio.h>\n#include <stdlib.h>\n\
+__global__ void vecAdd(double *a, double *b, double *c, int n)
+\t{\n\
+\tint id = blockIdx.x*blockDim.x+threadIdx.x;\n\
+if (id < n)\n\
+c[id] = a[id] + b[id];\n\
+}\n\n");
     Generator(generate_vdecl_list v_list);
     Generator(generate_fdecl_list f_list);
     Verbatim("\nint main(void) { return vlc(); }")
   ]
   in program
-
 
