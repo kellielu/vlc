@@ -1,4 +1,10 @@
 %{ open Ast
+
+    exception LexErr of string
+    exception ParseErr of string
+    
+
+    
     exception Invalid_type of string
     let string_to_variable_type = function
 	| "string" -> String
@@ -6,69 +12,74 @@
 	| dtype -> raise (Invalid_type dtype)
 %}
 
-%token TERMINATOR INDENT DEDENT
-%token LPAREN RPAREN COLON COMMA
-%token ASSIGNMENT
-%token RETURN
-%token PRINT
-%token <string> DATATYPE
+%token LPAREN RPAREN INDENT DEDENT COLON TERMINATOR EOF COMMA
+%token DEF RETURN
+%token <int> DEDENT_EOF, DEDENT_COUNT
+%token ASSIGNMENT 
 
-%token <string> STRING_LITERAL
 %token <int> INTEGER_LITERAL
-
+%token <string> DATATYPE STRING_LITERAL
 %token <string> IDENTIFIER
-
-%token EOF
 
 %right ASSIGNMENT
 
-%start top_level
-%type <Ast.statement list> top_level
+%start program  
+%type <Ast.program> program
 
 %%
 
-top_level:
-    | top_level_statement top_level                         { $1 :: $2 }
-    | top_level_statement                                   { [$1] }
+program:
+    |  /* nothing */                                            { [], [] }
+    | program vdecl TERMINATOR                                  { ($2 :: fst $1), snd $1 }
+    | program fdecl                                             { fst $1, ($2 :: snd $1) }
 
-top_level_statement:
-    | variable_declaration TERMINATOR                       { Variable_Declaration($1) }
-    | variable_type identifier LPAREN parameter_list RPAREN COLON TERMINATOR INDENT function_body DEDENT
-                                                            { Function_Declaration($1, $2, $4, $9) }
+fdecl:
+    | variable_type DEF IDENTIFIER LPAREN parameter_list RPAREN COLON INDENT function_body DEDENT
+                                                                {{ 
+                                                                    r_type = $1;
+                                                                    name = $3;
+                                                                    params = $5;
+                                                                    body = $9;
+                                                                }}
+
 parameter_list:
-    | { [] }
+    | /* nothing */                                             { [] }
+    | nonempty_parameter_list                                   { $1 }
+
+nonempty_parameter_list:
+    | vdecl COMMA nonempty_parameter_list                       {$1 :: $3}
+    | vdecl                                                     { [$1] }
+
+vdecl:
+    | variable_type IDENTIFIER                                  {{ 
+                                                                    v_type = $1;
+                                                                    name = $2;
+                                                                }}
 
 function_body:
-    | { [] }
-    | statement function_body    { $1::$2 }
-
-variable_declaration:
-    | variable_type identifier                              { Declaration($1, $2) } 
-
+    | /* nothing */                                             { [] }
+    | statement function_body                                   { $1::$2 }
+    
 statement:
-    | expression TERMINATOR                                          { Expression($1) }
-    | variable_type identifier ASSIGNMENT expression TERMINATOR        { Declaration_Assignment($1, $2, $4) }  
-    | variable_declaration TERMINATOR                                 { Variable_Declaration($1) } 
-    | identifier ASSIGNMENT expression TERMINATOR                      { Assignment($1, $3) }
-    | RETURN expression  TERMINATOR                                  { Return($2) }
-
-expression:
-	| identifier LPAREN expression_list RPAREN 			    { Function_Call($1,$3) }
-	| STRING_LITERAL        							    { String_Literal($1) }
-	| INTEGER_LITERAL									    { Integer_Literal($1) }
-
-identifier:
-	| IDENTIFIER                                            { Identifier($1) }
-
+    | expression TERMINATOR                                     { Expression($1) }
+    | vdecl TERMINATOR                                          { Declaration($1) }  
+    | RETURN expression TERMINATOR                              { Return($2) }
+    | IDENTIFIER ASSIGNMENT expression TERMINATOR               { Assignment( $1, $3 ) }
+    | vdecl ASSIGNMENT expression TERMINATOR                    { Initialization ($1, $3) }
+    
 expression_list:
-    |  { [] }
-    | nonempty_expression_list                              { $1 }
+    | /* nothing */                                             { [] }   
+    | nonempty_expression_list                                  { $1 }
 
 nonempty_expression_list:
-    | expression COMMA expression_list                      { $1 :: $3 }
-    | expression                                            { [$1] }
+    | expression COMMA nonempty_expression_list                 { $1 :: $3 }
+    | expression                                                { [$1] }
+
+expression:
+	| IDENTIFIER LPAREN expression_list RPAREN 			        { Function_Call($1,$3) }
+	| STRING_LITERAL        							        { String_Literal($1) }
+	| INTEGER_LITERAL									        { Integer_Literal($1) }
+	| IDENTIFIER                                                { Identifier($1) }
 
 variable_type:
-    | DATATYPE                                            { string_to_variable_type $1 }
-
-	
+    | DATATYPE                                                  { string_to_variable_type $1 }

@@ -1,5 +1,6 @@
-string helloworld = "Hello world!"
+string helloworld
 
-int def main():
+int def vlc():
+	helloworld = "Hello world!"
 	print(helloworld)
 	return 0
