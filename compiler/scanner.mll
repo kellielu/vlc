@@ -21,6 +21,10 @@ rule token = parse
 	| ')' { RPAREN }
 	| ':' { COLON }
 	| '=' { ASSIGNMENT }
+	| '[' { LBRACKET }
+	| ']' { RBRACKET }
+	| '{' { LCURLY }
+	| '}' { RCURLY }	
 	| ("string" | "int") as input { DATATYPE(input) }
 	| "return" { RETURN }
 	| "def"	   { DEF }

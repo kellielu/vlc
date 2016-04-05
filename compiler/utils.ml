@@ -31,26 +31,30 @@ let token_to_string = function
  	in 
  	helper token_list ""
 
+
+let idtos = function
+  | Identifier(s) -> s
+
 let rec expression_to_string = function
 	| String_Literal(s) -> "\"" ^ s ^ "\""
 	| Integer_Literal(i) -> string_of_int i
-	| Function_Call(id, e_list) -> id ^ "(" ^ (String.concat "," (List.map expression_to_string e_list)) ^ ")" 
-	| Identifier(id) -> id
+	| Function_Call(id, e_list) -> (idtos id) ^ "(" ^ (String.concat "," (List.map expression_to_string e_list)) ^ ")" 
+	| Identifier_Expression(id) -> (idtos id)
 
 let variable_type_to_string = function
 	| String -> "string"
 	| Integer -> "int"
 
-let vdecl_to_string vdecl = (variable_type_to_string vdecl.v_type) ^ " " ^ vdecl.name
+let vdecl_to_string vdecl = (variable_type_to_string vdecl.v_type) ^ " " ^ (idtos vdecl.name)
 
 let rec statement_to_string = function
 	| Expression(e) -> (expression_to_string e) ^ "\n"
  	| Declaration(vdecl) -> (vdecl_to_string vdecl) ^ "\n" 
 	| Return(e) -> "return " ^ (expression_to_string e) ^ "\n"
-	| Assignment(s,e) -> s ^ "=" ^ (expression_to_string e) ^ "\n"
+	| Assignment(id,e) -> (idtos id) ^ "=" ^ (expression_to_string e) ^ "\n"
 	| Initialization(vdecl,e) -> (vdecl_to_string vdecl) ^ "=" ^ (expression_to_string e) ^ "\n"
 
-let fdecl_to_string fdecl = (variable_type_to_string fdecl.r_type) ^ " def " ^ fdecl.name ^ "(" ^(String.concat "," (List.map vdecl_to_string fdecl.params)) ^ "):\n" ^ (String.concat "" (List.map statement_to_string fdecl.body)) ^ "\n"
+let fdecl_to_string fdecl = (variable_type_to_string fdecl.r_type) ^ " def " ^ (idtos fdecl.name) ^ "(" ^(String.concat "," (List.map vdecl_to_string fdecl.params)) ^ "):\n" ^ (String.concat "" (List.map statement_to_string fdecl.body)) ^ "\n"
 
 let program_to_string program = 
 	(String.concat "\n" (List.map vdecl_to_string (fst(program)))) ^ "\n" ^(String.concat "\n" (List.map fdecl_to_string (snd(program))))

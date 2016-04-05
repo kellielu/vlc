@@ -1,4 +1,5 @@
 OBJS =  ast.cmo environment.cmo codegen.cmo parser.cmo scanner.cmo processor.cmo utils.cmo vlc.cmo 
+
 # codegen.cmo
 .PHONY:all
 all: clean vlc
@@ -55,5 +56,4 @@ hot:
 
 .PHONY:c
 c:
-
 	./vlc -c ../sample-generated-programs/hello_host.vlc | tee ../output/generated.c

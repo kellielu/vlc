@@ -1,5 +1,6 @@
 open Ast
 open Environment
+open Utils
 
 exception Empty_expression_list
 exception Empty_parameter_list
@@ -11,6 +12,12 @@ exception Type_mismatch
 exception Invalid_operation
 exception Not_implemented
 
+
+let generate_id id env = 
+  let id_string = Utils.idtos(id) in
+  match id_string with
+    | "print" -> Environment.combine env [Verbatim("printf")]
+    | _ as identifier -> Environment.combine env [Verbatim(identifier)]
 
 let generate_variable_type variable_type env =
   match variable_type with
@@ -26,15 +33,15 @@ let generate_param d env =
   Environment.combine env [
     Generator(generate_variable_type d.v_type);
     Verbatim(" ");
-    Verbatim(d.name)
+    Generator(generate_id d.name)
   ]
 
 let generate_vdecl d env =
   Environment.combine env [
     Generator(generate_variable_type d.v_type);
     Verbatim(" ");
-    Verbatim(d.name);
-    Verbatim(";\n")
+    Generator(generate_id d.name);
+    Verbatim(";\n");
   ]
 
 (*------------------------------------------------------------*)
@@ -66,7 +73,14 @@ let rec infer_type expression env =
 (*------------------------------------------------------------*)
 let rec generate_expression expression env =
   match expression with
-    Binop(e1, op, e2) ->
+    | Function_Call(id, exp) ->
+      Environment.combine env [
+        Generator(generate_id id);
+        Verbatim("(");
+        Generator(generate_expression_list exp);
+        Verbatim(")")
+      ]
+    | Binop(e1, op, e2) ->
       let variable_type = (infer_type e1 env) in
       (match datatype with
         | Array ->
@@ -88,7 +102,7 @@ let rec generate_expression expression env =
         ]
     | String_Literal(s) -> Environment.combine env [Verbatim("\"" ^ s ^ "\"")]
     | Integer_Literal(i) -> Environment.combine env [Verbatim(string_of_int i)]
-    | Identifier(i) -> Environment.combine env [Verbatim(i)]
+    | Identifier_Expression(id) -> Environment.combine env [ Generator(generate_id id)]
 and generate_expression_list expression_list env =
   match expression_list with
     | [] -> Environment.combine env []
@@ -140,9 +154,9 @@ let rec generate_statement statement env =
         Generator(generate_expression e);
         Verbatim(";")
       ]
-    | Assignment (s, e) ->
+    | Assignment (id, e) ->
         Environment.combine env [
-          Verbatim(s);
+          Generator(generate_id id);
           Verbatim(" = ");
           Generator(generate_expression e);
 	  Verbatim(";")
@@ -179,7 +193,7 @@ let generate_fdecl f env =
   Environment.combine env [
     Generator(generate_variable_type f.r_type);
     Verbatim(" ");
-    Verbatim(f.name);
+    Generator(generate_id f.name);
     Verbatim("(");
     Generator(generate_parameter_list f.params);
     Verbatim("){\n");
