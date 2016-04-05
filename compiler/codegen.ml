@@ -77,7 +77,7 @@ let rec generate_expression expression env =
 			  int *d_c;\n\
 
 			  cudaMalloc(&d_a, by
-		"
+		")
     | Function_Call(id, exp) ->
         let function_name = if(id = "print") then "printf" else id in
         Environment.combine env [
