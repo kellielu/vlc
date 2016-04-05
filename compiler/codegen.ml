@@ -171,12 +171,17 @@ and generate_vdecl_list vdecl_list env =
 
 
 (*---------------------program----------------------------*)
-let generate_program v_list f_list =
+let generate_program program =
+  let v_list = fst(program) in 
+  let f_list = snd(program) in
   let env = Environment.create in
+  let program, env = 
   Environment.combine env [
     Verbatim("#include <stdio.h\n\n#include <stdlib.h\n\n#include <stdint.h\n\n#include <libvector.hpp>\n\n#include <string>\n\n");
     Generator(generate_vdecl_list v_list);
     Generator(generate_fdecl_list f_list);
     Verbatim("\nint main(void) { return vlc_main(); }")
   ]
+  in program
+
 
