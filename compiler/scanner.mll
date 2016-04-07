@@ -17,10 +17,19 @@ rule token = parse
 	| newline { indent lexbuf}
 	| whitespace { token lexbuf }
 
+	(* Punctuation *)
 	| '(' { LPAREN }
 	| ')' { RPAREN }
 	| ':' { COLON }
 	| '=' { ASSIGNMENT }
+
+	(*Arithmetic Operators*)
+	| '+' { ADD }
+	| '-' { SUBTRACT }
+	| '*' { MULTIPLY }
+	| '/' { DIVIDE }
+	| '%' { MODULO }
+
 	| ("string" | "int") as input { DATATYPE(input) }
 	| "return" { RETURN }
 	| "def"	   { DEF }

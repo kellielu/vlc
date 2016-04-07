@@ -8,6 +8,14 @@ exception Empty_vdecl_list
 exception Unknown_type
 exception Type_mismatch
 
+let generate_operator operator env =
+  match operator with
+    | Add -> Environment.combine env [Verbatim("+")]
+    | Subtract -> Environment.combine env [Verbatim("-")]
+    | Multiply -> Environment.combine env [Verbatim("*")]
+    | Divide -> Environment.combine env [Verbatim("/")]
+    | Modulo -> Environment.combine env [Verbatim("%")]
+
 let generate_variable_type variable_type env =
   match variable_type with
     | String -> Environment.combine env [Verbatim("char *")]
@@ -33,7 +41,13 @@ let generate_vdecl d env =
 (*---------------------expressions----------------------------*)
 let rec generate_expression expression env =
   match expression with
-    Function_Call(id, exp) ->
+    | Binop(e1, o, e2) -> 
+      Environment.combine env [
+        Generator(generate_expression e1);
+        Generator(generate_operator o);
+        Generator(generate_expression e2)
+      ]
+    | Function_Call(id, exp) ->
       let function_name = if (id = "print") then "printf" else id in
       Environment.combine env [
         Verbatim(function_name);
@@ -59,8 +73,6 @@ and generate_nonempty_expression_list expression_list env =
     | [] -> raise Empty_expression_list
 
 
-
-
 (*---------------------parameters----------------------------*)
 let rec generate_nonempty_parameter_list param_list env =
   match param_list with
@@ -78,9 +90,6 @@ and generate_parameter_list param_list env =
     | decl :: tail -> Environment.combine env [Generator(generate_nonempty_parameter_list tail)]
 
 
-
-
-
 (*---------------------statements----------------------------*)
 let rec generate_statement statement env =
   match statement with
@@ -95,9 +104,7 @@ let rec generate_statement statement env =
     | Assignment (s, e) ->
         Environment.combine env [
           Verbatim(s);
-          Verbatim(" ");
           Verbatim(" = ");
-	  Verbatim(" ");
           Generator(generate_expression e);
           Verbatim(";");
         ]
@@ -108,10 +115,10 @@ let rec generate_statement statement env =
         Verbatim(";")
       ]
     | Initialization(d, e) -> Environment.combine env [
-	Generator(generate_param d);
-	Verbatim(" ");
-	Generator(generate_expression e);
-	Verbatim(";");
+      	Generator(generate_param d);
+        Verbatim(" = ");
+      	Generator(generate_expression e);
+      	Verbatim(";");
       ]
 and generate_statement_list statement_list env =
   match statement_list with
@@ -122,9 +129,6 @@ and generate_statement_list statement_list env =
           Verbatim("\n");
           Generator(generate_statement_list tail)
         ]
-
-
-
 
 
 (*---------------------fdecls----------------------------*)
@@ -139,7 +143,6 @@ let generate_fdecl f env =
     Generator(generate_statement_list f.body);
     Verbatim("}\n");
   ]
-
 
 let rec generate_nonempty_fdecl_list fdecl_list env =
   match fdecl_list with
@@ -157,9 +160,6 @@ and generate_fdecl_list fdecl_list env =
     | decl :: tail -> Environment.combine env [Generator(generate_nonempty_fdecl_list fdecl_list)]
 
 
-
-
-
 (*---------------------vdecl list----------------------------*)
 let rec generate_nonempty_vdecl_list vdecl_list env =
   match vdecl_list with
@@ -175,8 +175,6 @@ and generate_vdecl_list vdecl_list env =
   match vdecl_list with
     | [] -> Environment.combine env [Verbatim("")]
     | decl :: tail -> Environment.combine env [Generator(generate_nonempty_vdecl_list vdecl_list)]
-
-
 
 
 (*---------------------program----------------------------*)

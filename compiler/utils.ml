@@ -13,6 +13,8 @@ let token_to_string = function
   | COMMA -> "COMMA" 
   | DEF -> "DEF"
   | ASSIGNMENT -> "ASSIGNMENT" 
+  | ADD -> "ADD" | SUBTRACT -> "SUBTRACT" | MULTIPLY -> "MULTIPLY" 
+  | DIVIDE -> "DIVIDE" | MODULO -> "MODULO"
   | EOF -> "EOF" 
   | IDENTIFIER(s) -> "IDENTIFIER(" ^ s ^ ")"
   | INTEGER_LITERAL(i) -> "INTEGER_LITERAL(" ^ string_of_int i ^ ")"
@@ -22,7 +24,7 @@ let token_to_string = function
   | DATATYPE(a) -> "DATATYPE(" ^ a ^ ")"
   | DEDENT_EOF(i) -> "DEDENT_EOF(" ^ string_of_int i ^ ")"
 
- let token_list_to_string token_list = 
+let token_list_to_string token_list = 
  	let rec helper token_list acc_string = 
  		if(List.length (token_list)) = 0 then
  			acc_string
@@ -31,7 +33,15 @@ let token_to_string = function
  	in 
  	helper token_list ""
 
+let operator_to_string = function
+  | Add -> "+"
+  | Subtract -> "-"
+  | Multiply -> "*"
+  | Divide -> "/"
+  | Modulo -> "%"
+
 let rec expression_to_string = function
+  | Binop(e1, o, e2) -> (expression_to_string e1) ^ (operator_to_string o) ^ (expression_to_string e2)
 	| String_Literal(s) -> "\"" ^ s ^ "\""
 	| Integer_Literal(i) -> string_of_int i
 	| Function_Call(id, e_list) -> id ^ "(" ^ (String.concat "," (List.map expression_to_string e_list)) ^ ")" 

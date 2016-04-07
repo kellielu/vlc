@@ -1,4 +1,7 @@
 (* Function Declaration *)
+type operator =
+| Add | Subtract | Multiply | Divide | Modulo
+
 type variable_type = 
 	| String
 	| Integer
@@ -11,6 +14,7 @@ type vdecl = {
 }
 
 type expression =
+    | Binop of expression * operator * expression
 	| String_Literal of string
 	| Integer_Literal of int
 	| Function_Call of string * expression list
