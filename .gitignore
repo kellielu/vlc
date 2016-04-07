@@ -1,1 +1,14 @@
 junk/*
+*.cmi
+*.cmo
+*.exe
+*.out
+compiler/vlc
+compiler/parser.ml
+compiler/parser.mli
+compiler/scanner.ml
+compiler/parser.output
+output/
+test.log
+*.diff
+*.c
