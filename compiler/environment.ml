@@ -4,7 +4,7 @@ open Ast
 module Variable_Map = Map.Make(struct type t = identifier let compare = compare end);;
 
 exception Already_declared
-exception Name_not_found
+exception Name_not_found of string
 exception Invalid_environment
 
 (*-----------------------------------------------------*)
@@ -85,7 +85,7 @@ let combine initial_env components =
       | Verbatim(verbatim) -> str ^ verbatim, env
       | Generator(gen) ->
         let new_str, new_env = gen env in
-          str ^ new_str, new_env in
+          str ^ new_str, new_env
       | NewScopeGenerator(gen) ->
         let new_str, new_env = gen (push_scope env) in
           str ^ new_str, pop_scope new_env in

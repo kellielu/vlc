@@ -25,6 +25,7 @@ rule token = parse
 	| ']' { RBRACKET }
 	| '{' { LCURLY }
 	| '}' { RCURLY }	
+	| ',' { COMMA }
 	| ("string" | "int") as input { DATATYPE(input) }
 	| "return" { RETURN }
 	| "def"	   { DEF }

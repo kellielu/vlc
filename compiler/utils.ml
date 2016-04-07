@@ -21,6 +21,7 @@ let token_to_string = function
   | RETURN -> "RETURN"
   | DATATYPE(a) -> "DATATYPE(" ^ a ^ ")"
   | DEDENT_EOF(i) -> "DEDENT_EOF(" ^ string_of_int i ^ ")"
+  | RBRACKET -> "RBRACKET" | LBRACKET -> "LBRACKET"
 
  let token_list_to_string token_list = 
  	let rec helper token_list acc_string = 
@@ -39,7 +40,8 @@ let rec expression_to_string = function
 	| String_Literal(s) -> "\"" ^ s ^ "\""
 	| Integer_Literal(i) -> string_of_int i
 	| Function_Call(id, e_list) -> (idtos id) ^ "(" ^ (String.concat "," (List.map expression_to_string e_list)) ^ ")" 
-	| Identifier_Expression(id) -> (idtos id)
+	| Identifier_Expression(id) -> (idtos id) 
+        | Array_Literal(s) -> "{" ^ (String.concat "," (List.map expression_to_string s)) ^ "}" 
 
 let variable_type_to_string = function
 	| String -> "string"

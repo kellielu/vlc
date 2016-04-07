@@ -8,7 +8,7 @@ exception Empty_fdecl_list
 exception Empty_vdecl_list
 exception Empty_list
 exception Unknown_type
-exception Type_mismatch
+exception Type_mismatch of string
 exception Invalid_operation
 exception Not_implemented
 
@@ -19,14 +19,14 @@ let generate_id id env =
     | "print" -> Environment.combine env [Verbatim("printf")]
     | _ as identifier -> Environment.combine env [Verbatim(identifier)]
 
-let generate_variable_type variable_type env =
+let rec generate_variable_type variable_type env =
   match variable_type with
     | String -> Environment.combine env [Verbatim("char *")]
     | Integer -> Environment.combine env [Verbatim("int")]
-    | ArrayType(t, n) -> Environment.combine env [Generator(generate_variable_type t);
+    | Array (t, n) -> Environment.combine env [Generator(generate_variable_type t);
 				Verbatim("[");
-                                Generator(generate_expression n);
-				Verbatim("]")
+                                Verbatim(string_of_int n);
+				Verbatim("]\n"); ]
     | _ -> raise Unknown_type
 
 let generate_param d env =
@@ -61,8 +61,8 @@ let rec infer_type expression env =
   match expression with
     | String_Literal(_) -> String
     | Array_Literal(expr_list) ->
-       let f expression = infer_type expr env in
-       ArrayType(match_type (List.map f exprlist))
+       let f expression = infer_type expression env in
+       Array(match_type (List.map f expr_list), (List.length expr_list))
     | _ -> raise (Not_implemented)
 
 
@@ -80,22 +80,17 @@ let rec generate_expression expression env =
         Generator(generate_expression_list exp);
         Verbatim(")")
       ]
-    | Binop(e1, op, e2) ->
+   (* | Binop(e1, op, e2) ->
       let variable_type = (infer_type e1 env) in
       (match datatype with
         | Array ->
 	  let func = match op with
             | Add -> Environment.combine env [
-		Verbatim("int *d_a;\n\
-			  int *d_b;\n\
-			  int *d_c;\n\
-
-			  cudaMalloc(&d_a, by
-		")
+		Verbatim("__add(e1, e2)")])
+	    | _ -> raise (Not_implemented) *)
     | Function_Call(id, exp) ->
-        let function_name = if(id = "print") then "printf" else id in
         Environment.combine env [
-          Verbatim(function_name);
+          Generator(generate_id id);
           Verbatim("(");
           Generator(generate_expression_list exp);
           Verbatim(")")
@@ -140,7 +135,6 @@ and generate_parameter_list param_list env =
 
 
 
-
 (*-----------------------------------------------------------*)
 (*---------------------Statements----------------------------*)
 (*-----------------------------------------------------------*)
@@ -169,7 +163,7 @@ let rec generate_statement statement env =
       ]
     | Initialization(d, e) -> Environment.combine env [
 	Generator(generate_param d);
-	Verbatim(" ");
+	Verbatim(" = ");
 	Generator(generate_expression e);
 	Verbatim(";");
       ]

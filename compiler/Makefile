@@ -1,4 +1,4 @@
-OBJS =  ast.cmo environment.cmo codegen.cmo parser.cmo scanner.cmo processor.cmo utils.cmo vlc.cmo 
+OBJS =  ast.cmo environment.cmo utils.cmo codegen.cmo parser.cmo scanner.cmo processor.cmo vlc.cmo 
 
 # codegen.cmo
 .PHONY:all
