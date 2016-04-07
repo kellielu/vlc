@@ -12,6 +12,7 @@ exception Unknown_type_of_vdecl
 exception Type_mismatch of string
 exception Invalid_operation
 exception Not_implemented
+exception Unknown_type
 
 
 let generate_id id env = 
