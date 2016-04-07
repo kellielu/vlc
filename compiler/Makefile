@@ -57,4 +57,4 @@ hot: vlc
 
 .PHONY:c
 c: vlc
-	./vlc -c ../sample-generated-programs/hello_host.vlc | tee ../output/generated.c
+	./vlc -c ../sample-generated-programs/hello_host.vlc | tee ../output/generated.cu

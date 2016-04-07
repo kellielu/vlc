@@ -7,7 +7,8 @@ exception Empty_parameter_list
 exception Empty_fdecl_list
 exception Empty_vdecl_list
 exception Empty_list
-exception Unknown_type
+exception Unknown_type_of_var
+exception Unknown_type_of_vdecl
 exception Type_mismatch of string
 exception Invalid_operation
 exception Not_implemented
@@ -46,10 +47,10 @@ let rec generate_expression expression env =
     | String_Literal(s) -> Environment.combine env [Verbatim("\"" ^ s ^ "\"")]
     | Integer_Literal(i) -> Environment.combine env [Verbatim(string_of_int i)]
     | Array_Literal(s) -> 
-    Environment.combine env [Verbatim("{");
+    Environment.combine env [
+          Verbatim("{");
           Generator(generate_expression_list s);
-          Verbatim("}")
-          ]
+          Verbatim("}")]
     | Identifier_Expression(id) -> Environment.combine env [ Generator(generate_id id)]
 and generate_expression_list expression_list env =
   match expression_list with
@@ -71,27 +72,47 @@ let rec generate_variable_type variable_type env =
     | String -> Environment.combine env [Verbatim("char *")]
     | Integer -> Environment.combine env [Verbatim("int")]
     | Array(t, n) -> Environment.combine env [
-        Generator(generate_variable_type t);
-				Verbatim("[");
-        Verbatim(string_of_int n);
-				Verbatim("]")
+        Verbatim("hi");
         ]
-    | _ -> raise Unknown_type
+    | _ -> raise Unknown_type_of_var
 
 let generate_param d env =
+  match d.v_type with 
+  | Array(t,n) ->
+  Environment.combine env [
+    Generator(generate_variable_type t);
+      Verbatim(" ");
+      Generator(generate_id d.name);
+      Verbatim("[");
+      Verbatim(string_of_int n);
+      Verbatim("]")
+  ]
+  | String | Integer ->
   Environment.combine env [
     Generator(generate_variable_type d.v_type);
     Verbatim(" ");
     Generator(generate_id d.name)
   ]
 
-let generate_vdecl d env =
-  Environment.combine env [
-    Generator(generate_variable_type d.v_type);
-    Verbatim(" ");
-    Generator(generate_id d.name);
-    Verbatim(";\n");
-  ]
+let generate_vdecl d env = 
+  match d.v_type with 
+  | Array(t,n) -> 
+    Environment.combine env [
+      Generator(generate_variable_type t);
+      Verbatim(" ");
+      Generator(generate_id d.name);
+      Verbatim("[");
+      Verbatim(string_of_int n);
+      Verbatim("]")
+    ]
+  | String| Integer -> 
+    Environment.combine env [
+      Generator(generate_variable_type d.v_type);
+      Verbatim(" ");
+      Generator(generate_id d.name);
+      Verbatim(";\n");
+    ]
+  | _ -> raise Unknown_type_of_vdecl
 
 (*------------------------------------------------------------*)
 (*---------------------Type inference-------------------------*)
