@@ -40,7 +40,7 @@ parser.cmi: ast.cmo
 
 
 .PHONY:test
-test: generator
+test:
 	dos2unix ../test.sh
 	../test.sh
 
@@ -57,4 +57,4 @@ hot: vlc
 
 .PHONY:c
 c: vlc
-	./vlc -c ../sample-generated-programs/hello_host.vlc | tee ../output/generated.c
+	./vlc -c ../sample-generated-programs/hello_host.vlc | tee ../output/generated.cu
