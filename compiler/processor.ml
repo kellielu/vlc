@@ -3,33 +3,6 @@ open Parser
 exception MissingEOF
 let last_token = ref EOF
 
-let token_to_string = function
-    TERMINATOR -> "TERMINATOR" | INDENT -> "INDENT"
-  | DEDENT -> "DEDENT" | LPAREN -> "LPAREN"
-  | RPAREN -> "RPAREN" | COLON -> "COLON"
-  | COMMA -> "COMMA" 
-  | DEF -> "DEF"
-  | ASSIGNMENT -> "ASSIGNMENT" 
-  | EOF -> "EOF" 
-  | IDENTIFIER(s) -> "IDENTIFIER(" ^ s ^ ")"
-  | INTEGER_LITERAL(i) -> "INTEGER_LITERAL(" ^ string_of_int i ^ ")"
-  | DEDENT_COUNT(i) -> "DEDENT_COUNT(" ^ string_of_int i ^ ")"
-  | STRING_LITERAL(s) -> "STRINGLITERAL(" ^ s ^ ")"
-  | RETURN -> "RETURN"
-  | DATATYPE(a) -> "DATATYPE(" ^ a ^ ")"
-  | DEDENT_EOF(i) -> "DEDENT_EOF(" ^ string_of_int i ^ ")"
-
-
- let token_list_to_string token_list = 
-  let rec helper token_list acc_string = 
-    if(List.length (token_list)) = 0 then
-      acc_string
-    else
-      helper (List.tl token_list) ((token_to_string(List.hd token_list)) ^ "\n" ^ acc_string)
-  in 
-  helper token_list ""
-
-
 (* Gets the original tokens from the scanner *)
 let get_tokens lexbuf = 
   let rec next lexbuf token_list = 

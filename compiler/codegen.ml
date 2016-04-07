@@ -8,7 +8,7 @@ exception Empty_fdecl_list
 exception Empty_vdecl_list
 exception Empty_list
 exception Unknown_type
-exception Type_mismatch
+exception Type_mismatch of string
 exception Invalid_operation
 exception Not_implemented
 
@@ -19,14 +19,63 @@ let generate_id id env =
     | "print" -> Environment.combine env [Verbatim("printf")]
     | _ as identifier -> Environment.combine env [Verbatim(identifier)]
 
-let generate_variable_type variable_type env =
+
+(*------------------------------------------------------------*)
+(*---------------------Expressions----------------------------*)
+(*------------------------------------------------------------*)
+let rec generate_expression expression env =
+  match expression with
+    | Function_Call(id, exp) ->
+      Environment.combine env [
+        Generator(generate_id id);
+        Verbatim("(");
+        Generator(generate_expression_list exp);
+        Verbatim(")")
+      ]
+(*     | Binop(e1, op, e2) ->
+      let variable_type = (infer_type e1 env) in
+      (match datatype with
+        | Array ->
+    let func = match op with
+            | Add -> 
+    Environment.combine env [
+    Verbatim("int *d_a;\n\
+        int *d_b;\n\
+        int *d_c;\n\
+        cudaMalloc(&d_a, by")] *)
+    | String_Literal(s) -> Environment.combine env [Verbatim("\"" ^ s ^ "\"")]
+    | Integer_Literal(i) -> Environment.combine env [Verbatim(string_of_int i)]
+    | Array_Literal(s) -> 
+    Environment.combine env [Verbatim("{");
+          Generator(generate_expression_list s);
+          Verbatim("}")
+          ]
+    | Identifier_Expression(id) -> Environment.combine env [ Generator(generate_id id)]
+and generate_expression_list expression_list env =
+  match expression_list with
+    | [] -> Environment.combine env []
+    | lst -> Environment.combine env [Generator(generate_nonempty_expression_list lst)]
+and generate_nonempty_expression_list expression_list env =
+  match expression_list with
+    | expression :: [] -> Environment.combine env [Generator(generate_expression expression)]
+    | expression :: tail -> Environment.combine env [
+        Generator(generate_expression expression);
+        Verbatim(", ");
+        Generator(generate_nonempty_expression_list tail)
+      ]
+    | [] -> (raise Empty_expression_list)
+
+
+let rec generate_variable_type variable_type env =
   match variable_type with
     | String -> Environment.combine env [Verbatim("char *")]
     | Integer -> Environment.combine env [Verbatim("int")]
-    | ArrayType(t, n) -> Environment.combine env [Generator(generate_variable_type t);
+    | Array(t, n) -> Environment.combine env [
+        Generator(generate_variable_type t);
 				Verbatim("[");
-                                Generator(generate_expression n);
+        Verbatim(string_of_int n);
 				Verbatim("]")
+        ]
     | _ -> raise Unknown_type
 
 let generate_param d env =
@@ -61,53 +110,14 @@ let rec infer_type expression env =
   match expression with
     | String_Literal(_) -> String
     | Array_Literal(expr_list) ->
-       let f expression = infer_type expr env in
-       ArrayType(match_type (List.map f exprlist))
+       let f expression = infer_type expression env in
+       Array(match_type (List.map f expr_list),(List.length expr_list))
     | _ -> raise (Not_implemented)
 
 
 
 
-(*------------------------------------------------------------*)
-(*---------------------Expressions----------------------------*)
-(*------------------------------------------------------------*)
-let rec generate_expression expression env =
-  match expression with
-    | Function_Call(id, exp) ->
-      Environment.combine env [
-        Generator(generate_id id);
-        Verbatim("(");
-        Generator(generate_expression_list exp);
-        Verbatim(")")
-      ]
-    | Binop(e1, op, e2) ->
-      let variable_type = (infer_type e1 env) in
-      (match datatype with
-        | Array ->
-	  let func = match op with
-            | Add -> Environment.combine env [
-		Verbatim("int *d_a;\n\
-			  int *d_b;\n\
-			  int *d_c;\n\
 
-			  cudaMalloc(&d_a, by
-		"
-    | String_Literal(s) -> Environment.combine env [Verbatim("\"" ^ s ^ "\"")]
-    | Integer_Literal(i) -> Environment.combine env [Verbatim(string_of_int i)]
-    | Identifier_Expression(id) -> Environment.combine env [ Generator(generate_id id)]
-and generate_expression_list expression_list env =
-  match expression_list with
-    | [] -> Environment.combine env []
-    | lst -> Environment.combine env [Generator(generate_nonempty_expression_list lst)]
-and generate_nonempty_expression_list expression_list env =
-  match expression_list with
-    | expression :: [] -> Environment.combine env [Generator(generate_expression expression)]
-    | expression :: tail -> Environment.combine env [
-        Generator(generate_expression expression);
-        Verbatim(", ");
-        Generator(generate_nonempty_expression_list tail)
-      ]
-    | [] -> raise Empty_expression_list
 
 
 
@@ -128,7 +138,7 @@ let rec generate_nonempty_parameter_list param_list env =
 and generate_parameter_list param_list env =
   match param_list with
     | [] -> Environment.combine env [Verbatim("")]
-    | decl :: tail -> Environment.combine env [Generator(generate_nonempty_parameter_list tail)]
+    | decl :: tail -> Environment.combine env [Generator(generate_nonempty_parameter_list param_list)]
 
 
 
@@ -161,7 +171,7 @@ let rec generate_statement statement env =
       ]
     | Initialization(d, e) -> Environment.combine env [
 	Generator(generate_param d);
-	Verbatim(" ");
+  Verbatim("=");
 	Generator(generate_expression e);
 	Verbatim(";");
       ]
@@ -243,7 +253,7 @@ let generate_program program =
   let program, env = 
   Environment.combine env [
     Verbatim("#include <stdio.h>\n#include <stdlib.h>\n\
-__global__ void vecAdd(double *a, double *b, double *c, int n)
+__global__ void vecAdd(double *a, double *b, double *c, int n)\
 \t{\n\
 \tint id = blockIdx.x*blockDim.x+threadIdx.x;\n\
 if (id < n)\n\

@@ -87,5 +87,5 @@ expression:
 
 variable_type:
     | DATATYPE                                                      { string_to_variable_type $1 }
-    | variable_type identifier LBRACKET INTEGER_LITERAL RBRACKET    { Array($1,$4) }
+    | variable_type LBRACKET INTEGER_LITERAL RBRACKET               { Array($1,$3) }
     

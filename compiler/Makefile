@@ -1,4 +1,4 @@
-OBJS =  ast.cmo environment.cmo codegen.cmo parser.cmo scanner.cmo processor.cmo utils.cmo vlc.cmo 
+OBJS =  ast.cmo environment.cmo utils.cmo codegen.cmo parser.cmo scanner.cmo processor.cmo vlc.cmo 
 
 # codegen.cmo
 .PHONY:all
@@ -41,19 +41,20 @@ parser.cmi: ast.cmo
 
 .PHONY:test
 test: generator
-	cd ../test && ./runtests.sh
+	dos2unix ../test.sh
+	../test.sh
 
 .PHONY:clean
 clean:
 	rm -f parser.ml parser.mli scanner.ml *.cmo *.cmi *.output vlc
 
 .PHONY:ha
-ha:
+ha: vlc
 	./vlc -a ../sample-generated-programs/hello_host.vlc 
 .PHONY:hot
-hot:
+hot: vlc
 	./vlc -t ../sample-generated-programs/hello_host.vlc 
 
 .PHONY:c
-c:
+c: vlc
 	./vlc -c ../sample-generated-programs/hello_host.vlc | tee ../output/generated.c
