@@ -1,6 +1,0 @@
-string helloworld
-
-int def main():
-	helloworld = "Hello world!"
-	print(helloworld)
-	return 0

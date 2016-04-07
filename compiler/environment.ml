@@ -85,9 +85,10 @@ let combine initial_env components =
       | Verbatim(verbatim) -> str ^ verbatim, env
       | Generator(gen) ->
         let new_str, new_env = gen env in
-          str ^ new_str, new_env
+          str ^ new_str, new_env (* in
+        List.fold_left f ("", initial_env) components *)
       | NewScopeGenerator(gen) ->
         let new_str, new_env = gen (push_scope env) in
-          str ^ new_str, pop_scope new_env in
-  List.fold_left f ("", initial_env) components
+          str ^ new_str, (pop_scope new_env) in
+        List.fold_left f ("", initial_env) components
 

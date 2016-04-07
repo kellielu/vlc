@@ -21,7 +21,7 @@ let token_to_string = function
   | RETURN -> "RETURN"
   | DATATYPE(a) -> "DATATYPE(" ^ a ^ ")"
   | DEDENT_EOF(i) -> "DEDENT_EOF(" ^ string_of_int i ^ ")"
-  | RBRACKET -> "RBRACKET" | LBRACKET -> "LBRACKET"
+  | LCURLY -> "LCURLY" | RCURLY -> "RCURLY" | LBRACKET -> "LBRACKET" | RBRACKET -> "RBRACKET"
 
  let token_list_to_string token_list = 
  	let rec helper token_list acc_string = 
@@ -39,13 +39,15 @@ let idtos = function
 let rec expression_to_string = function
 	| String_Literal(s) -> "\"" ^ s ^ "\""
 	| Integer_Literal(i) -> string_of_int i
+  | Array_Literal(e_list) -> "{" ^ String.concat "," (List.map expression_to_string e_list) ^ "}"
 	| Function_Call(id, e_list) -> (idtos id) ^ "(" ^ (String.concat "," (List.map expression_to_string e_list)) ^ ")" 
 	| Identifier_Expression(id) -> (idtos id) 
         | Array_Literal(s) -> "{" ^ (String.concat "," (List.map expression_to_string s)) ^ "}" 
 
-let variable_type_to_string = function
+let rec variable_type_to_string = function
 	| String -> "string"
 	| Integer -> "int"
+  | Array(vtype,size) -> (variable_type_to_string vtype) ^ "[" ^ (string_of_int size) ^ "]" 
 
 let vdecl_to_string vdecl = (variable_type_to_string vdecl.v_type) ^ " " ^ (idtos vdecl.name)
 

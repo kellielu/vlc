@@ -19,6 +19,7 @@ let generate_id id env =
     | "print" -> Environment.combine env [Verbatim("printf")]
     | _ as identifier -> Environment.combine env [Verbatim(identifier)]
 
+
 let rec generate_variable_type variable_type env =
   match variable_type with
     | String -> Environment.combine env [Verbatim("char *")]
@@ -115,6 +116,7 @@ and generate_nonempty_expression_list expression_list env =
 
 
 
+
 (*-----------------------------------------------------------*)
 (*---------------------Parameters----------------------------*)
 (*-----------------------------------------------------------*)
@@ -131,7 +133,7 @@ let rec generate_nonempty_parameter_list param_list env =
 and generate_parameter_list param_list env =
   match param_list with
     | [] -> Environment.combine env [Verbatim("")]
-    | decl :: tail -> Environment.combine env [Generator(generate_nonempty_parameter_list tail)]
+    | decl :: tail -> Environment.combine env [Generator(generate_nonempty_parameter_list param_list)]
 
 
 
@@ -245,7 +247,7 @@ let generate_program program =
   let program, env = 
   Environment.combine env [
     Verbatim("#include <stdio.h>\n#include <stdlib.h>\n\
-__global__ void vecAdd(double *a, double *b, double *c, int n)
+__global__ void vecAdd(double *a, double *b, double *c, int n)\
 \t{\n\
 \tint id = blockIdx.x*blockDim.x+threadIdx.x;\n\
 if (id < n)\n\
