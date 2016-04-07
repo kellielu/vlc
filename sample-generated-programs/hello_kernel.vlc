@@ -1,7 +1,10 @@
-void defg print_kernel(string my_string):
-	print "Hello world, %s" % my_string
+int defg vecAdd(a,b):
+	return a + b
 
 int vlc():
-	string [5] my_strings = ["0", "1", "2", "3","4"]
-	map(print_kernel, my_strings)
+	int[5] vector_a = {1,2,3,4,5}
+	int[5] vector_b= {1,2,3,4,5}
+	int[5] vector_c = map(vecAdd, a, b)
+	print vector_c
+	
 	return 0

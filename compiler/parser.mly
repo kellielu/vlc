@@ -2,6 +2,7 @@
 
     exception LexErr of string
     exception ParseErr of string
+    exception ArrayErr
     
 
     
@@ -87,5 +88,19 @@ expression:
 
 variable_type:
     | DATATYPE                                                      { string_to_variable_type $1 }
-    | variable_type LBRACKET INTEGER_LITERAL RBRACKET               { Array($1,$3) }
+    | variable_type array_dimension_list                            
+        { 
+            let rec create_multidimensional_array vtype dim_list= 
+                match dim_list with
+                    | [] -> raise ArrayErr
+                    | head::[] -> Array(vtype,head)
+                    | head::tail -> Array((create_multidimensional_array vtype tail),head)
+            in create_multidimensional_array $1 $2
+             
+        }
+
+array_dimension_list:
+    | LBRACKET INTEGER_LITERAL RBRACKET                              { [$2]}
+    | LBRACKET INTEGER_LITERAL RBRACKET  array_dimension_list        {  $2 :: $4 }
+
     

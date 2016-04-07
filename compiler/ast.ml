@@ -36,3 +36,8 @@ type fdecl = {
 }
 
 type program = vdecl list * fdecl list
+
+type kernel_variable_type = 
+    | Kernel_String
+    | Kernel_Integer
+    | Kernel_Array of kernel_variable_type * int

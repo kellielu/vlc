@@ -48,13 +48,24 @@ test:
 clean:
 	rm -f parser.ml parser.mli scanner.ml *.cmo *.cmi *.output vlc
 
-.PHONY:ha
-ha: vlc
+.PHONY:hha
+hha: vlc
 	./vlc -a ../sample-generated-programs/hello_host.vlc 
-.PHONY:hot
-hot: vlc
+.PHONY:hht
+hht: vlc
 	./vlc -t ../sample-generated-programs/hello_host.vlc 
 
-.PHONY:c
-c: vlc
+.PHONY:hhc
+hhc: vlc
 	./vlc -c ../sample-generated-programs/hello_host.vlc | tee ../output/generated.cu
+
+.PHONY:hka
+hka: vlc
+	./vlc -a ../sample-generated-programs/hello_kernel.vlc 
+.PHONY:hkt
+hkt: vlc
+	./vlc -t ../sample-generated-programs/hello_kernel.vlc 
+
+.PHONY:hkc
+hkc: vlc
+	./vlc -c ../sample-generated-programs/hello_kernel.vlc | tee ../output/generated.cu

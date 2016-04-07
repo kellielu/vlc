@@ -1,9 +1,9 @@
 open Ast
 open Parser
 
-let type_to_string = function
+(* let type_to_string = function
 	| String -> "string"
-	| Integer -> "int"
+	| Integer -> "int" *)
 
 
 let token_to_string = function
@@ -50,7 +50,7 @@ let rec variable_type_to_string = function
 
 let vdecl_to_string vdecl = (variable_type_to_string vdecl.v_type) ^ " " ^ (idtos vdecl.name)
 
-let rec statement_to_string = function
+let statement_to_string = function
 	| Expression(e) -> (expression_to_string e) ^ "\n"
  	| Declaration(vdecl) -> (vdecl_to_string vdecl) ^ "\n" 
 	| Return(e) -> "return " ^ (expression_to_string e) ^ "\n"

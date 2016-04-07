@@ -3,5 +3,5 @@ string helloworld
 int def vlc():
 	helloworld = "Hello world!\n"
 	print(helloworld)
-	int[2] a = {2,3}
+	int[2][2] a = {{1,2},{3,4}}
 	return 0

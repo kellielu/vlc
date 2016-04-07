@@ -9,9 +9,31 @@ exception Empty_vdecl_list
 exception Empty_list
 exception Unknown_type_of_var
 exception Unknown_type_of_vdecl
+exception Unknown_type_of_param
 exception Type_mismatch of string
 exception Invalid_operation
 exception Not_implemented
+
+(*------------------------------------------------------------*)
+(*---------------------Type inference-------------------------*)
+(*------------------------------------------------------------*)
+let rec infer_type expression env =
+  let f type1 type2 =
+    match type1 with
+      | Some(t) -> (if t = type2 then Some(t)
+                    else raise (Type_mismatch "wrong types"))
+      | None -> Some(type2) in
+  let match_type expression_list =
+    let a = List.fold_left f None expression_list in
+      match a with
+        | Some(t) -> t
+        | None -> raise Empty_list in
+  match expression with
+    | String_Literal(_) -> String
+    | Array_Literal(expr_list) ->
+       let f expression = infer_type expression env in
+       Array(match_type (List.map f expr_list),(List.length expr_list))
+    | _ -> raise (Not_implemented)
 
 
 let generate_id id env = 
@@ -71,37 +93,53 @@ let rec generate_variable_type variable_type env =
   match variable_type with
     | String -> Environment.combine env [Verbatim("char *")]
     | Integer -> Environment.combine env [Verbatim("int")]
-    | Array(t,n) -> Environment.combine env [Verbatim("")]
-    | _ -> raise Unknown_type_of_var
+    | Array(t,n) -> 
+      match t with
+        | Array(t1,n1) -> generate_variable_type t1 env
+        | String | Integer -> Environment.combine env [Generator(generate_variable_type t)]
+        | _ -> raise Unknown_type_of_var
+
+let rec get_array_dimensions vtype dimensions = 
+  match vtype with
+  | Array(t,n) -> 
+      get_array_dimensions t (List.rev(n::dimensions))
+  | String | Integer -> dimensions
+  | _ -> raise Unknown_type_of_var
 
 let generate_param d env =
   match d.v_type with 
   | Array(t,n) ->
-  Environment.combine env [
-    Generator(generate_variable_type t);
-      Verbatim(" ");
-      Generator(generate_id d.name);
-      Verbatim("[");
-      Verbatim(string_of_int n);
-      Verbatim("]")
-  ]
+      let array_dimensions= (get_array_dimensions t [n]) in
+      Environment.combine env [
+          Generator(generate_variable_type t);
+          Verbatim(" ");
+          Generator(generate_id d.name);
+          (* Get the array dimensions *)
+          Verbatim("[");
+          Verbatim(String.concat "][" (List.map string_of_int array_dimensions));
+          Verbatim("]")
+      ]
   | String | Integer ->
-  Environment.combine env [
-    Generator(generate_variable_type d.v_type);
-    Verbatim(" ");
-    Generator(generate_id d.name)
-  ]
+      Environment.combine env [
+        Generator(generate_variable_type d.v_type);
+        Verbatim(" ");
+        Generator(generate_id d.name)
+      ]
+
+  | _ -> raise Unknown_type_of_param
 
 let generate_vdecl d env = 
   match d.v_type with 
   | Array(t,n) -> 
+    let array_dimensions= (get_array_dimensions t [n]) in
     Environment.combine env [
       Generator(generate_variable_type t);
       Verbatim(" ");
       Generator(generate_id d.name);
       Verbatim("[");
-      Verbatim(string_of_int n);
-      Verbatim("]")
+      Verbatim(String.concat "][" (List.map string_of_int array_dimensions));
+      Verbatim("]");
+      Verbatim(";\n")
     ]
   | String| Integer -> 
     Environment.combine env [
@@ -112,26 +150,6 @@ let generate_vdecl d env =
     ]
   | _ -> raise Unknown_type_of_vdecl
 
-(*------------------------------------------------------------*)
-(*---------------------Type inference-------------------------*)
-(*------------------------------------------------------------*)
-let rec infer_type expression env =
-  let f type1 type2 =
-    match type1 with
-      | Some(t) -> (if t = type2 then Some(t)
-                    else raise (Type_mismatch "wrong types"))
-      | None -> Some(type2) in
-  let match_type expression_list =
-    let a = List.fold_left f None expression_list in
-      match a with
-        | Some(t) -> t
-        | None -> raise Empty_list in
-  match expression with
-    | String_Literal(_) -> String
-    | Array_Literal(expr_list) ->
-       let f expression = infer_type expression env in
-       Array(match_type (List.map f expr_list),(List.length expr_list))
-    | _ -> raise (Not_implemented)
 
 
 
