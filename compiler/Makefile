@@ -40,7 +40,7 @@ parser.cmi: ast.cmo
 
 
 .PHONY:test
-test: generator
+test:
 	dos2unix ../test.sh
 	../test.sh
 
