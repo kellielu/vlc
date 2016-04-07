@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 (set -o igncr) 2>/dev/null && set -o igncr; # this comment is required
 
 # Regression testing script for VLC
