@@ -71,9 +71,7 @@ let rec generate_variable_type variable_type env =
   match variable_type with
     | String -> Environment.combine env [Verbatim("char *")]
     | Integer -> Environment.combine env [Verbatim("int")]
-    | Array(t, n) -> Environment.combine env [
-        Verbatim("hi");
-        ]
+    | Array(t,n) -> Environment.combine env [Verbatim("")]
     | _ -> raise Unknown_type_of_var
 
 let generate_param d env =
@@ -274,11 +272,11 @@ let generate_program program =
   let program, env = 
   Environment.combine env [
     Verbatim("#include <stdio.h>\n#include <stdlib.h>\n\
-__global__ void vecAdd(double *a, double *b, double *c, int n)\
+__global__ void vecAdd(float *a, float *b, float *c, int n)\
 \t{\n\
 \tint id = blockIdx.x*blockDim.x+threadIdx.x;\n\
 if (id < n)\n\
-c[id] = a[id] + b[id];\n\
+{c[id] = a[id] + b[id];\n}\
 }\n\n");
     Generator(generate_vdecl_list v_list);
     Generator(generate_fdecl_list f_list);
