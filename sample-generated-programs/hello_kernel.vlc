@@ -1,10 +1,10 @@
-int defg vecAdd(a,b):
-	return a + b
+int defg vecScaleAdd(int x, int y):
+	return scale * (x + y)
 
 int vlc():
-	int[5] vector_a = {1,2,3,4,5}
-	int[5] vector_b= {1,2,3,4,5}
-	int[5] vector_c = map(vecAdd, a, b)
-	print vector_c
+	int[5] a = {1,2,3,4,5}
+	int[5] b= {1,2,3,4,5}
+	int[5] c = map(vecScaleAdd,consts(scale = 4), a, b)
+	print c
 	
 	return 0

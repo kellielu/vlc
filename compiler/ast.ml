@@ -1,4 +1,4 @@
-(* Function Declaration *)
+(* Host AST types *)
 
 type identifier = 
     Identifier of string
@@ -35,9 +35,13 @@ type fdecl = {
     body        : statement list;
 }
 
-type program = vdecl list * fdecl list
+(* Kernel AST types *)
 
-type kernel_variable_type = 
-    | Kernel_String
-    | Kernel_Integer
-    | Kernel_Array of kernel_variable_type * int
+type kernel_fdecl = {
+    kernel_r_type      : variable_type;
+    kernel_name        : identifier;
+    kernel_params      : vdecl list;
+    kernel_body        : statement list;
+}
+(* Program Definition *)
+type program = vdecl list * kernel_fdecl list * fdecl list

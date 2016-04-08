@@ -1,10 +1,12 @@
 open Ast
 open Environment
 open Utils
+open Semant
 
 exception Empty_expression_list
 exception Empty_parameter_list
 exception Empty_fdecl_list
+exception Empty_kernel_fdecl_list
 exception Empty_vdecl_list
 exception Empty_list
 exception Unknown_type_of_var
@@ -13,6 +15,7 @@ exception Unknown_type_of_param
 exception Type_mismatch of string
 exception Invalid_operation
 exception Not_implemented
+
 
 (*------------------------------------------------------------*)
 (*---------------------Type inference-------------------------*)
@@ -42,6 +45,7 @@ let generate_id id env =
     | "print" -> Environment.combine env [Verbatim("printf")]
     | _ as identifier -> Environment.combine env [Verbatim(identifier)]
 
+(* ------------------------------------------------------------HOST CODE GENERATION ------------------------------------------------------------*)
 
 (*------------------------------------------------------------*)
 (*---------------------Expressions----------------------------*)
@@ -277,15 +281,44 @@ and generate_vdecl_list vdecl_list env =
     | [] -> Environment.combine env [Verbatim("")]
     | decl :: tail -> Environment.combine env [Generator(generate_nonempty_vdecl_list vdecl_list)]
 
+(*------------------------------------------------------------ KERNEL CODE GENERATION ------------------------------------------------------------*)
 
+let generate_kernel_fdecl kernel_f env =
+  Environment.combine env [
+    Generator(generate_variable_type kernel_f.kernel_r_type);
+    Verbatim(" ");
+    Generator(generate_id kernel_f.kernel_name);
+    Verbatim("(");
+    Generator(generate_parameter_list kernel_f.kernel_params);
+    Verbatim("){\n");
+    Generator(generate_statement_list kernel_f.kernel_body);
+    Verbatim("}\n");
+  ]
+
+
+let rec generate_nonempty_kernel_fdecl_list kernel_fdecl_list env =
+  match kernel_fdecl_list with
+    | kernel_fdecl :: [] -> Environment.combine env [Generator(generate_kernel_fdecl kernel_fdecl)]
+    | kernel_fdecl :: tail ->
+      Environment.combine env [
+        Generator(generate_kernel_fdecl kernel_fdecl);
+        Verbatim("\n\n");
+        Generator(generate_nonempty_kernel_fdecl_list tail)
+      ]
+    | [] -> raise (Empty_kernel_fdecl_list)
+and generate_kernel_fdecl_list kernel_fdecl_list env =
+  match kernel_fdecl_list with
+    | [] -> Environment.combine env [Verbatim("")]
+    | decl :: tail -> Environment.combine env [Generator(generate_nonempty_kernel_fdecl_list kernel_fdecl_list)]
 
 
 (*--------------------------------------------------------*)
 (*---------------------program----------------------------*)
 (*--------------------------------------------------------*)
 let generate_program program =
-  let v_list = fst(program) in 
-  let f_list = snd(program) in
+  let v_list = Utils.triple_fst(program) in 
+  let kernel_f_list = Utils.triple_snd(program) in
+  let f_list = Utils.triple_trd(program) in 
   let env = Environment.create in
   let program, env = 
   Environment.combine env [
@@ -297,6 +330,7 @@ if (id < n)\n\
 {c[id] = a[id] + b[id];\n}\
 }\n\n");
     Generator(generate_vdecl_list v_list);
+    Generator(generate_kernel_fdecl_list kernel_f_list);
     Generator(generate_fdecl_list f_list);
     Verbatim("\nint main(void) { return vlc(); }")
   ]

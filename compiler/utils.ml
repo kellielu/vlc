@@ -1,17 +1,25 @@
 open Ast
 open Parser
+open Semant
 
 (* let type_to_string = function
 	| String -> "string"
 	| Integer -> "int" *)
 
+(*------------------------------------------------------------General Helper Functions------------------------------------------------------------*)
 
+let triple_fst (a,_,_) = a
+let triple_snd (_,a,_) = a
+let triple_trd (_,_,a) = a
+
+
+(*------------------------------------------------------------Parser Debugging Functions------------------------------------------------------------*)
 let token_to_string = function
     TERMINATOR -> "TERMINATOR" | INDENT -> "INDENT"
   | DEDENT -> "DEDENT" | LPAREN -> "LPAREN"
   | RPAREN -> "RPAREN" | COLON -> "COLON"
   | COMMA -> "COMMA" 
-  | DEF -> "DEF"
+  | DEF -> "DEF" | DEFG -> "DEFG"
   | ASSIGNMENT -> "ASSIGNMENT" 
   | EOF -> "EOF" 
   | IDENTIFIER(s) -> "IDENTIFIER(" ^ s ^ ")"
@@ -32,6 +40,7 @@ let token_to_string = function
  	in 
  	helper token_list ""
 
+(*------------------------------------------------------------Code Generation Helper Functions and Program Printing Functions------------------------------------------------------------*)
 
 let idtos = function
   | Identifier(s) -> s
@@ -57,7 +66,15 @@ let statement_to_string = function
 	| Assignment(id,e) -> (idtos id) ^ "=" ^ (expression_to_string e) ^ "\n"
 	| Initialization(vdecl,e) -> (vdecl_to_string vdecl) ^ "=" ^ (expression_to_string e) ^ "\n"
 
-let fdecl_to_string fdecl = (variable_type_to_string fdecl.r_type) ^ " def " ^ (idtos fdecl.name) ^ "(" ^(String.concat "," (List.map vdecl_to_string fdecl.params)) ^ "):\n" ^ (String.concat "" (List.map statement_to_string fdecl.body)) ^ "\n"
+let fdecl_to_string fdecl = (variable_type_to_string fdecl.r_type) ^ " def " ^ (idtos fdecl.name) ^ "(" ^(String.concat "," (List.map vdecl_to_string fdecl.params)) ^ "):\n\t" ^ (String.concat "\t" (List.map statement_to_string fdecl.body)) ^ "\n"
+
+let kernel_fdecl_to_string kernel_fdecl = (variable_type_to_string kernel_fdecl.kernel_r_type) ^ " defg " ^ (idtos kernel_fdecl.kernel_name) ^ "(" ^(String.concat "," (List.map vdecl_to_string kernel_fdecl.kernel_params)) ^ "):\n\t" ^ (String.concat "\t" (List.map statement_to_string kernel_fdecl.kernel_body)) ^ "\n"
 
 let program_to_string program = 
-	(String.concat "\n" (List.map vdecl_to_string (fst(program)))) ^ "\n" ^(String.concat "\n" (List.map fdecl_to_string (snd(program))))
+	(String.concat "\n" (List.map vdecl_to_string (triple_fst(program)))) ^ "\n" ^
+  (String.concat "\n" (List.map kernel_fdecl_to_string (triple_snd(program)))) ^"\n" ^
+  (String.concat "\n" (List.map fdecl_to_string (triple_trd(program))))
+
+
+(* Sast helper functions *)
+let sast_to_string sast = program_to_string sast
