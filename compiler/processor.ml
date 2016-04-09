@@ -32,11 +32,18 @@ let rec get_tokens_with_dedents original_token_list new_token_list=
   else
     new_token_list
 
+(* Removes opening TERMINATOR if it is there*)
+let filter_opening_whitespace token_list = 
+    match token_list with
+    | [] -> []
+    | hd::tail -> if (hd = TERMINATOR) then tail else token_list
+
 (* Function that uses above two functions *)
 let get_token_list lexbuf = 
   let original_token_list = get_tokens lexbuf in 
-  let new_token_list = get_tokens_with_dedents original_token_list []
-in new_token_list
+  let new_token_list = get_tokens_with_dedents original_token_list [] in
+  let filtered_token_list = filter_opening_whitespace new_token_list
+in filtered_token_list
 
 (* Parse function *)
 let parser token_list = 

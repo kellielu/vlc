@@ -64,6 +64,11 @@ hht: vlc
 hhc: vlc
 	./vlc -c ../sample-generated-programs/hello_host.vlc | tee ../output/generated.cu
 
+# Make for tests
+.PHONY: tfd
+tfd: vlc
+	./vlc -c ../tests/test-function_decl.vlc	
+
 # Make for hello_kernel
 .PHONY:hka
 hka: vlc

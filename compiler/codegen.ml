@@ -255,7 +255,6 @@ let rec generate_nonempty_vdecl_list vdecl_list env =
     | vdecl :: tail ->
       Environment.combine env [
         Generator(generate_vdecl vdecl);
-        Verbatim(", ");
         Generator(generate_nonempty_vdecl_list tail)
       ]
     | [] -> raise (Empty_vdecl_list)

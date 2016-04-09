@@ -1,8 +1,32 @@
-int def add_two():
-	return 1 + 2
 
+
+								
+
+int hello
+				
+int hi
+					
+
+int def add_two(int a, int b):
+	return a + b
+
+
+int def add_three(int a, int b, int c):
+
+					
+
+	return a + b + c
+
+				
 
 int def vlc():
+
+	hello = 4
+
+	hi = 5
+
+
+
 	int a = 5
 	int b = 6
 

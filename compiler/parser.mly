@@ -39,9 +39,9 @@
 
 program:
     |  /* nothing */                                { [], [], [] }
-    | program vdecl TERMINATOR                      { ($2 :: triple_fst $1), triple_snd $1, triple_trd $1  }
-    | program kernel_fdecl                          { triple_fst $1, ($2 :: triple_snd $1),  triple_trd $1 }
-    | program fdecl                                 { triple_fst $1, triple_snd $1, ($2 :: triple_trd $1)  }
+    | program vdecl TERMINATOR                      { List.rev ($2 :: List.rev (triple_fst $1)), triple_snd $1, triple_trd $1  }
+    | program kernel_fdecl                          { triple_fst $1, List.rev ($2 :: List.rev (triple_snd $1)),  triple_trd $1 }
+    | program fdecl                                 { triple_fst $1, triple_snd $1, List.rev($2 :: List.rev(triple_trd $1))  }
 
 identifier:
     | IDENTIFIER                                    { Identifier($1)}
