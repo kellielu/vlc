@@ -22,6 +22,11 @@ rule token = parse
 	| ')' { RPAREN }
 	| ':' { COLON }
 	| '=' { ASSIGNMENT }
+	| '[' { LBRACKET }
+	| ']' { RBRACKET }
+	| '{' { LCURLY }
+	| '}' { RCURLY }
+	| ',' { COMMA }	
 
 	(*Arithmetic Operators*)
 	| '+' { ADD }
@@ -29,10 +34,11 @@ rule token = parse
 	| '*' { MULTIPLY }
 	| '/' { DIVIDE }
 	| '%' { MODULO }
-
+	
 	| ("string" | "int") as input { DATATYPE(input) }
 	| "return" { RETURN }
 	| "def"	   { DEF }
+	| "defg"   { DEFG }
 	| (letter | '_')(letter | digit | '_')* as id { IDENTIFIER(id) }
 	| '"' (([' '-'!' '#'-'&' '('-'[' ']'-'~'] | '\\' [ '\\' '"' 'n' 'r' 't' '''])* as stringliteral) '"' { STRING_LITERAL(stringliteral) }
 	| digit* as integerliteral { INTEGER_LITERAL(int_of_string integerliteral) }

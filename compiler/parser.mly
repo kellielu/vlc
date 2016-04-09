@@ -1,17 +1,23 @@
-%{ open Ast
+%{ open Ast;;
 
     exception LexErr of string
     exception ParseErr of string
+    exception ArrayErr
+    
     exception Invalid_type of string
     let string_to_variable_type = function
 	| "string" -> String
 	| "int" -> Integer
 	| dtype -> raise (Invalid_type dtype)
+
+    let triple_fst (a,_,_) = a
+    let triple_snd (_,a,_) = a
+    let triple_trd (_,_,a) = a
+
 %}
 
-%token LPAREN RPAREN INDENT DEDENT COLON TERMINATOR EOF COMMA
-
-%token DEF RETURN
+%token LPAREN RPAREN LBRACKET RBRACKET LCURLY RCURLY INDENT DEDENT COLON TERMINATOR EOF COMMA
+%token DEF DEFG RETURN
 %token <int> DEDENT_EOF, DEDENT_COUNT
 
 %token ADD SUBTRACT MULTIPLY DIVIDE MODULO
@@ -32,17 +38,31 @@
 %%
 
 program:
-    |  /* nothing */                                { [], [] }
-    | program vdecl TERMINATOR                      { ($2 :: fst $1), snd $1 }
-    | program fdecl                                 { fst $1, ($2 :: snd $1) }
+<<<<<<< HEAD
+    |  /* nothing */                                { [], [], [] }
+    | program vdecl TERMINATOR                      { ($2 :: triple_fst $1), triple_snd $1, triple_trd $1  }
+    | program kernel_fdecl                          { triple_fst $1, ($2 :: triple_snd $1),  triple_trd $1 }
+    | program fdecl                                 { triple_fst $1, triple_snd $1, ($2 :: triple_trd $1)  }
+
+identifier:
+    | IDENTIFIER                                    { Identifier($1)}
 
 fdecl:
-    | variable_type DEF IDENTIFIER LPAREN parameter_list RPAREN COLON INDENT function_body DEDENT
+    | variable_type DEF identifier LPAREN parameter_list RPAREN COLON INDENT function_body DEDENT
                                                     {{ 
                                                         r_type = $1;
                                                         name = $3;
                                                         params = $5;
                                                         body = $9;
+                                                    }}
+
+kernel_fdecl:
+    | variable_type DEFG identifier LPAREN parameter_list RPAREN COLON INDENT function_body DEDENT
+                                                    {{
+                                                        kernel_r_type = $1;
+                                                        kernel_name = $3;
+                                                        kernel_params = $5;
+                                                        kernel_body = $9;
                                                     }}
 
 parameter_list:
@@ -54,7 +74,7 @@ nonempty_parameter_list:
     | vdecl                                         { [$1] }
 
 vdecl:
-    | variable_type IDENTIFIER                      {{ 
+    | variable_type identifier                      {{ 
                                                         v_type = $1;
                                                         name = $2;
                                                     }}
@@ -67,9 +87,9 @@ statement:
     | expression TERMINATOR                         { Expression($1) }
     | vdecl TERMINATOR                              { Declaration($1) }  
     | RETURN expression TERMINATOR                  { Return($2) }
-    | IDENTIFIER ASSIGNMENT expression TERMINATOR   { Assignment( $1, $3 ) }
+    | identifier ASSIGNMENT expression TERMINATOR   { Assignment( $1, $3 ) }
     | vdecl ASSIGNMENT expression TERMINATOR        { Initialization ($1, $3) }
-    
+
 expression_list:
     | /* nothing */                                 { [] }   
     | nonempty_expression_list                      { $1 }
@@ -79,10 +99,11 @@ nonempty_expression_list:
     | expression                                    { [$1] }
 
 expression:
-	| IDENTIFIER LPAREN expression_list RPAREN      { Function_Call($1,$3) }
-	| STRING_LITERAL        					    { String_Literal($1) }
-	| INTEGER_LITERAL							    { Integer_Literal($1) }
-	| IDENTIFIER                                    { Identifier($1) }
+    | identifier LPAREN expression_list RPAREN      { Function_Call($1,$3) }
+    | STRING_LITERAL                                { String_Literal($1) }
+    | INTEGER_LITERAL                               { Integer_Literal($1) }
+    | identifier                                    { Identifier_Expression($1) }
+    | LCURLY expression_list RCURLY                 { Array_Literal($2)}
     | expression ADD expression                     { Binop($1, Add, $3) }
     | expression SUBTRACT expression                { Binop($1, Subtract, $3) }
     | expression MULTIPLY expression                { Binop($1, Multiply, $3) }
@@ -91,3 +112,19 @@ expression:
 
 variable_type:
     | DATATYPE                                      { string_to_variable_type $1 }
+    | variable_type array_dimension_list                            
+        { 
+            let rec create_multidimensional_array vtype dim_list= 
+                match dim_list with
+                    | [] -> raise ArrayErr
+                    | head::[] -> Array(vtype,head)
+                    | head::tail -> Array((create_multidimensional_array vtype tail),head)
+            in create_multidimensional_array $1 $2
+             
+        }
+
+array_dimension_list:
+    | LBRACKET INTEGER_LITERAL RBRACKET                              { [$2]}
+    | LBRACKET INTEGER_LITERAL RBRACKET  array_dimension_list        {  $2 :: $4 }
+
+    

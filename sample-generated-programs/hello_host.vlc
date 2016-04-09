@@ -1,7 +1,10 @@
 string helloworld
 
+int defg vecScaleAdd(int x, int y):
+	return x
+
 int def vlc():
 
-	helloworld = "Hello world!"
+	helloworld = "Hello world!\n"
 	print(helloworld)
 	return 0
