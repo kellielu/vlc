@@ -39,6 +39,7 @@ rule token = parse
 	| eof { get_eof() }
 
 and indent = parse
+	| newline whitespace* newline { token lexbuf }
 	| whitespace* newline       { indent lexbuf }
 	| whitespace* eof 			{ get_eof() }
 	| whitespace* as indentation

@@ -1,11 +1,10 @@
-int def add_two(int a, int b):
-	return a + b 
+int def add_two():
+	return 1 + 2 
 
 
 int def vlc():
 	int a = 5
 	int b = 6
-	int c = add_two(a, b)
 
 	print("success")
 	return 0
