@@ -1,14 +1,6 @@
 string helloworld
 
 int def vlc():
-	int a = 2
-	int b = 4
-
-	int c = a + b
-	int d = b - a
-	int e = a * b
-	int f = b / a
-	int g = b % a
 
 	helloworld = "Hello world!"
 	print(helloworld)
