@@ -29,6 +29,7 @@ rule token = parse
 	| ("string" | "int") as input { DATATYPE(input) }
 	| "return" { RETURN }
 	| "def"	   { DEF }
+	| "defg"   { DEFG }
 	| (letter | '_')(letter | digit | '_')* as id { IDENTIFIER(id) }
 	| '"' (([' '-'!' '#'-'&' '('-'[' ']'-'~'] | '\\' [ '\\' '"' 'n' 'r' 't' '''])* as stringliteral) '"' { STRING_LITERAL(stringliteral) }
 	| digit* as integerliteral { INTEGER_LITERAL(int_of_string integerliteral) }

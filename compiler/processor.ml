@@ -14,14 +14,15 @@ let get_tokens lexbuf =
 (* Replaces DEDENT_COUNT with DEDENTS *)
 let rec get_tokens_with_dedents original_token_list new_token_list= 
   let rec fill_dedent count mylist = 
-    if count <= 0 then mylist 
+    if count <= 0 then mylist
     else 
       fill_dedent (count-1) (List.rev(DEDENT::List.rev(mylist)))
   in
   if (List.length(original_token_list)) != 0 then
     match (List.hd original_token_list) with
       | DEDENT_COUNT(c) -> 
-        let temp = fill_dedent c new_token_list in
+        let temp1 = (List.rev (TERMINATOR::(List.rev new_token_list))) in
+        let temp = fill_dedent c temp1 in
         get_tokens_with_dedents (List.tl original_token_list) temp
       | DEDENT_EOF(c) ->
         let temp1 = (List.rev (TERMINATOR::(List.rev new_token_list))) in
