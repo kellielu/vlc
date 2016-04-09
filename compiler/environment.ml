@@ -1,4 +1,3 @@
-
 open Ast
 
 module Variable_Map = Map.Make(struct type t = identifier let compare = compare end);;
