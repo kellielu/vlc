@@ -38,7 +38,6 @@
 %%
 
 program:
-<<<<<<< HEAD
     |  /* nothing */                                { [], [], [] }
     | program vdecl TERMINATOR                      { ($2 :: triple_fst $1), triple_snd $1, triple_trd $1  }
     | program kernel_fdecl                          { triple_fst $1, ($2 :: triple_snd $1),  triple_trd $1 }

@@ -176,7 +176,6 @@ and generate_parameter_list param_list env =
 (*-----------------------------------------------------------*)
 (*---------------------Statements----------------------------*)
 (*-----------------------------------------------------------*)
->>>>>>> 71765fae45a2f11bf5d49968879fb33d4cc1c54b
 let rec generate_statement statement env =
   match statement with
     | Declaration(d) -> Environment.combine env [
