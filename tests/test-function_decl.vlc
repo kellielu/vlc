@@ -1,5 +1,5 @@
 int def add_two():
-	return 1 + 2 
+	return 1 + 2
 
 
 int def vlc():
