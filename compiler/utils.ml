@@ -60,7 +60,8 @@ let rec expression_to_string = function
 	| Integer_Literal(i) -> string_of_int i
   | Array_Literal(e_list) -> "{" ^ String.concat "," (List.map expression_to_string e_list) ^ "}"
 	| Function_Call(id, e_list) -> (idtos id) ^ "(" ^ (String.concat "," (List.map expression_to_string e_list)) ^ ")" 
-	| Identifier_Expression(id) -> (idtos id)
+	| Identifier_Expression(id) -> (idtos id) 
+        | Array_Literal(s) -> "{" ^ (String.concat "," (List.map expression_to_string s)) ^ "}" 
 
 let rec variable_type_to_string = function
 	| String -> "string"

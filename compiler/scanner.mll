@@ -43,10 +43,10 @@ rule token = parse
 	| '"' (([' '-'!' '#'-'&' '('-'[' ']'-'~'] | '\\' [ '\\' '"' 'n' 'r' 't' '''])* as stringliteral) '"' { STRING_LITERAL(stringliteral) }
 	| digit* as integerliteral { INTEGER_LITERAL(int_of_string integerliteral) }
 	| eof { get_eof() }
+	| newline whitespace* newline       { token lexbuf }
 
 and indent = parse
-	| whitespace* newline       { indent lexbuf }
-	| whitespace* eof 			{ get_eof() }
+	| whitespace* eof 		    { get_eof() }
 	| whitespace* as indentation
 		{
 	        let indent_length = (String.length indentation) in
