@@ -39,14 +39,17 @@ rule token = parse
 	| "return" { RETURN }
 	| "def"	   { DEF }
 	| "defg"   { DEFG }
+	| "map"	   { MAP }
+	| "reduce" { REDUCE }
+	| "consts" { CONSTS }
 	| (letter | '_')(letter | digit | '_')* as id { IDENTIFIER(id) }
 	| '"' (([' '-'!' '#'-'&' '('-'[' ']'-'~'] | '\\' [ '\\' '"' 'n' 'r' 't' '''])* as stringliteral) '"' { STRING_LITERAL(stringliteral) }
 	| digit* as integerliteral { INTEGER_LITERAL(int_of_string integerliteral) }
 	| eof { get_eof() }
-	| newline whitespace* newline       { token lexbuf }
 
 and indent = parse
-	| whitespace* eof 		    { get_eof() }
+	| whitespace* newline       { indent lexbuf }
+	| whitespace* eof 			{ get_eof() }
 	| whitespace* as indentation
 		{
 	        let indent_length = (String.length indentation) in

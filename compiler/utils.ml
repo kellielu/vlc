@@ -32,6 +32,7 @@ let token_to_string = function
   | DATATYPE(a) -> "DATATYPE(" ^ a ^ ")"
   | DEDENT_EOF(i) -> "DEDENT_EOF(" ^ string_of_int i ^ ")"
   | LCURLY -> "LCURLY" | RCURLY -> "RCURLY" | LBRACKET -> "LBRACKET" | RBRACKET -> "RBRACKET"
+  | MAP -> "MAP" | REDUCE -> "REDUCE" | CONSTS -> "CONSTS"
 
 let token_list_to_string token_list = 
  	let rec helper token_list acc_string = 
@@ -54,19 +55,28 @@ let operator_to_string = function
   | Divide -> "/"
   | Modulo -> "%"
 
+let rec variable_type_to_string = function
+  | String -> "string"
+  | Integer -> "int"
+  | Array(vtype,size) -> (variable_type_to_string vtype) ^ "[" ^ (string_of_int size) ^ "]" 
+
+
 let rec expression_to_string = function
   | Binop(e1, o, e2) -> (expression_to_string e1) ^ (operator_to_string o) ^ (expression_to_string e2)
 	| String_Literal(s) -> "\"" ^ s ^ "\""
 	| Integer_Literal(i) -> string_of_int i
   | Array_Literal(e_list) -> "{" ^ String.concat "," (List.map expression_to_string e_list) ^ "}"
 	| Function_Call(id, e_list) -> (idtos id) ^ "(" ^ (String.concat "," (List.map expression_to_string e_list)) ^ ")" 
-	| Identifier_Expression(id) -> (idtos id) 
-        | Array_Literal(s) -> "{" ^ (String.concat "," (List.map expression_to_string s)) ^ "}" 
+	| Identifier_Expression(id) -> (idtos id)
+  | Map_Call(mcall) -> map_call_to_string mcall
+  | Reduce_Call(rcall) -> reduce_call_to_string rcall
+and constant_to_string = function
+  | Constant(id,e) -> (idtos id) ^ "=" ^ (expression_to_string e)
+and map_call_to_string mcall = "map(" ^ idtos(mcall.map_function) ^ "," ^ "consts(" ^ (String.concat "," (List.map constant_to_string mcall.map_constants)) ^ ")," ^ (String.concat "," (List.map expression_to_string mcall.map_arrays)) ^ ")"
 
-let rec variable_type_to_string = function
-	| String -> "string"
-	| Integer -> "int"
-  | Array(vtype,size) -> (variable_type_to_string vtype) ^ "[" ^ (string_of_int size) ^ "]" 
+and reduce_call_to_string rcall = "reduce(" ^ idtos(rcall.reduce_function) ^ "," ^ "consts(" ^ (String.concat "," (List.map constant_to_string rcall.reduce_constants)) ^ ")," ^ (String.concat "," (List.map expression_to_string rcall.reduce_arrays)) ^ ")"
+
+
 
 let vdecl_to_string vdecl = (variable_type_to_string vdecl.v_type) ^ " " ^ (idtos vdecl.name)
 

@@ -22,6 +22,8 @@
 
 %token ADD SUBTRACT MULTIPLY DIVIDE MODULO
 
+%token MAP REDUCE CONSTS
+
 %token ASSIGNMENT 
 
 %token <int> INTEGER_LITERAL
@@ -64,6 +66,50 @@ kernel_fdecl:
                                                         kernel_body = $9;
                                                     }}
 
+
+/* Constant Parameters for Map */
+constant:
+    | identifier ASSIGNMENT expression                  {Constant($1,$3)}
+    
+constant_list:
+    |  /* nothing */                                    { [] }
+    | nonempty_constant_list                            { $1 }
+
+nonempty_constant_list:
+    | constant COMMA nonempty_constant_list             {$1 :: $3}
+    | constant                                          { [$1] }
+
+/* Reduce */
+reduce_call:
+    | REDUCE LPAREN identifier COMMA CONSTS LPAREN constant_list RPAREN COMMA nonempty_expression_list RPAREN
+        {{
+            reduce_function = $3;
+            reduce_constants = $7;
+            reduce_arrays = $10;
+        }}
+    | REDUCE LPAREN identifier COMMA nonempty_expression_list RPAREN
+        {{
+            reduce_function = $3;
+            reduce_constants = [];
+            reduce_arrays = $5;
+        }}
+
+/* Map */
+map_call:
+    | MAP LPAREN identifier COMMA CONSTS LPAREN constant_list RPAREN COMMA nonempty_expression_list RPAREN 
+                                                    {{
+                                                        map_function = $3;
+                                                        map_constants = $7;
+                                                        map_arrays = $10;
+                                                    }}
+    | MAP LPAREN identifier COMMA nonempty_expression_list RPAREN
+                                                    {{
+                                                        map_function = $3;
+                                                        map_constants = [];
+                                                        map_arrays = $5;
+                                                    }}
+
+/* Parameters for normal host functions and kernel functions */
 parameter_list:
     | /* nothing */                                 { [] }
     | nonempty_parameter_list                       { $1 }
@@ -108,6 +154,8 @@ expression:
     | expression MULTIPLY expression                { Binop($1, Multiply, $3) }
     | expression DIVIDE expression                  { Binop($1, Divide, $3) }
     | expression MODULO expression                  { Binop($1, Modulo, $3)}
+    | map_call                                      { Map_Call($1)}
+    | reduce_call                                   { Reduce_Call($1)}
 
 variable_type:
     | DATATYPE                                      { string_to_variable_type $1 }
