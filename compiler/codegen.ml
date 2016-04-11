@@ -16,6 +16,7 @@ exception Unknown_type_of_param
 exception Type_mismatch of string
 exception Invalid_operation
 exception Not_implemented
+exception Unknown_type
 
 
 (*------------------------------------------------------------*)
@@ -68,6 +69,14 @@ let generate_id id env =
 (*------------------------------------------------------------*)
 (*---------------------Expressions----------------------------*)
 (*------------------------------------------------------------*)
+let generate_operator operator env =
+  match operator with
+    | Add -> Environment.combine env [Verbatim("+")]
+    | Subtract -> Environment.combine env [Verbatim("-")]
+    | Multiply -> Environment.combine env [Verbatim("*")]
+    | Divide -> Environment.combine env [Verbatim("/")]
+    | Modulo -> Environment.combine env [Verbatim("%")]
+
 let rec generate_expression expression env =
   match expression with
     | Binop(e1, o, e2) -> 
@@ -93,7 +102,6 @@ let rec generate_expression expression env =
     | Identifier_Expression(id) -> Environment.combine env [ Generator(generate_id id)]
     | Map_Call(mcall) -> Environment.combine env [ Generator(generate_map_call mcall)]
     | Reduce_Call(rcall) -> Environment.combine env [Generator(generate_reduce_call rcall)]
-
 and generate_expression_list expression_list env =
   match expression_list with
     | [] -> Environment.combine env []
@@ -149,13 +157,13 @@ and generate_reduce_call rcall env=
         Verbatim(")")
       ]
 
-
 let rec get_array_dimensions vtype dimensions = 
   match vtype with
   | Array(t,n) -> 
       get_array_dimensions t (List.rev(n::dimensions))
   | String | Integer -> dimensions
   | _ -> raise Unknown_type_of_var
+
 
 let generate_param d env =
   match d.v_type with 
@@ -176,29 +184,32 @@ let generate_param d env =
         Verbatim(" ");
         Generator(generate_id d.name)
       ]
-
   | _ -> raise Unknown_type_of_param
 
 let generate_vdecl d env = 
   match d.v_type with 
   | Array(t,n) -> 
     let array_dimensions= (get_array_dimensions t [n]) in
-    Environment.combine env [
-      Generator(generate_variable_type t);
-      Verbatim(" ");
-      Generator(generate_id d.name);
-      Verbatim("[");
-      Verbatim(String.concat "][" (List.map string_of_int array_dimensions));
-      Verbatim("]");
-      Verbatim(";\n")
-    ]
+    Environment.update_scope d.name d.v_type (
+      Environment.combine env [
+        Generator(generate_variable_type t);
+        Verbatim(" ");
+        Generator(generate_id d.name);
+        Verbatim("[");
+        Verbatim(String.concat "][" (List.map string_of_int array_dimensions));
+        Verbatim("]");
+        Verbatim(";\n")
+      ]
+    )
   | String| Integer -> 
-    Environment.combine env [
-      Generator(generate_variable_type d.v_type);
-      Verbatim(" ");
-      Generator(generate_id d.name);
-      Verbatim(";\n");
-    ]
+    Environment.update_scope d.name d.v_type (
+      Environment.combine env [
+        Generator(generate_variable_type d.v_type);
+        Verbatim(" ");
+        Generator(generate_id d.name);
+        Verbatim(";\n");
+      ]
+    )
   | _ -> raise Unknown_type_of_vdecl
 
 (*-----------------------------------------------------------*)
@@ -220,6 +231,16 @@ and generate_parameter_list param_list env =
     | decl :: tail -> Environment.combine env [Generator(generate_nonempty_parameter_list param_list)]
 
 (*-----------------------------------------------------------*)
+(*------------------Parallel ops-----------------------------*)
+(*-----------------------------------------------------------*)
+(* let generate_copy_from_host id1 id2 id3 env ->
+
+let generate_copy_to_host id1 id2 id3 env ->
+
+let generate_parallel_binop id1 id2 op id3 env ->
+  
+ *)
+(*-----------------------------------------------------------*)
 (*---------------------Statements----------------------------*)
 (*-----------------------------------------------------------*)
 let rec generate_statement statement env =
@@ -233,12 +254,134 @@ let rec generate_statement statement env =
         Verbatim(";")
       ]
     | Assignment (id, e) ->
+     Environment.combine env [
+          Generator(generate_id id);
+          Verbatim(" = ");
+          Generator(generate_expression e);
+          Verbatim(";")
+        ]
+       (*  let datatype = (infer_type id env) in
+        (match datatype with
+	  | Array(vtype,size) -> Environment.combine env [
+	      let var_type = Environment.get_var_type id env in
+        Generator(generate_variable_type var_type)
+	      ]
+(* generate device initialization *) 
+(* allocate memory for device *)
+(* copy host arrays to device *)
+(* declare blocksize *)
+(* declare gridsize *)
+(* execute kernel *)
+(* copy array back to host *)
+(* release memory ? *)
+(* Will not be able to do A = B+C+D... *)
+(* "  
+
+  // CUDA initialization
+  cuInit(0);
+  cuDeviceGetCount(&devCount);
+  cuDeviceGet(&device, 0);
+
+  int devMajor, devMinor;
+  cuDeviceComputeCapability(&devMajor, &devMinor, device);
+  std::cout << \"Device Compute Capability: \"
+            << devMajor << \".\" << devMinor << \"\n\";
+  if (devMajor < 2) {
+    std::cerr << \"ERROR: Device 0 is not SM 2.0 or greater\n\";
+    return 1;
+  }
+
+  std::string str((std::istreambuf_iterator<char>(t)),
+                    std::istreambuf_iterator<char>());
+
+  // Create driver context
+  checkCudaErrors(cuCtxCreate(&context, 0, device));
+
+  // Create module for object
+  checkCudaErrors(cuModuleLoadDataEx(&cudaModule, str.c_str(), 0, 0, 0));
+
+  // Get kernel function
+  checkCudaErrors(cuModuleGetFunction(&function, cudaModule, \"kernel\"));
+
+  // Device data
+  CUdeviceptr devBufferA;
+  CUdeviceptr devBufferB;
+  CUdeviceptr devBufferC;
+
+  checkCudaErrors(cuMemAlloc(&devBufferA, sizeof(float)*16));
+  checkCudaErrors(cuMemAlloc(&devBufferB, sizeof(float)*16));
+  checkCudaErrors(cuMemAlloc(&devBufferC, sizeof(float)*16));
+
+  float* hostA = new float[16];
+  float* hostB = new float[16];
+  float* hostC = new float[16];
+
+  // Populate input
+  for (unsigned i = 0; i != 16; ++i) {
+    hostA[i] = (float)i;
+    hostB[i] = (float)(2*i);
+    hostC[i] = 0.0f;
+  }
+
+  checkCudaErrors(cuMemcpyHtoD(devBufferA, &hostA[0], sizeof(float)*16));
+  checkCudaErrors(cuMemcpyHtoD(devBufferB, &hostB[0], sizeof(float)*16));
+
+
+  unsigned blockSizeX = 16;
+  unsigned blockSizeY = 1;
+  unsigned blockSizeZ = 1;
+  unsigned gridSizeX  = 1;
+  unsigned gridSizeY  = 1;
+  unsigned gridSizeZ  = 1;
+
+  // Kernel parameters
+  void *KernelParams[] = { &devBufferA, &devBufferB, &devBufferC };
+
+  std::cout << \"Launching kernel\n\";
+
+  // Kernel launch
+  checkCudaErrors(cuLaunchKernel(function, gridSizeX, gridSizeY, gridSizeZ,
+                                 blockSizeX, blockSizeY, blockSizeZ,
+                                 0, NULL, KernelParams, NULL));
+
+  // Retrieve device data
+  checkCudaErrors(cuMemcpyDtoH(&hostC[0], devBufferC, sizeof(float)*16));
+
+
+  std::cout << \"Results:\n\";
+  for (unsigned i = 0; i != 16; ++i) {
+    std::cout << hostA[i] << " + " << hostB[i] << " = " << hostC[i] << \"\n\";
+  }
+
+
+  // Clean up after ourselves
+  delete [] hostA;
+  delete [] hostB;
+  delete [] hostC;
+
+  // Clean-up
+  checkCudaErrors(cuMemFree(devBufferA));
+  checkCudaErrors(cuMemFree(devBufferB));
+  checkCudaErrors(cuMemFree(devBufferC));
+  checkCudaErrors(cuModuleUnload(cudaModule));
+  checkCudaErrors(cuCtxDestroy(context));
+
+  return 0;
+"*) 
+          | Integer(i) -> Environment.combine env [
+              Generator(generate_id id);
+              Verbatim(" = ");
+              Generator(generate_expression e);
+	      Verbatim(";")
+            ]
+          | String(s) -> raise (Invalid_operation)
+        )
         Environment.combine env [
           Generator(generate_id id);
           Verbatim(" = ");
           Generator(generate_expression e);
-	  Verbatim(";")
-        ]
+	        Verbatim(";")
+        ]*)
     | Return(e) ->
       Environment.combine env [
         Verbatim("return ");
@@ -349,13 +492,36 @@ let generate_program program =
   let env = Environment.create in
   let program, env = 
   Environment.combine env [
-    Verbatim("#include <stdio.h>\n#include <stdlib.h>\n\
-__global__ void vecAdd(float *a, float *b, float *c, int n)\
-\t{\n\
-\tint id = blockIdx.x*blockDim.x+threadIdx.x;\n\
-if (id < n)\n\
-{c[id] = a[id] + b[id];\n}\
-}\n\n");
+    Verbatim("#include <stdio.h>\n\
+#include <stdlib.h>\n\
+#include \"cuda.h\"\n\
+#include <iostream>\n\
+char** add_kernel = [\".version 3.1\",
+\".target sm_20\",
+\".address_size 64\",
+\".visible .entry kernel(\",
+\"  .param .u64 kernel_param_0,\",
+\"  .param .u64 kernel_param_1,\",
+\"  .param .u64 kernel_param_2\",
+\")\",
+\"{\",
+\"  .reg .f32   %f<4>;\",
+\"  .reg .s32   %r<2>;\",
+\"  .reg .s64   %rl<8>;\",
+\"  ld.param.u64    %rl1, [kernel_param_0];\",
+\"  mov.u32         %r1, %tid.x;\",
+\"  mul.wide.s32    %rl2, %r1, 4;\",
+\"  add.s64         %rl3, %rl1, %rl2;\",
+\"  ld.param.u64    %rl4, [kernel_param_1];\",
+\"  add.s64         %rl5, %rl4, %rl2;\",
+\"  ld.param.u64    %rl6, [kernel_param_2];\",
+\"  add.s64         %rl7, %rl6, %rl2;\",
+\"  ld.global.f32   %f1, [%rl3];\",
+\"  ld.global.f32   %f2, [%rl5];\",
+\"  add.f32         %f3, %f1, %f2;\",
+\"  st.global.f32   [%rl7], %f3;\",
+\"  ret\",
+\"}\"]\n");
     Generator(generate_vdecl_list v_list);
     Generator(generate_kernel_fdecl_list kernel_f_list);
     Generator(generate_fdecl_list f_list);
