@@ -22,7 +22,7 @@
 
 %token ADD SUBTRACT MULTIPLY DIVIDE MODULO
 
-%token MAP REDUCE CONSTS
+%token CONSTS
 
 %token ASSIGNMENT 
 
@@ -79,35 +79,23 @@ nonempty_constant_list:
     | constant COMMA nonempty_constant_list             {$1 :: $3}
     | constant                                          { [$1] }
 
-/* Reduce */
-reduce_call:
-    | REDUCE LPAREN identifier COMMA CONSTS LPAREN constant_list RPAREN COMMA nonempty_expression_list RPAREN
+/* Map and Reduce Higher Order Calls*/
+higher_order_function_call:
+    | identifier LPAREN identifier COMMA CONSTS LPAREN constant_list RPAREN COMMA nonempty_expression_list RPAREN
         {{
-            reduce_function = $3;
-            reduce_constants = $7;
-            reduce_arrays = $10;
+            function_type = $1;
+            kernel_function_name = $3;
+            constants = $7;
+            arrays = $10;
         }}
-    | REDUCE LPAREN identifier COMMA nonempty_expression_list RPAREN
+    | identifier LPAREN identifier COMMA nonempty_expression_list RPAREN
         {{
-            reduce_function = $3;
-            reduce_constants = [];
-            reduce_arrays = $5;
+            function_type = $1;
+            kernel_function_name = $3;
+            constants = [];
+            arrays = $5;
         }}
 
-/* Map */
-map_call:
-    | MAP LPAREN identifier COMMA CONSTS LPAREN constant_list RPAREN COMMA nonempty_expression_list RPAREN 
-                                                    {{
-                                                        map_function = $3;
-                                                        map_constants = $7;
-                                                        map_arrays = $10;
-                                                    }}
-    | MAP LPAREN identifier COMMA nonempty_expression_list RPAREN
-                                                    {{
-                                                        map_function = $3;
-                                                        map_constants = [];
-                                                        map_arrays = $5;
-                                                    }}
 
 /* Parameters for normal host functions and kernel functions */
 parameter_list:
@@ -154,8 +142,7 @@ expression:
     | expression MULTIPLY expression                { Binop($1, Multiply, $3) }
     | expression DIVIDE expression                  { Binop($1, Divide, $3) }
     | expression MODULO expression                  { Binop($1, Modulo, $3)}
-    | map_call                                      { Map_Call($1)}
-    | reduce_call                                   { Reduce_Call($1)}
+    | higher_order_function_call                    { Higher_Order_Function_Call($1)}
 
 variable_type:
     | DATATYPE                                      { string_to_variable_type $1 }

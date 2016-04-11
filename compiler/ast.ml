@@ -22,19 +22,14 @@ type expression =
     | Array_Literal of expression list 
 	| Function_Call of identifier * expression list
 	| Identifier_Expression of identifier
-    | Map_Call of map_call
-    | Reduce_Call of reduce_call
+    | Higher_Order_Function_Call of higher_order_function_call
 and constant = 
     | Constant of identifier * expression
-and map_call = {
-    map_function            : identifier;
-    map_constants           : constant list;
-    map_arrays              : expression list; (* Check in semantic analyzer that type is array*)
-}
-and reduce_call = {
-    reduce_function         : identifier;
-    reduce_constants        : constant list;
-    reduce_arrays           : expression list; (* Check in semantic analyzer that type is array*)
+and higher_order_function_call = {
+    function_type           : identifier;
+    kernel_function_name    : identifier;
+    constants               : constant list;
+    arrays                  : expression list; (* Check in semantic analyzer that type is array*)
 }
 
 type statement = 

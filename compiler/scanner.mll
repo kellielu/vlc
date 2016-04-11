@@ -39,8 +39,6 @@ rule token = parse
 	| "return" { RETURN }
 	| "def"	   { DEF }
 	| "defg"   { DEFG }
-	| "map"	   { MAP }
-	| "reduce" { REDUCE }
 	| "consts" { CONSTS }
 	| (letter | '_')(letter | digit | '_')* as id { IDENTIFIER(id) }
 	| '"' (([' '-'!' '#'-'&' '('-'[' ']'-'~'] | '\\' [ '\\' '"' 'n' 'r' 't' '''])* as stringliteral) '"' { STRING_LITERAL(stringliteral) }

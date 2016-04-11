@@ -32,7 +32,7 @@ let token_to_string = function
   | DATATYPE(a) -> "DATATYPE(" ^ a ^ ")"
   | DEDENT_EOF(i) -> "DEDENT_EOF(" ^ string_of_int i ^ ")"
   | LCURLY -> "LCURLY" | RCURLY -> "RCURLY" | LBRACKET -> "LBRACKET" | RBRACKET -> "RBRACKET"
-  | MAP -> "MAP" | REDUCE -> "REDUCE" | CONSTS -> "CONSTS"
+  | CONSTS -> "CONSTS"
 
 let token_list_to_string token_list = 
  	let rec helper token_list acc_string = 
@@ -68,15 +68,10 @@ let rec expression_to_string = function
   | Array_Literal(e_list) -> "{" ^ String.concat "," (List.map expression_to_string e_list) ^ "}"
 	| Function_Call(id, e_list) -> (idtos id) ^ "(" ^ (String.concat "," (List.map expression_to_string e_list)) ^ ")" 
 	| Identifier_Expression(id) -> (idtos id)
-  | Map_Call(mcall) -> map_call_to_string mcall
-  | Reduce_Call(rcall) -> reduce_call_to_string rcall
+  | Higher_Order_Function_Call(fcall) -> higher_order_function_call_to_string fcall
 and constant_to_string = function
   | Constant(id,e) -> (idtos id) ^ "=" ^ (expression_to_string e)
-and map_call_to_string mcall = "map(" ^ idtos(mcall.map_function) ^ "," ^ "consts(" ^ (String.concat "," (List.map constant_to_string mcall.map_constants)) ^ ")," ^ (String.concat "," (List.map expression_to_string mcall.map_arrays)) ^ ")"
-
-and reduce_call_to_string rcall = "reduce(" ^ idtos(rcall.reduce_function) ^ "," ^ "consts(" ^ (String.concat "," (List.map constant_to_string rcall.reduce_constants)) ^ ")," ^ (String.concat "," (List.map expression_to_string rcall.reduce_arrays)) ^ ")"
-
-
+and higher_order_function_call_to_string fcall = (idtos fcall.function_type) ^ "(" ^ idtos(fcall.kernel_function_name) ^ "," ^ "consts(" ^ (String.concat "," (List.map constant_to_string fcall.constants)) ^ ")," ^ (String.concat "," (List.map expression_to_string fcall.arrays)) ^ ")"
 
 let vdecl_to_string vdecl = (variable_type_to_string vdecl.v_type) ^ " " ^ (idtos vdecl.name)
 

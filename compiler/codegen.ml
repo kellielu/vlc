@@ -13,6 +13,7 @@ exception Empty_constant_list
 exception Unknown_type_of_var
 exception Unknown_type_of_vdecl
 exception Unknown_type_of_param
+exception Unknown_higher_order_function_call
 exception Type_mismatch of string
 exception Invalid_operation
 exception Not_implemented
@@ -95,13 +96,17 @@ let rec generate_expression expression env =
     | String_Literal(s) -> Environment.combine env [Verbatim("\"" ^ s ^ "\"")]
     | Integer_Literal(i) -> Environment.combine env [Verbatim(string_of_int i)]
     | Array_Literal(s) -> 
-    Environment.combine env [
+      Environment.combine env [
           Verbatim("{");
           Generator(generate_expression_list s);
-          Verbatim("}")]
+          Verbatim("}")
+      ]
     | Identifier_Expression(id) -> Environment.combine env [ Generator(generate_id id)]
-    | Map_Call(mcall) -> Environment.combine env [ Generator(generate_map_call mcall)]
-    | Reduce_Call(rcall) -> Environment.combine env [Generator(generate_reduce_call rcall)]
+    | Higher_Order_Function_Call(fcall) -> 
+      match Utils.idtos(fcall.function_type) with
+        |"map" -> Environment.combine env [ Generator(generate_map_function_call fcall)]
+        |"reduce" -> Environment.combine env [ Generator(generate_reduce_function_call fcall)]
+        | _ -> raise Unknown_higher_order_function_call
 and generate_expression_list expression_list env =
   match expression_list with
     | [] -> Environment.combine env []
@@ -109,7 +114,8 @@ and generate_expression_list expression_list env =
 and generate_nonempty_expression_list expression_list env =
   match expression_list with
     | expression :: [] -> Environment.combine env [Generator(generate_expression expression)]
-    | expression :: tail -> Environment.combine env [
+    | expression :: tail -> 
+      Environment.combine env [
         Generator(generate_expression expression);
         Verbatim(", ");
         Generator(generate_nonempty_expression_list tail)
@@ -130,33 +136,36 @@ and generate_constant_list constant_list env =
 and generate_nonempty_constant_list constant_list env = 
   match constant_list with
     | constant:: [] -> Environment.combine env [ Generator(generate_constant constant)]
-    | constant:: tail -> Environment.combine env [
-      Generator(generate_constant constant);
-      Verbatim(", ");
-      Generator(generate_nonempty_constant_list tail)
-    ]
+    | constant:: tail -> 
+      Environment.combine env [
+        Generator(generate_constant constant);
+        Verbatim(", ");
+        Generator(generate_nonempty_constant_list tail)
+      ]
     | [] -> (raise Empty_constant_list)
-and generate_map_call mcall env= 
+and generate_map_function_call fcall env= 
     Environment.combine env[
-        Verbatim("map(");
-        Verbatim(Utils.idtos mcall.map_function);
+        Verbatim(Utils.idtos fcall.function_type);
+        Verbatim("(");
+        Verbatim(Utils.idtos fcall.kernel_function_name);
         Verbatim(",consts(");
-        Generator(generate_constant_list mcall.map_constants);
+        Generator(generate_constant_list fcall.constants);
         Verbatim("), ");
-        Generator(generate_nonempty_expression_list mcall.map_arrays);
+        Generator(generate_nonempty_expression_list fcall.arrays);
         Verbatim(")")
       ]
-and generate_reduce_call rcall env= 
-    Environment.combine env[
-        Verbatim("reduce(");
-        Verbatim(Utils.idtos rcall.reduce_function);
+and generate_reduce_function_call fcall env = 
+      Environment.combine env[
+        Verbatim(Utils.idtos fcall.function_type);
+        Verbatim("(");
+        Verbatim(Utils.idtos fcall.kernel_function_name);
         Verbatim(",consts(");
-        Generator(generate_constant_list rcall.reduce_constants);
+        Generator(generate_constant_list fcall.constants);
         Verbatim("), ");
-        Generator(generate_nonempty_expression_list rcall.reduce_arrays);
+        Generator(generate_nonempty_expression_list fcall.arrays);
         Verbatim(")")
       ]
-
+      
 let rec get_array_dimensions vtype dimensions = 
   match vtype with
   | Array(t,n) -> 
@@ -201,7 +210,7 @@ let generate_vdecl d env =
         Verbatim(";\n")
       ]
     )
-  | String| Integer -> 
+  | String | Integer -> 
     Environment.update_scope d.name d.v_type (
       Environment.combine env [
         Generator(generate_variable_type d.v_type);
@@ -245,21 +254,23 @@ let generate_parallel_binop id1 id2 op id3 env ->
 (*-----------------------------------------------------------*)
 let rec generate_statement statement env =
   match statement with
-    | Declaration(d) -> Environment.combine env [
-	Generator(generate_param d);
-	Verbatim(";")
+    | Declaration(d) -> 
+      Environment.combine env [
+	      Generator(generate_param d);
+	      Verbatim(";")
       ]
-    | Expression(e) -> Environment.combine env [
+    | Expression(e) -> 
+      Environment.combine env [
         Generator(generate_expression e);
         Verbatim(";")
       ]
     | Assignment (id, e) ->
-     Environment.combine env [
-          Generator(generate_id id);
-          Verbatim(" = ");
-          Generator(generate_expression e);
-          Verbatim(";")
-        ]
+      Environment.combine env [
+        Generator(generate_id id);
+        Verbatim(" = ");
+        Generator(generate_expression e);
+        Verbatim(";")
+      ]
        (*  let datatype = (infer_type id env) in
         (match datatype with
 	  | Array(vtype,size) -> Environment.combine env [
@@ -388,7 +399,8 @@ let rec generate_statement statement env =
         Generator(generate_expression e);
         Verbatim(";")
       ]
-    | Initialization(d, e) -> Environment.combine env [
+    | Initialization(d, e) -> 
+      Environment.combine env [
       	Generator(generate_param d);
         Verbatim(" = ");
       	Generator(generate_expression e);
@@ -398,11 +410,11 @@ and generate_statement_list statement_list env =
   match statement_list with
     | [] -> Environment.combine env []
     | statement :: tail ->
-        Environment.combine env [
-          Generator(generate_statement statement);
-          Verbatim("\n");
-          Generator(generate_statement_list tail)
-        ]
+      Environment.combine env [
+        Generator(generate_statement statement);
+        Verbatim("\n");
+        Generator(generate_statement_list tail)
+      ]
 
 (*-------------------------------------------------------*)
 (*---------------------fdecls----------------------------*)
@@ -496,31 +508,31 @@ let generate_program program =
 #include <stdlib.h>\n\
 #include \"cuda.h\"\n\
 #include <iostream>\n\
-char** add_kernel = [\".version 3.1\",
-\".target sm_20\",
-\".address_size 64\",
-\".visible .entry kernel(\",
-\"  .param .u64 kernel_param_0,\",
-\"  .param .u64 kernel_param_1,\",
-\"  .param .u64 kernel_param_2\",
-\")\",
-\"{\",
-\"  .reg .f32   %f<4>;\",
-\"  .reg .s32   %r<2>;\",
-\"  .reg .s64   %rl<8>;\",
-\"  ld.param.u64    %rl1, [kernel_param_0];\",
-\"  mov.u32         %r1, %tid.x;\",
-\"  mul.wide.s32    %rl2, %r1, 4;\",
-\"  add.s64         %rl3, %rl1, %rl2;\",
-\"  ld.param.u64    %rl4, [kernel_param_1];\",
-\"  add.s64         %rl5, %rl4, %rl2;\",
-\"  ld.param.u64    %rl6, [kernel_param_2];\",
-\"  add.s64         %rl7, %rl6, %rl2;\",
-\"  ld.global.f32   %f1, [%rl3];\",
-\"  ld.global.f32   %f2, [%rl5];\",
-\"  add.f32         %f3, %f1, %f2;\",
-\"  st.global.f32   [%rl7], %f3;\",
-\"  ret\",
+char** add_kernel = [\".version 3.1\",\
+\".target sm_20\",\
+\".address_size 64\",\
+\".visible .entry kernel(\",\
+\"  .param .u64 kernel_param_0,\",\
+\"  .param .u64 kernel_param_1,\",\
+\"  .param .u64 kernel_param_2\",\
+\")\",\
+\"{\",\
+\"  .reg .f32   %f<4>;\",\
+\"  .reg .s32   %r<2>;\",\
+\"  .reg .s64   %rl<8>;\",\
+\"  ld.param.u64    %rl1, [kernel_param_0];\",\
+\"  mov.u32         %r1, %tid.x;\",\
+\"  mul.wide.s32    %rl2, %r1, 4;\",\
+\"  add.s64         %rl3, %rl1, %rl2;\",\
+\"  ld.param.u64    %rl4, [kernel_param_1];\",\
+\"  add.s64         %rl5, %rl4, %rl2;\",\
+\"  ld.param.u64    %rl6, [kernel_param_2];\",\
+\"  add.s64         %rl7, %rl6, %rl2;\",\
+\"  ld.global.f32   %f1, [%rl3];\",\
+\"  ld.global.f32   %f2, [%rl5];\",\
+\"  add.f32         %f3, %f1, %f2;\",\
+\"  st.global.f32   [%rl7], %f3;\",\
+\"  ret\",\
 \"}\"]\n");
     Generator(generate_vdecl_list v_list);
     Generator(generate_kernel_fdecl_list kernel_f_list);
