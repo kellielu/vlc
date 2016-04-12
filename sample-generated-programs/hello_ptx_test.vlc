@@ -1,0 +1,6 @@
+int def vlc():
+	int[5] a = {1,2,3,4,5}
+	int[5] b= {1,2,3,4,5}
+	int[5] c = map(vector_add, a, b)
+	
+	return 0

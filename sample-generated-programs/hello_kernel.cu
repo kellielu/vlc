@@ -25,6 +25,17 @@ int main(){
 	int threadsPerBlock = 512;
 	int blocksPerGrid = ceil(5/512);
 
+	cuInit(0);
+	cuDeviceGetCount(&devCount);
+	cuDeviceGet(&device, 0);
+
+	int devMajor, devMinor;
+  cuDeviceComputeCapability(&devMajor, &devMinor, device);
+  std::cout << "Device Compute Capability: "<< devMajor << \".\" << devMinor << \"\n\";
+  if (devMajor < 2) {
+    std::cerr << \"ERROR: Device 0 is not SM 2.0 or greater\n\";
+    return 1;
+  }
 	cudaMalloc( (void**) &dev_a, 5*sizeof(int) );
    	cudaMalloc( (void**) &dev_b, 5*sizeof(int) );
    	cudaMalloc( (void**) &dev_c, 5*sizeof(int) );
