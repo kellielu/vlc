@@ -3,16 +3,18 @@ type action = Tokens | Ast | Compile | Sast
 let _ = 
 	if Array.length Sys.argv < 2 then
   print_string (
-      "Usage: vlc [mode] <source file>\n" ^
-      "\t-t: Prints token stream\n" ^
-      "\t-a: Pretty prints Ast as a program\n" ^
-      "\t-s: Pretty prints Sast as a program\n" ^
-      "\t-c: Compiles to C\n" )
+      "Usage: vlc [mode] <VLC program file>\n" ^
+      "\t-t: prints tokens read in by scanner\n" ^
+      "\t-a: prints ast as a program\n" ^
+      "\t-s: prints sast as a program\n" ^
+      "\t-c: compiles VLC program to CUDA C file and PTX files\n" ^
+      "\t-r: compiles and runs VLC program\n" )
 	else
     let action = List.assoc Sys.argv.(1) [ ("-t", Tokens);
                                            ("-a", Ast);
                                            ("-s", Sast);
-                                           ("-c", Compile) ] and
+                                           ("-c", Compile);
+                                           ("-r", Run)] and
 filename = Sys.argv.(2) in
 let file_in = open_in filename in
       let lexbuf = Lexing.from_channel file_in in
@@ -28,3 +30,4 @@ let file_in = open_in filename in
             print_string (Utils.sast_to_string sast)
         | Compile ->
             print_string (Codegen.generate_program sast ^ "\n")
+(*         | Run -> (*Acts as an interpreter*) *)

@@ -8,6 +8,7 @@ open Semant
 
 (*------------------------------------------------------------General Helper Functions------------------------------------------------------------*)
 
+(* Used to access members of our 'program' type, which is a triple tuple *)
 let triple_fst (a,_,_) = a
 let triple_snd (_,a,_) = a
 let triple_trd (_,_,a) = a
@@ -43,7 +44,7 @@ let token_list_to_string token_list =
  	in 
  	helper token_list ""
 
-(*------------------------------------------------------------Code Generation Helper Functions and Program Printing Functions------------------------------------------------------------*)
+(*------------------------------------------------------------Code Generation Helper Functions and Program(Ast) Printing Functions------------------------------------------------------------*)
 
 let idtos = function
   | Identifier(s) -> s
@@ -79,6 +80,7 @@ let statement_to_string = function
 	| Expression(e) -> (expression_to_string e) ^ "\n"
  	| Declaration(vdecl) -> (vdecl_to_string vdecl) ^ "\n" 
 	| Return(e) -> "return " ^ (expression_to_string e) ^ "\n"
+  | Return_Void -> "return" ^ "\n"
 	| Assignment(id,e) -> (idtos id) ^ "=" ^ (expression_to_string e) ^ "\n"
 	| Initialization(vdecl,e) -> (vdecl_to_string vdecl) ^ "=" ^ (expression_to_string e) ^ "\n"
 

@@ -1,15 +1,13 @@
-%{ open Ast;;
+%{ open Ast;; open Exceptions;;
 
-    exception LexErr of string
-    exception ParseErr of string
-    exception ArrayErr
     
-    exception Invalid_type of string
+    (* Converts keywords to appropriate datatype*)
     let string_to_variable_type = function
 	| "string" -> String
 	| "int" -> Integer
-	| dtype -> raise (Invalid_type dtype)
+	| dtype -> raise (Exceptions.Invalid_type dtype)
 
+    (* Functions for accessing a triple tuple - used for program *)
     let triple_fst (a,_,_) = a
     let triple_snd (_,a,_) = a
     let triple_trd (_,_,a) = a
@@ -48,6 +46,7 @@ program:
 identifier:
     | IDENTIFIER                                    { Identifier($1)}
 
+/* Kernel and host function declarations */
 fdecl:
     | variable_type DEF identifier LPAREN parameter_list RPAREN COLON INDENT function_body DEDENT
                                                     {{ 
@@ -67,7 +66,7 @@ kernel_fdecl:
                                                     }}
 
 
-/* Constant Parameters for Map */
+/* Constant parameters for higher order function calls */
 constant:
     | identifier ASSIGNMENT expression                  {Constant($1,$3)}
     
@@ -79,7 +78,8 @@ nonempty_constant_list:
     | constant COMMA nonempty_constant_list             {$1 :: $3}
     | constant                                          { [$1] }
 
-/* Map and Reduce Higher Order Calls*/
+
+/* Higher order function calls */
 higher_order_function_call:
     | identifier LPAREN identifier COMMA CONSTS LPAREN constant_list RPAREN COMMA nonempty_expression_list RPAREN
         {{
@@ -112,6 +112,7 @@ vdecl:
                                                         name = $2;
                                                     }}
 
+/* Statements, expressions, and variable types*/ 
 function_body:
     | /* nothing */                                 { [] }
     | statement function_body                       { $1::$2 }
@@ -120,6 +121,7 @@ statement:
     | expression TERMINATOR                         { Expression($1) }
     | vdecl TERMINATOR                              { Declaration($1) }  
     | RETURN expression TERMINATOR                  { Return($2) }
+    | RETURN TERMINATOR                             { Return_Void }
     | identifier ASSIGNMENT expression TERMINATOR   { Assignment( $1, $3 ) }
     | vdecl ASSIGNMENT expression TERMINATOR        { Initialization ($1, $3) }
 
@@ -148,12 +150,12 @@ variable_type:
     | DATATYPE                                      { string_to_variable_type $1 }
     | variable_type array_dimension_list                            
         { 
-            let rec create_multidimensional_array vtype dim_list= 
+            let rec create_array vtype dim_list= 
                 match dim_list with
-                    | [] -> raise ArrayErr
+                    | [] -> raise (Exceptions.Array_parsing_error)
                     | head::[] -> Array(vtype,head)
-                    | head::tail -> Array((create_multidimensional_array vtype tail),head)
-            in create_multidimensional_array $1 $2
+                    | head::tail -> Array((create_array vtype tail),head)
+            in create_array $1 $2
              
         }
 

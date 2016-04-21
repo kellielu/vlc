@@ -19,7 +19,7 @@ exception Invalid_operation
 exception Not_implemented
 exception Unknown_type
 
-
+let dev_name_counter = ref 0
 (*------------------------------------------------------------*)
 (*---------------------Type inference-------------------------*)
 (*------------------------------------------------------------*)
@@ -145,14 +145,47 @@ and generate_nonempty_constant_list constant_list env =
     | [] -> (raise Empty_constant_list)
 and generate_map_function_call fcall env= 
     Environment.combine env[
-        Verbatim(Utils.idtos fcall.function_type);
-        Verbatim("(");
-        Verbatim(Utils.idtos fcall.kernel_function_name);
-        Verbatim(",consts(");
-        Generator(generate_constant_list fcall.constants);
-        Verbatim("), ");
-        Generator(generate_nonempty_expression_list fcall.arrays);
-        Verbatim(")")
+        (* Need to fix for ordinary array *)
+        Verbatim("{0};\n");
+        (* Initializes CUDA driver and loads needed function *)
+        Verbatim("checkCudaErrors(cuCtxCreate(&context, 0, device));\n");
+        Verbatim("checkCudaErrors(cuModuleLoadDataEx(&cudaModule," ^ Utils.idtos fcall.function_type ^ ", 0, 0, 0));\n");
+        Verbatim("checkCudaErrors(cuModuleGetFunction(&function, cudaModule, \"" ^ Utils.idtos fcall.function_type ^ "\"));\n");
+        (* Allocates GPU pointer and copies things over to GPU memory *)
+        (* Genreator(memcpy_input_arrays fcall.arrays);
+        Generator(memcpy_constants fcall.constants); *)
+          (* Allocates memory for result array *)
+        Verbatim("CUdeviceptr dev_a;\n");
+        Verbatim("CUdeviceptr dev_b;\n");
+        Verbatim("CUdeviceptr dev_c;\n");
+        Verbatim("checkCudaErrors(cuMemAlloc(&dev_a, sizeof(int)*5));\n");
+        Verbatim("checkCudaErrors(cuMemAlloc(&dev_b, sizeof(int)*5));\n");
+        Verbatim("checkCudaErrors(cuMemAlloc(&dev_c, sizeof(int)*5));\n");
+        (* Copies from host to GPU *)
+        Verbatim("checkCudaErrors(cuMemcpyHtoD(dev_a, a, sizeof(int)*5));\n");
+        Verbatim("checkCudaErrors(cuMemcpyHtoD(dev_b, b, sizeof(int)*5));\n");
+        (* Launches Kernel and performs GPU operations *)
+        Verbatim("void *KernelParams[] = { &dev_a, &dev_b, &dev_c };\n");
+        Verbatim("unsigned int blockSizeX = 16;\n");
+        Verbatim("unsigned int blockSizeY = 1;\n");
+        Verbatim("unsigned int blockSizeZ = 1;\n");
+        Verbatim("unsigned int gridSizeX = 1;\n");
+        Verbatim("unsigned int gridSizeY = 1;\n");
+        Verbatim("unsigned int gridSizeZ = 1;\n");
+        Verbatim("checkCudaErrors(cuLaunchKernel(function, gridSizeX, gridSizeY, gridSizeZ,
+                             blockSizeX, blockSizeY, blockSizeZ,
+                             0, NULL, KernelParams, NULL));\n");
+        (* Copies resulting array on GPU back to CPU 
+            Need to fix semantic analyzer and environment for generating variable*)
+        (* Verbatim("checkCudaErrors(cuMemcpyDtoH(c, dev_c, sizeof(" ^ generate_variable_type (List.hd fcall.arrays) ^ ")*" ^ string_of_int (snd(List.hd fcall.arrays)) ^"));\n"); *)
+        Verbatim("checkCudaErrors(cuMemcpyDtoH(c, dev_c, sizeof(int)*5));\n");
+        (* Cleanup *)
+        Verbatim("checkCudaErrors(cuMemFree(dev_a));\n");
+        Verbatim("checkCudaErrors(cuMemFree(dev_b));\n");
+        Verbatim("checkCudaErrors(cuMemFree(dev_c));\n");
+        Verbatim("checkCudaErrors(cuModuleUnload(cudaModule));\n");
+        Verbatim("checkCudaErrors(cuCtxDestroy(context));\n");
+        
       ]
 and generate_reduce_function_call fcall env = 
       Environment.combine env[
@@ -165,13 +198,36 @@ and generate_reduce_function_call fcall env =
         Generator(generate_nonempty_expression_list fcall.arrays);
         Verbatim(")")
       ]
-      
+
 let rec get_array_dimensions vtype dimensions = 
   match vtype with
   | Array(t,n) -> 
       get_array_dimensions t (List.rev(n::dimensions))
   | String | Integer -> dimensions
   | _ -> raise Unknown_type_of_var
+
+
+(* let cudeviceptr_name = "dev_" ^ (string_of_int dev_name_counter.contents) in
+let rec memcpy_array_list array_list = 
+  match array_list with 
+    | [] -> Environment.combine env[Verbatim("");]
+    | head::tail -> 
+      Environment.combine env[
+        Verbatim("CUdeviceptr "^ cudeviceptr_name^";\n"); 
+        incr dev_name_counter; 
+        Verbatim("checkCudaErrors(cuMemAlloc(&"^ cudeviceptr_name^", sizeof(" ^ "int" ^ ")*" ^ string_of_int (List.length head)^ "));\n");
+        Verbatim("checkCudaErrors(cuMemcpyHtoD(dev_a, a, sizeof(int)*5));");
+        Generator(memcpy_array_list tail);
+      ]
+
+let rec memcpy_constant_list constant_list env= 
+  match constant_list with
+    | [] -> Environment.combine env[Verbatim("");]
+    | head::tail -> 
+      Environment.combine env[
+        Verbatim("CUdeviceptr " ^ fst(head) ^ ";\n");
+        Generator(memcpy_constant_list tail);
+      ] *)
 
 
 let generate_param d env =
@@ -508,10 +564,70 @@ let generate_program program =
 #include <stdlib.h>\n\
 #include \"cuda.h\"\n\
 #include <iostream>\n\
-char** add_kernel = [\".version 3.1\",\
+#include <assert.h>\n\
+
+CUdevice    device;\n\
+CUmodule    cudaModule;\n\
+CUcontext   context;\n\
+CUfunction  function;\n\
+int         devCount;\n\
+CUdeviceptr dev_result;\n\
+
+void checkCudaErrors(CUresult err) {\n\
+  assert(err == CUDA_SUCCESS);\n\
+}\n\
+int cudaInit(){\n\
+  // CUDA initialization\n\
+  checkCudaErrors(cuInit(0));\n\
+  checkCudaErrors(cuDeviceGetCount(&devCount));\n\
+  checkCudaErrors(cuDeviceGet(&device, 0));\n\
+  \n\
+  char name[128];\n\
+  checkCudaErrors(cuDeviceGetName(name, 128, device));\n\
+  printf(\"Using CUDA Device [0]:%s\",name);\n\
+  \n\
+  int devMajor, devMinor;\n\
+  checkCudaErrors(cuDeviceComputeCapability(&devMajor, &devMinor, device));\n\
+  printf(\"Device Compute Capability:%d.%d\",devMajor,devMinor);\n\
+  \n\
+  if (devMajor < 2) {\n\
+    printf(\"ERROR: Device 0 is not SM 2.0 or greater\");\n\
+    return 1;\n\
+  }\n\
+  checkCudaErrors(cuCtxCreate(&context, 0, device));\n\
+  return 0;\n\
+} \n\
+\n\
+char* vector_add = \".version 3.1\\n\\\n\
+.target sm_20\\n\\\n\
+.address_size 64\\n\\\n\
+.visible .entry vector_add(\\n\\\n\
+  .param .u64 kernel_param_0,\\n\\\n\
+  .param .u64 kernel_param_1,\\n\\\n\
+  .param .u64 kernel_param_2\\n\\\n\
+)\\n\\\n\
+{\\n\\\n\
+.reg .f32   %f<4>;\\n\\\n\
+.reg .s32   %r<2>;\\n\\\n\
+.reg .s64   %rl<8>;\\n\\\n\
+ld.param.u64    %rl1, [kernel_param_0];\\n\\\n\
+mov.u32         %r1, %tid.x;\\n\\\n\
+mul.wide.s32    %rl2, %r1, 4;\\n\\\n\
+add.s64         %rl3, %rl1, %rl2;\\n\\\n\
+ld.param.u64    %rl4, [kernel_param_1];\\n\\\n\
+add.s64         %rl5, %rl4, %rl2;\\n\\\n\
+ld.param.u64    %rl6, [kernel_param_2];\\n\\\n\
+add.s64         %rl7, %rl6, %rl2;\\n\\\n\
+ld.global.f32   %f1, [%rl3];\\n\\\n\
+ld.global.f32   %f2, [%rl5];\\n\\\n\
+add.f32         %f3, %f1,%f2;\\n\\\n\
+st.global.f32   [%rl7], %f3;\\n\\\n\
+ret;\\n\\\n\
+}\";\n\n");
+(* char** vector_add = [\".version 3.1\",\
 \".target sm_20\",\
 \".address_size 64\",\
-\".visible .entry kernel(\",\
+\".visible .entry vector_add(\",\
 \"  .param .u64 kernel_param_0,\",\
 \"  .param .u64 kernel_param_1,\",\
 \"  .param .u64 kernel_param_2\",\
@@ -533,11 +649,15 @@ char** add_kernel = [\".version 3.1\",\
 \"  add.f32         %f3, %f1, %f2;\",\
 \"  st.global.f32   [%rl7], %f3;\",\
 \"  ret\",\
-\"}\"]\n");
+\"}\"]\n" *)
     Generator(generate_vdecl_list v_list);
     Generator(generate_kernel_fdecl_list kernel_f_list);
     Generator(generate_fdecl_list f_list);
-    Verbatim("\nint main(void) { return vlc(); }")
+    Verbatim("\nint main(void) {\n\
+int init_error = cudaInit();
+if( init_error != 0 ) { return 1; }\n\
+else { return vlc(); }\n\
+
+}")
   ]
   in program
-

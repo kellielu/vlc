@@ -1,6 +1,7 @@
 { 
 	open Parser 
-	exception Bad_dedent
+	open Exceptions
+
 	let indent_stack = Stack.create()
 
 	let get_eof () = 
@@ -34,17 +35,21 @@ rule token = parse
 	| '*' { MULTIPLY }
 	| '/' { DIVIDE }
 	| '%' { MODULO }
-	
+
+	(* Keywords *)
 	| ("string" | "int") as input { DATATYPE(input) }
 	| "return" { RETURN }
 	| "def"	   { DEF }
 	| "defg"   { DEFG }
 	| "consts" { CONSTS }
+
+	(* Identifier and Literals *)
 	| (letter | '_')(letter | digit | '_')* as id { IDENTIFIER(id) }
 	| '"' (([' '-'!' '#'-'&' '('-'[' ']'-'~'] | '\\' [ '\\' '"' 'n' 'r' 't' '''])* as stringliteral) '"' { STRING_LITERAL(stringliteral) }
 	| digit* as integerliteral { INTEGER_LITERAL(int_of_string integerliteral) }
 	| eof { get_eof() }
 
+(* Block for handling white space delimiting *)
 and indent = parse
 	| whitespace* newline       { indent lexbuf }
 	| whitespace* eof 			{ get_eof() }
@@ -61,6 +66,7 @@ and indent = parse
 	          TERMINATOR
 	        else
 	          let count = 
+	          	(* Function that pops indent lengths from the stack until we reach the appropriate indent length *)
 	            let rec popped_from_stack counter =
 	                if (Stack.top indent_stack) > indent_length then
 	                    begin
@@ -71,7 +77,7 @@ and indent = parse
 	                else counter
 	            in popped_from_stack 0
 	          in 
-	          if count = - 1 then raise (Bad_dedent)
+	          if count = - 1 then raise (Exceptions.Bad_dedent)
 	          else DEDENT_COUNT(count)
       }
 	{

@@ -1,9 +1,9 @@
 open Parser
+open Exceptions
 
-exception MissingEOF
 let last_token = ref EOF
 
-(* Gets the original tokens from the scanner *)
+(* Gets the original raw tokens from the scanner *)
 let get_tokens lexbuf = 
   let rec next lexbuf token_list = 
   match Scanner.token lexbuf with
@@ -32,13 +32,13 @@ let rec get_tokens_with_dedents original_token_list new_token_list=
   else
     new_token_list
 
-(* Removes opening TERMINATOR if it is there*)
+(* Removes opening TERMINATOR if it is there *)
 let filter_opening_whitespace token_list = 
     match token_list with
     | [] -> []
     | hd::tail -> if (hd = TERMINATOR) then tail else token_list
 
-(* Function that uses above two functions *)
+(* Function that uses above three functions to get the final list of tokens *)
 let get_token_list lexbuf = 
   let original_token_list = get_tokens lexbuf in 
   let new_token_list = get_tokens_with_dedents original_token_list [] in
@@ -54,6 +54,6 @@ let parser token_list =
             last_token := head;
             token_list := tail;
             head
-        | [] -> raise (MissingEOF) in
+        | [] -> raise (Exceptions.Missing_eof) in
   let program = Parser.program tokenizer (Lexing.from_string "") in 
   program

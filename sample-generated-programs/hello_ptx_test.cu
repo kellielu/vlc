@@ -15,16 +15,22 @@ assert(err == CUDA_SUCCESS);
 }
 int cudaInit(){
 // CUDA initialization
+fprintf(stderr, "0");
 checkCudaErrors(cuInit(0));
+fprintf(stderr, "1");
 checkCudaErrors(cuDeviceGetCount(&devCount));
+fprintf(stderr, "2");
 checkCudaErrors(cuDeviceGet(&device, 0));
+fprintf(stderr, "3");
 
 char name[128];
 checkCudaErrors(cuDeviceGetName(name, 128, device));
+fprintf(stderr, "4");
 printf("Using CUDA Device [0]:%s",name);
 
 int devMajor, devMinor;
 checkCudaErrors(cuDeviceComputeCapability(&devMajor, &devMinor, device));
+fprintf(stderr, "5");
 printf("Device Compute Capability:%d.%d",devMajor,devMinor);
 
 if (devMajor < 2) {
@@ -32,54 +38,73 @@ printf("ERROR: Device 0 is not SM 2.0 or greater");
 return 1;
 }
 return 0;
+} 
+
+void cudaCleanup(){
+	checkCudaErrors(cuCtxDestroy(context));
 }
 
-char* vector_add = ".version 3.1\
-.target sm_20\
-.address_size 64\
-.visible .entry vector_add(\
-.param .u64 kernel_param_0,\
-.param .u64 kernel_param_1,\
-.param .u64 kernel_param_2\
-)\
-{\
-.reg .f32   %%f<4>;\
-.reg .s32   %%r<2>;\
-.reg .s64   %%rl<8>;\
-ld.param.u64    %%rl1, [kernel_param_0];\
-mov.u32         %%r1, %%tid.x;\
-mul.wide.s32    %%rl2, %%r1, 4;\
-add.s64         %%rl3, %%rl1, %%rl2;\
-ld.param.u64    %%rl4, [kernel_param_1];\
-add.s64         %%rl5, %%rl4, %%rl2;\
-ld.param.u64    %%rl6, [kernel_param_2];\
-add.s64         %%rl7, %%rl6, %%rl2;\
-ld.global.f32   %%f1, [%%rl3];\
-ld.global.f32   %%f2, [%%rl5];\
-add.f32         %%f3, %%f1, %%f2;\
-st.global.f32   [%%rl7], %%f3;\
-ret;\
+char* vector_add = ".version 3.1\n\
+.target sm_20\n\
+.address_size 64\n\
+\n\
+  // .globl kernel\n\
+                                        // @kernel\n\
+.visible .entry kernel(\n\
+  .param .u64 kernel_param_0,\n\
+  .param .u64 kernel_param_1,\n\
+  .param .u64 kernel_param_2\n\
+)\n\
+{\n\
+  .reg .f32   %f<4>;\n\
+  .reg .s32   %r<2>;\n\
+  .reg .s64   %rl<8>;\n\
+\n\
+// BB#0:                                // %entry\n\
+  ld.param.u64    %rl1, [kernel_param_0];\n\
+  mov.u32         %r1, %tid.x;\n\
+  mul.wide.s32    %rl2, %r1, 4;\n\
+  add.s64         %rl3, %rl1, %rl2;\n\
+  ld.param.u64    %rl4, [kernel_param_1];\n\
+  add.s64         %rl5, %rl4, %rl2;\n\
+  ld.param.u64    %rl6, [kernel_param_2];\n\
+  add.s64         %rl7, %rl6, %rl2;\n\
+  ld.global.f32   %f1, [%rl3];\n\
+  ld.global.f32   %f2, [%rl5];\n\
+  add.f32         %f3, %f1, %f2;\n\
+  st.global.f32   [%rl7], %f3;\n\
+  ret;\n\
 }";
+
 int vlc(){
+fprintf(stderr, "%s", vector_add);
 int a[5] = {1, 2, 3, 4, 5};
 int b[5] = {1, 2, 3, 4, 5};
 int c[5];
 //Create context for device
 checkCudaErrors(cuCtxCreate(&context, 0, device));
-// Create module for object
+fprintf(stderr, "6");
+// Create module for objectd
 checkCudaErrors(cuModuleLoadDataEx(&cudaModule, vector_add, 0, 0, 0));
+fprintf(stderr, "7");
 // Get kernel function
-checkCudaErrors(cuModuleGetFunction(&function, cudaModule, "vector_add"));
+checkCudaErrors(cuModuleGetFunction(&function, cudaModule, "kernel"));
+fprintf(stderr, "8");
 //Allocate device pointers and memory
 CUdeviceptr dev_a;
 CUdeviceptr dev_b;
 CUdeviceptr dev_c;
 checkCudaErrors(cuMemAlloc(&dev_a, sizeof(int)*5));
+fprintf(stderr, "9");
 checkCudaErrors(cuMemAlloc(&dev_b, sizeof(int)*5));
+fprintf(stderr, "10");
 checkCudaErrors(cuMemAlloc(&dev_c, sizeof(int)*5));
+fprintf(stderr, "11");
 //Copy data from host to GPU
 checkCudaErrors(cuMemcpyHtoD(dev_a, a, sizeof(int)*5));
+fprintf(stderr, "12");
 checkCudaErrors(cuMemcpyHtoD(dev_b, b, sizeof(int)*5));
+fprintf(stderr, "13");
 //Set kernel parameters
 void *KernelParams[] = { &dev_a, &dev_b, &dev_c };
 unsigned int blockSizeX = 16;
@@ -93,8 +118,10 @@ printf("Launching kernel...\n");
 checkCudaErrors(cuLaunchKernel(function, gridSizeX, gridSizeY, gridSizeZ,
                              blockSizeX, blockSizeY, blockSizeZ,
                              0, NULL, KernelParams, NULL));
+fprintf(stderr, "14");
 //Copy data from GPU to host
 checkCudaErrors(cuMemcpyDtoH(c, dev_c, sizeof(int)*5));
+fprintf(stderr, "15");
 //Do cleanup
 checkCudaErrors(cuMemFree(dev_a));
 checkCudaErrors(cuMemFree(dev_b));
@@ -114,7 +141,9 @@ return 0;
 }
 
 int main(void) {
+printf("main 0");
 int init_error = cudaInit();
+printf("main 1");
 if( init_error != 0 ) { return 1; }
 else { return vlc(); }
 

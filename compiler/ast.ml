@@ -37,6 +37,7 @@ type statement =
     | Expression of expression
     | Assignment of identifier * expression
     | Return of expression
+    | Return_Void
     | Initialization of vdecl * expression
 	
 type fdecl = {

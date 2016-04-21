@@ -49,7 +49,6 @@ test:
 .PHONY:clean
 clean:
 	rm -f parser.ml parser.mli scanner.ml *.cmo *.cmi *.output vlc
-	rm -f ../output/*
 
 
 # Make for hello_host
@@ -80,3 +79,21 @@ hkt: vlc
 .PHONY:hkc
 hkc: vlc
 	./vlc -c ../sample-generated-programs/hello_kernel.vlc | tee ../output/generated.cu
+
+# Make for hello_ptx
+.PHONY:hpa
+hpa: vlc
+	./vlc -a ../sample-generated-programs/hello_ptx_test.vlc 
+.PHONY:hpt
+hpt: vlc
+	./vlc -t ../sample-generated-programs/hello_ptx_test.vlc 
+
+.PHONY:hpc
+hpc: vlc
+	./vlc -c ../sample-generated-programs/hello_ptx_test.vlc | tee ../output/generated.cu
+
+.PHONY: vecadd
+vecadd:
+	nvcc -lcuda -o ../sample-generated-programs/hello_ptx ../sample-generated-programs/hello_ptx_test.cu 
+
+
