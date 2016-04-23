@@ -12,3 +12,6 @@ output/
 test.log
 *.diff
 *.c
+*.lib
+*.cu
+*.exp
