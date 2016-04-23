@@ -1,7 +1,6 @@
 int def add_two():
 	return 1 + 2
 
-
 int def vlc():
 	int a = 5
 	int b = 6
