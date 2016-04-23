@@ -1,19 +1,21 @@
 type operator =
-| Add | Subtract | Multiply | Divide | Modulo
+    | Add | Subtract | Multiply | Divide | Modulo
 
 type identifier = 
     Identifier of string
 
+type data_type = 
+    | String
+    | Integer
+    | Void
+
 type variable_type = 
-	| String
-	| Integer
+    | Primitive of data_type
 	| Array of variable_type * int
 (* 	| Struct of variable_type list * expression list * int *)
 
-type vdecl = {
-    v_type   : variable_type;   
-    name     : identifier;
-}
+type vdecl = 
+    Variable_Declaration of variable_type * identifier
 
 type expression =
     | Binop of expression * operator * expression
@@ -26,19 +28,22 @@ type expression =
 and constant = 
     | Constant of identifier * expression
 and higher_order_function_call = {
-    function_type           : identifier;
+    f_type                  : identifier; (* Map or reduce *)
     kernel_function_name    : identifier;
     constants               : constant list;
     arrays                  : expression list; (* Check in semantic analyzer that type is array*)
 }
 
-type statement = 
+type variable_statement = 
     | Declaration of vdecl
-    | Expression of expression
+    | Initialization of vdecl * expression
     | Assignment of identifier * expression
+
+type statement = 
+    | Variable_Statement of variable_statement
+    | Expression of expression
     | Return of expression
     | Return_Void
-    | Initialization of vdecl * expression
 	
 type fdecl = {
     r_type      : variable_type;
@@ -47,13 +52,14 @@ type fdecl = {
     body        : statement list;
 }
 
-(* Kernel AST types *)
-
 type kernel_fdecl = {
     kernel_r_type      : variable_type;
     kernel_name        : identifier;
     kernel_params      : vdecl list;
     kernel_body        : statement list;
 }
+
+
+
 (* Program Definition *)
-type program = vdecl list * kernel_fdecl list * fdecl list
+type program = variable_statement list * kernel_fdecl list * fdecl list

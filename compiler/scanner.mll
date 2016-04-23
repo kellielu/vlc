@@ -37,7 +37,7 @@ rule token = parse
 	| '%' { MODULO }
 
 	(* Keywords *)
-	| ("string" | "int") as input { DATATYPE(input) }
+	| ("string" | "int" | "void") as input { DATATYPE(input) }
 	| "return" { RETURN }
 	| "def"	   { DEF }
 	| "defg"   { DEFG }

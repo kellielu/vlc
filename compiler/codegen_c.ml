@@ -1,240 +1,198 @@
-open Ast
-open Environment
+open Sast
 open Utils
-open Semant
+open Exceptions
+open Codegen_ptx 
 
-exception Empty_expression_list
-exception Empty_parameter_list
-exception Empty_fdecl_list
-exception Empty_kernel_fdecl_list
-exception Empty_vdecl_list
-exception Empty_list
-exception Empty_constant_list
-exception Unknown_type_of_var
-exception Unknown_type_of_vdecl
-exception Unknown_type_of_param
-exception Unknown_higher_order_function_call
-exception Type_mismatch of string
-exception Invalid_operation
-exception Not_implemented
-exception Unknown_type
+(* For sprintf *)
+open Printf
+open String
 
-let dev_name_counter = ref 0
-(*------------------------------------------------------------*)
-(*---------------------Type inference-------------------------*)
-(*------------------------------------------------------------*)
-let rec infer_type expression env =
-  let f type1 type2 =
-    match type1 with
-      | Some(t) -> (if t = type2 then Some(t)
-                    else raise (Type_mismatch "wrong types"))
-      | None -> Some(type2) in
-  let match_type expression_list =
-    let a = List.fold_left f None expression_list in
-      match a with
-        | Some(t) -> t
-        | None -> raise Empty_list in
-  match expression with
-    | String_Literal(_) -> String
-    | Array_Literal(expr_list) ->
-       let f expression = infer_type expression env in
-       Array(match_type (List.map f expr_list),(List.length expr_list))
-    | _ -> raise (Not_implemented)
+let builtin_functions = ["print"]
 
-let generate_operator operator env =
-  match operator with
-    | Add -> Environment.combine env [Verbatim("+")]
-    | Subtract -> Environment.combine env [Verbatim("-")]
-    | Multiply -> Environment.combine env [Verbatim("*")]
-    | Divide -> Environment.combine env [Verbatim("/")]
-    | Modulo -> Environment.combine env [Verbatim("%")]
-
-let rec generate_variable_type variable_type env =
-  match variable_type with
-    | String -> Environment.combine env [Verbatim("char *")]
-    | Integer -> Environment.combine env [Verbatim("int")]
-    | Array(t,n) -> 
-      match t with
-        | Array(t1,n1) -> generate_variable_type t1 env
-        | String | Integer -> Environment.combine env [Generator(generate_variable_type t)]
-        | _ -> raise Unknown_type_of_var
-
-let generate_id id env = 
-  let id_string = Utils.idtos(id) in
-  match id_string with
-    | "print" -> Environment.combine env [Verbatim("printf")]
-    | _ as identifier -> Environment.combine env [Verbatim(identifier)]
-
-(* ------------------------------------------------------------HOST CODE GENERATION ------------------------------------------------------------*)
-
-(*------------------------------------------------------------*)
-(*---------------------Expressions----------------------------*)
-(*------------------------------------------------------------*)
-let generate_operator operator env =
-  match operator with
-    | Add -> Environment.combine env [Verbatim("+")]
-    | Subtract -> Environment.combine env [Verbatim("-")]
-    | Multiply -> Environment.combine env [Verbatim("*")]
-    | Divide -> Environment.combine env [Verbatim("/")]
-    | Modulo -> Environment.combine env [Verbatim("%")]
-
-let rec generate_expression expression env =
-  match expression with
-    | Binop(e1, o, e2) -> 
-      Environment.combine env [
-        Generator(generate_expression e1);
-        Generator(generate_operator o);
-        Generator(generate_expression e2)
-      ]
-    | Function_Call(id, exp) ->
-      Environment.combine env [
-        Generator(generate_id id);
-        Verbatim("(");
-        Generator(generate_expression_list exp);
-        Verbatim(")")
-      ]
-    | String_Literal(s) -> Environment.combine env [Verbatim("\"" ^ s ^ "\"")]
-    | Integer_Literal(i) -> Environment.combine env [Verbatim(string_of_int i)]
-    | Array_Literal(s) -> 
-      Environment.combine env [
-          Verbatim("{");
-          Generator(generate_expression_list s);
-          Verbatim("}")
-      ]
-    | Identifier_Expression(id) -> Environment.combine env [ Generator(generate_id id)]
-    | Higher_Order_Function_Call(fcall) -> 
-      match Utils.idtos(fcall.function_type) with
-        |"map" -> Environment.combine env [ Generator(generate_map_function_call fcall)]
-        |"reduce" -> Environment.combine env [ Generator(generate_reduce_function_call fcall)]
-        | _ -> raise Unknown_higher_order_function_call
-and generate_expression_list expression_list env =
-  match expression_list with
-    | [] -> Environment.combine env []
-    | lst -> Environment.combine env [Generator(generate_nonempty_expression_list lst)]
-and generate_nonempty_expression_list expression_list env =
-  match expression_list with
-    | expression :: [] -> Environment.combine env [Generator(generate_expression expression)]
-    | expression :: tail -> 
-      Environment.combine env [
-        Generator(generate_expression expression);
-        Verbatim(", ");
-        Generator(generate_nonempty_expression_list tail)
-      ]
-    | [] -> (raise Empty_expression_list)
-and generate_constant constant env = 
-  match constant with 
-  | Constant(id,e) -> 
-    Environment.combine env[
-      Verbatim(Utils.idtos id);
-      Verbatim("=");
-      Generator(generate_expression e)
-    ]
-and generate_constant_list constant_list env = 
-  match constant_list with
-    | [] -> Environment.combine env []
-    | lst -> Environment.combine env [Generator(generate_nonempty_constant_list lst)]
-and generate_nonempty_constant_list constant_list env = 
-  match constant_list with
-    | constant:: [] -> Environment.combine env [ Generator(generate_constant constant)]
-    | constant:: tail -> 
-      Environment.combine env [
-        Generator(generate_constant constant);
-        Verbatim(", ");
-        Generator(generate_nonempty_constant_list tail)
-      ]
-    | [] -> (raise Empty_constant_list)
-and generate_map_function_call fcall env= 
-    Environment.combine env[
-        (* Need to fix for ordinary array *)
-        Verbatim("{0};\n");
-        (* Initializes CUDA driver and loads needed function *)
-        Verbatim("checkCudaErrors(cuCtxCreate(&context, 0, device));\n");
-        Verbatim("checkCudaErrors(cuModuleLoadDataEx(&cudaModule," ^ Utils.idtos fcall.function_type ^ ", 0, 0, 0));\n");
-        Verbatim("checkCudaErrors(cuModuleGetFunction(&function, cudaModule, \"" ^ Utils.idtos fcall.function_type ^ "\"));\n");
-        (* Allocates GPU pointer and copies things over to GPU memory *)
-        (* Genreator(memcpy_input_arrays fcall.arrays);
-        Generator(memcpy_constants fcall.constants); *)
-          (* Allocates memory for result array *)
-        Verbatim("CUdeviceptr dev_a;\n");
-        Verbatim("CUdeviceptr dev_b;\n");
-        Verbatim("CUdeviceptr dev_c;\n");
-        Verbatim("checkCudaErrors(cuMemAlloc(&dev_a, sizeof(int)*5));\n");
-        Verbatim("checkCudaErrors(cuMemAlloc(&dev_b, sizeof(int)*5));\n");
-        Verbatim("checkCudaErrors(cuMemAlloc(&dev_c, sizeof(int)*5));\n");
-        (* Copies from host to GPU *)
-        Verbatim("checkCudaErrors(cuMemcpyHtoD(dev_a, a, sizeof(int)*5));\n");
-        Verbatim("checkCudaErrors(cuMemcpyHtoD(dev_b, b, sizeof(int)*5));\n");
-        (* Launches Kernel and performs GPU operations *)
-        Verbatim("void *KernelParams[] = { &dev_a, &dev_b, &dev_c };\n");
-        Verbatim("unsigned int blockSizeX = 16;\n");
-        Verbatim("unsigned int blockSizeY = 1;\n");
-        Verbatim("unsigned int blockSizeZ = 1;\n");
-        Verbatim("unsigned int gridSizeX = 1;\n");
-        Verbatim("unsigned int gridSizeY = 1;\n");
-        Verbatim("unsigned int gridSizeZ = 1;\n");
-        Verbatim("checkCudaErrors(cuLaunchKernel(function, gridSizeX, gridSizeY, gridSizeZ,
-                             blockSizeX, blockSizeY, blockSizeZ,
-                             0, NULL, KernelParams, NULL));\n");
-        (* Copies resulting array on GPU back to CPU 
-            Need to fix semantic analyzer and environment for generating variable*)
-        (* Verbatim("checkCudaErrors(cuMemcpyDtoH(c, dev_c, sizeof(" ^ generate_variable_type (List.hd fcall.arrays) ^ ")*" ^ string_of_int (snd(List.hd fcall.arrays)) ^"));\n"); *)
-        Verbatim("checkCudaErrors(cuMemcpyDtoH(c, dev_c, sizeof(int)*5));\n");
-        (* Cleanup *)
-        Verbatim("checkCudaErrors(cuMemFree(dev_a));\n");
-        Verbatim("checkCudaErrors(cuMemFree(dev_b));\n");
-        Verbatim("checkCudaErrors(cuMemFree(dev_c));\n");
-        Verbatim("checkCudaErrors(cuModuleUnload(cudaModule));\n");
-        Verbatim("checkCudaErrors(cuCtxDestroy(context));\n");
-        
-      ]
-and generate_reduce_function_call fcall env = 
-      Environment.combine env[
-        Verbatim(Utils.idtos fcall.function_type);
-        Verbatim("(");
-        Verbatim(Utils.idtos fcall.kernel_function_name);
-        Verbatim(",consts(");
-        Generator(generate_constant_list fcall.constants);
-        Verbatim("), ");
-        Generator(generate_nonempty_expression_list fcall.arrays);
-        Verbatim(")")
-      ]
+let is_builtin_function name =
+  List.exists (fun function_name -> function_name = name) builtin_functions
 
 let rec get_array_dimensions vtype dimensions = 
   match vtype with
   | Array(t,n) -> 
       get_array_dimensions t (List.rev(n::dimensions))
-  | String | Integer -> dimensions
-  | _ -> raise Unknown_type_of_var
+  | Primitive(p) -> dimensions
+  | _ -> raise Exceptions.Unknown_variable_type
+
+(*-------------------------------------Generating Functions-------------------------------------*)
+
+(* Calls generate_func for every element of the list and concatenates results with specified concat symbol
+   Used if you need to generate a list of something - e.x. list of statements, list of params *)
+let generate_list generate_func concat mylist = 
+  let list_string = String.concat concat (List.map generate_func mylist) in
+  sprintf "%s" list_string
+
+(* Generate operators *)
+let generate_operator operator  =
+  let op = match operator with
+    | Add -> "+"
+    | Subtract -> "-"
+    | Multiply -> "*"
+    | Divide -> "/"
+    | Modulo -> "%"
+  in
+  sprintf "%s" op
+
+(* Generate data type*)
+let generate_data_type dtype = 
+    let data_type = match dtype with 
+      | String -> "char *"
+      | Integer -> "int"
+      | Void -> "void"
+      | _ -> Exceptions.Unknown_data_type
+    in sprintf data_type
+
+(* Generate variable type *)
+let rec generate_variable_type variable_type  =
+  let vtype = match variable_type with
+    | Primitive(p) -> generate_data_type p
+    | Array(t,n) -> 
+      match t with
+        | Array(t1,n1) -> generate_variable_type t1 
+        | Primtive(p) -> generate_data_type p
+        | _ -> raise Exceptions.Unknown_variable_type
+  in sprintf "%s" vtype
+
+(* Generate id *)
+let generate_id id  = 
+  let id_string = Utils.idtos(id) in
+  match id_string with
+    | "print" -> sprintf "printf"
+    | _ as identifier -> sprintf identifier
+
+ (* Generates CUDA device pointer *)
+ let generate_device_ptr name = 
+    sprintf "CUdeviceptr " ^ name ^ ";"
+
+ (* Generates CUDA memory allocation from host to device *)
+ (* Fill in with VLC_Array*) 
+ let generate_mem_alloc_statement_host_to_device arr_name arr_datatype arr_length= 
+    sprintf "checkCudaErrors(cuMemAlloc(&" ^ arr_name ^ ", sizeof(" ^ arr_datatype ^ ")*" ^ arr_length ^ "));"
+
+ let generate_mem_alloc_host_to_device fcall = 
+    let create_list mylist length element = if length > 0 then element::mylist; create_list mylist (length-1) element else mylist in
+    let mem_alloc_string = String.concat "\n" List.map2 generate_mem_alloc_statement_host_to_device fcall.kernel_input_array_names fcall.input_array_types (create_list [] (List.length fcall.kernel_input_array_names) fcall.array_length) in
+    sprintf "%s" mem_alloc_string
+
+(* Generates CUDA copying from host to device*)
+ let generate_mem_cpy_statement_host_to_device kernel_arr_name host_arr_name vtype arr_length = 
+    let mem_cpy_string  = 
+      "checkCudaErrors(cuMemcpyHtoD("^ kernel_arr_name ^", " ^ host_arr_name ^ ", sizeof(" ^ vtype ^ ")*" ^ arr_length ^ "));\n"
+
+ let generate_mem_cpy_host_to_device fcall = 
+    let create_list mylist length element = if length > 0 then element::mylist; create_list mylist (length-1) element else mylist in
+    let mem_cpy_string = String.concat "\n" List.map2 generate_mem_cpy_statement_host_to_device fcall.kernel_input_array_names fcall.host_input_array_names fcall.input_array_types (create_list [] (List.length fcall.kernel_input_array_names) fcall.array_length) in
+    sprintf "%s" mem_cpy_string
+
+(* Generates CUDA statement for kernel params *)
+ let generate_kernel_params name_array = 
+    let kernel_param_string = generate_list generate_id ", &" name_array in 
+    sprintf ("void *KernelParams[] = { &" ^ kernel_param_string ^ "};")
+
+(* Generate CUDA memory cleanup *)
+let generate_mem_cleanup name = 
+    sprintf "checkCudaErrors(cuMemFree("^ name ^ "));"
+
+ (* Generate expressions - including higher order function calls - and constants *)
+let rec generate_expression expression  =
+  let expr = match expression with
+    | Binop(e1, o, e2) -> 
+        sprintf (generate_expression e1) ^ " " (generate_operator o) ^ " " ^ (generate_expression e2)
+    | Function_Call(id, exp) ->
+        sprintf (generate_id id) ^ "(" ^ (generate_expression_list exp) ^ ")"
+    | String_Literal(s) -> 
+        sprintf "\"" ^ s ^ "\""
+    | Integer_Literal(i) -> 
+        sprintf string_of_int i
+    | Array_Literal(s) -> 
+        (* Fill in with VLC_Array*)
+        (* sprintf "{" ^ (generate_expression_list s) ^ "}" *)
+    | Identifier_Expression(id) -> 
+        sprintf (generate_id id)
+    | Higher_Order_Function_Call(fcall) -> 
+      match Utils.idtos(fcall.f_type) with
+        | "map" | "reduce" -> 
+            generate_higher_order_function_call fcall
+        | _ -> raise Exceptions.Unknown_higher_order_function_call
+    | Kernel_Function_Call(kfcall) ->
+        generate_kernel_function_call (kfcall)
+
+(* Generates CUDA statements that copy constants from host to gpu*)
+and generate_constant_on_gpu const  = 
+  match const.variable_type with 
+  | Primitive(vtype) ->
+      let mem_alloc_constant_string = 
+        generate_device_ptr const.kernel_const_name ^ 
+        generate_mem_alloc_statement_host_to_device const.kernel_const_name vtype 1 ^ 
+        generate_mem_cpy_statement_host_to_device const.kernel_const_name host_const_name vtype 1 ^ 
+      in 
+      sprintf mem_alloc_constant_string
+  | Array(vtype,length) ->
+    (* Fill in with VLC_Array *)
+
+(* Generates statements for higher order map or reduce calls *)
+and generate_higher_order_function_call fcall = 
+    let higher_order_function_call_string = 
+    (* Fill in with VLC_Array *)
+      "{0};\n" ^ 
+    (* Initializes CUDA driver and loads needed function *)
+      "checkCudaErrors(cuCtxCreate(&context, 0, device));\n" ^ 
+      "std::ifstream t(\"" ^ Utils.idtos fcall.kernel_function ^ ".ptx\");\n" ^ 
+      "if (!t.is_open()) {\n" ^
+          " std::cerr << \"" ^ Utils.idtos fcall.kernel_function ^ ".ptx not found\n\";\n" ^
+          "return 1;\n" ^
+      "}\n" ^
+      "std::string " ^ Utils.idtos fcall.kernel_function ^ "_str" ^ "((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());\n" ^ 
+      "checkCudaErrors(cuModuleLoadDataEx(&cudaModule," ^ (Utils.idtos fcall.kernel_function) ^ "_str" ^ ", 0, 0, 0));\n" ^ 
+      "checkCudaErrors(cuModuleGetFunction(&function, cudaModule, \"" ^ (Utils.idtos fcall.kernel_function) ^ "_str" ^ "\"));\n" ^ 
+    (* Copies over constants *)
+      generate_list "\n" generate_constant_on_gpu fcall.constants ^ "\n" ^
+    (* Allocates GPU pointers for input and result array *)
+      generate_list generate_device_ptr "\n" fcall.kernel_input_array_names ^ "\n" ^ 
+      generate_device_ptr fcall.kernel_return_array_name  ^ "\n" ^
+    (* Allocations memory and copies input arrays over to GPU memory *)
+      generate_mem_alloc_host_to_device fcall ^ "\n" ^
+      generate_mem_cpy_host_to_device 
+
+    (* Sets Kernel params and other information needed to call cuLaunchKernel *)
+      generate_kernel_params fcall.kernel_array_name_list ^ "\n" ^
+      "unsigned int blockSizeX = 16;\n" ^ 
+      "unsigned int blockSizeY = 1;\n" ^
+      "unsigned int blockSizeZ = 1;\n" ^
+      "unsigned int gridSizeX = 1;\n" ^
+      "unsigned int gridSizeY = 1;\n" ^
+      "unsigned int gridSizeZ = 1;\n" ^
+    (* Launches kernel *)
+      "checkCudaErrors(cuLaunchKernel(function, gridSizeX, gridSizeY, gridSizeZ, blockSizeX, blockSizeY, blockSizeZ,0, NULL, KernelParams, NULL));\n" ^
+    (* Copies result array back to host *)
+      "checkCudaErrors(cuMemcpyDtoH(c," ^ fcall.host_return_array_name ^ ", sizeof(" ^ fcall.return_array_type ^ ")*" ^ fcall.array_length ^ "));\n" ^ 
+    (* Cleanup *)
+    generate_list generate_mem_cleanup "\n" fcall.kernel_input_array_names ^ "\n" ^ 
+    generate_mem_cleanup fcall.kernel_return_array_name ^ "\n" ^ 
+    "checkCudaErrors(cuModuleUnload(cudaModule));\n" ^ 
+    "checkCudaErrors(cuCtxDestroy(context));\n"
+  in sprintf higher_order_function_call_string
+  
+and generate_kernel_function_call kfcall =
+  (* Fill in for kernel function_call *)
+  sprintf kfcall.kernel_function
 
 
-(* let cudeviceptr_name = "dev_" ^ (string_of_int dev_name_counter.contents) in
-let rec memcpy_array_list array_list = 
-  match array_list with 
-    | [] -> Environment.combine env[Verbatim("");]
-    | head::tail -> 
-      Environment.combine env[
-        Verbatim("CUdeviceptr "^ cudeviceptr_name^";\n"); 
-        incr dev_name_counter; 
-        Verbatim("checkCudaErrors(cuMemAlloc(&"^ cudeviceptr_name^", sizeof(" ^ "int" ^ ")*" ^ string_of_int (List.length head)^ "));\n");
-        Verbatim("checkCudaErrors(cuMemcpyHtoD(dev_a, a, sizeof(int)*5));");
-        Generator(memcpy_array_list tail);
-      ]
-
-let rec memcpy_constant_list constant_list env= 
-  match constant_list with
-    | [] -> Environment.combine env[Verbatim("");]
-    | head::tail -> 
-      Environment.combine env[
-        Verbatim("CUdeviceptr " ^ fst(head) ^ ";\n");
-        Generator(memcpy_constant_list tail);
-      ] *)
 
 
-let generate_param d env =
+
+(* Generates parameters for function declarations*)
+let generate_param d  =
   match d.v_type with 
   | Array(t,n) ->
-      let array_dimensions= (get_array_dimensions t [n]) in
-      Environment.combine env [
+      (* Fill in with VLC_Array*)
+      (* let array_dimensions= (get_array_dimensions t [n]) in
+      Environment.combine  [
           Generator(generate_variable_type t);
           Verbatim(" ");
           Generator(generate_id d.name);
@@ -242,21 +200,20 @@ let generate_param d env =
           Verbatim("[");
           Verbatim(String.concat "][" (List.map string_of_int array_dimensions));
           Verbatim("]")
-      ]
-  | String | Integer ->
-      Environment.combine env [
-        Generator(generate_variable_type d.v_type);
-        Verbatim(" ");
-        Generator(generate_id d.name)
-      ]
-  | _ -> raise Unknown_type_of_param
+      ] *)
+  | Primitive(p) ->
+      let param_string = (generate_data_type p) ^ " " ^ (generate_id d.name) in 
+      sprintf param_string
+  | _ -> raise Exceptions.Unknown_type_of_param
 
-let generate_vdecl d env = 
+(* Generates variable declaration statements *)
+let generate_vdecl d  = 
   match d.v_type with 
   | Array(t,n) -> 
-    let array_dimensions= (get_array_dimensions t [n]) in
+    (* Fill in with VLC_Array *)
+    (* let array_dimensions= (get_array_dimensions t [n]) in
     Environment.update_scope d.name d.v_type (
-      Environment.combine env [
+      Environment.combine  [
         Generator(generate_variable_type t);
         Verbatim(" ");
         Generator(generate_id d.name);
@@ -265,399 +222,70 @@ let generate_vdecl d env =
         Verbatim("]");
         Verbatim(";\n")
       ]
-    )
-  | String | Integer -> 
-    Environment.update_scope d.name d.v_type (
-      Environment.combine env [
-        Generator(generate_variable_type d.v_type);
-        Verbatim(" ");
-        Generator(generate_id d.name);
-        Verbatim(";\n");
-      ]
-    )
-  | _ -> raise Unknown_type_of_vdecl
+    ) *)
+  | Primitive(p) -> 
+      let vdecl_string = (generate_data_type p) ^ " " ^ (generate_id d.name) in 
+      sprintf param_string
+  | _ -> raise Exceptions.Unknown_type_of_vdecl
 
-(*-----------------------------------------------------------*)
-(*---------------------Parameters----------------------------*)
-(*-----------------------------------------------------------*)
-let rec generate_nonempty_parameter_list param_list env =
-  match param_list with
-    | param :: [] -> Environment.combine env [Generator(generate_param param)]
-    | param :: tail ->
-      Environment.combine env [
-        Generator(generate_param param);
-        Verbatim(", ");
-        Generator(generate_nonempty_parameter_list tail)
-      ]
-    | [] -> raise (Empty_parameter_list)
-and generate_parameter_list param_list env =
-  match param_list with
-    | [] -> Environment.combine env [Verbatim("")]
-    | decl :: tail -> Environment.combine env [Generator(generate_nonempty_parameter_list param_list)]
+(* Generates variable statements *)
+let generate_variable_statement vstatement = 
+  let vstatement_string = match vstatement with
+    | Declaration(d)  -> 
+        (generate_vdecl d) ^ ";\n"
+    | Assignment (id, e) -> 
+        (generate_id id) ^ "=" ^ (generate_expression e) ^ ";\n"
+    | Initialization(d,e) ->
+        (generate_vdecl) ^ "=" ^ (generate_expression e) ^ ";\n"
+  in sprintf vstatement_string
 
-(*-----------------------------------------------------------*)
-(*------------------Parallel ops-----------------------------*)
-(*-----------------------------------------------------------*)
-(* let generate_copy_from_host id1 id2 id3 env ->
-
-let generate_copy_to_host id1 id2 id3 env ->
-
-let generate_parallel_binop id1 id2 op id3 env ->
-  
- *)
-(*-----------------------------------------------------------*)
-(*---------------------Statements----------------------------*)
-(*-----------------------------------------------------------*)
-let rec generate_statement statement env =
-  match statement with
-    | Declaration(d) -> 
-      Environment.combine env [
-	      Generator(generate_param d);
-	      Verbatim(";")
-      ]
+(* Generates statements *)
+let rec generate_statement statement  =
+  let statement_string = match statement with
+    | Variable_Statement(vsmtm) -> 
+        generate_variable_statement vsmtm  
     | Expression(e) -> 
-      Environment.combine env [
-        Generator(generate_expression e);
-        Verbatim(";")
-      ]
-    | Assignment (id, e) ->
-      Environment.combine env [
-        Generator(generate_id id);
-        Verbatim(" = ");
-        Generator(generate_expression e);
-        Verbatim(";")
-      ]
-       (*  let datatype = (infer_type id env) in
-        (match datatype with
-	  | Array(vtype,size) -> Environment.combine env [
-	      let var_type = Environment.get_var_type id env in
-        Generator(generate_variable_type var_type)
-	      ]
-(* generate device initialization *) 
-(* allocate memory for device *)
-(* copy host arrays to device *)
-(* declare blocksize *)
-(* declare gridsize *)
-(* execute kernel *)
-(* copy array back to host *)
-(* release memory ? *)
-(* Will not be able to do A = B+C+D... *)
-(* "  
-
-  // CUDA initialization
-  cuInit(0);
-  cuDeviceGetCount(&devCount);
-  cuDeviceGet(&device, 0);
-
-  int devMajor, devMinor;
-  cuDeviceComputeCapability(&devMajor, &devMinor, device);
-  std::cout << \"Device Compute Capability: \"
-            << devMajor << \".\" << devMinor << \"\n\";
-  if (devMajor < 2) {
-    std::cerr << \"ERROR: Device 0 is not SM 2.0 or greater\n\";
-    return 1;
-  }
-
-  std::string str((std::istreambuf_iterator<char>(t)),
-                    std::istreambuf_iterator<char>());
-
-  // Create driver context
-  checkCudaErrors(cuCtxCreate(&context, 0, device));
-
-  // Create module for object
-  checkCudaErrors(cuModuleLoadDataEx(&cudaModule, str.c_str(), 0, 0, 0));
-
-  // Get kernel function
-  checkCudaErrors(cuModuleGetFunction(&function, cudaModule, \"kernel\"));
-
-  // Device data
-  CUdeviceptr devBufferA;
-  CUdeviceptr devBufferB;
-  CUdeviceptr devBufferC;
-
-  checkCudaErrors(cuMemAlloc(&devBufferA, sizeof(float)*16));
-  checkCudaErrors(cuMemAlloc(&devBufferB, sizeof(float)*16));
-  checkCudaErrors(cuMemAlloc(&devBufferC, sizeof(float)*16));
-
-  float* hostA = new float[16];
-  float* hostB = new float[16];
-  float* hostC = new float[16];
-
-  // Populate input
-  for (unsigned i = 0; i != 16; ++i) {
-    hostA[i] = (float)i;
-    hostB[i] = (float)(2*i);
-    hostC[i] = 0.0f;
-  }
-
-  checkCudaErrors(cuMemcpyHtoD(devBufferA, &hostA[0], sizeof(float)*16));
-  checkCudaErrors(cuMemcpyHtoD(devBufferB, &hostB[0], sizeof(float)*16));
-
-
-  unsigned blockSizeX = 16;
-  unsigned blockSizeY = 1;
-  unsigned blockSizeZ = 1;
-  unsigned gridSizeX  = 1;
-  unsigned gridSizeY  = 1;
-  unsigned gridSizeZ  = 1;
-
-  // Kernel parameters
-  void *KernelParams[] = { &devBufferA, &devBufferB, &devBufferC };
-
-  std::cout << \"Launching kernel\n\";
-
-  // Kernel launch
-  checkCudaErrors(cuLaunchKernel(function, gridSizeX, gridSizeY, gridSizeZ,
-                                 blockSizeX, blockSizeY, blockSizeZ,
-                                 0, NULL, KernelParams, NULL));
-
-  // Retrieve device data
-  checkCudaErrors(cuMemcpyDtoH(&hostC[0], devBufferC, sizeof(float)*16));
-
-
-  std::cout << \"Results:\n\";
-  for (unsigned i = 0; i != 16; ++i) {
-    std::cout << hostA[i] << " + " << hostB[i] << " = " << hostC[i] << \"\n\";
-  }
-
-
-  // Clean up after ourselves
-  delete [] hostA;
-  delete [] hostB;
-  delete [] hostC;
-
-  // Clean-up
-  checkCudaErrors(cuMemFree(devBufferA));
-  checkCudaErrors(cuMemFree(devBufferB));
-  checkCudaErrors(cuMemFree(devBufferC));
-  checkCudaErrors(cuModuleUnload(cudaModule));
-  checkCudaErrors(cuCtxDestroy(context));
-
-  return 0;
-"*) 
-          | Integer(i) -> Environment.combine env [
-              Generator(generate_id id);
-              Verbatim(" = ");
-              Generator(generate_expression e);
-	      Verbatim(";")
-            ]
-          | String(s) -> raise (Invalid_operation)
-        )
-        Environment.combine env [
-          Generator(generate_id id);
-          Verbatim(" = ");
-          Generator(generate_expression e);
-	        Verbatim(";")
-        ]*)
+        (generate_expression e) ^ ";\n"
     | Return(e) ->
-      Environment.combine env [
-        Verbatim("return ");
-        Generator(generate_expression e);
-        Verbatim(";")
-      ]
-    | Initialization(d, e) -> 
-      Environment.combine env [
-      	Generator(generate_param d);
-        Verbatim(" = ");
-      	Generator(generate_expression e);
-      	Verbatim(";");
-      ]
-and generate_statement_list statement_list env =
-  match statement_list with
-    | [] -> Environment.combine env []
-    | statement :: tail ->
-      Environment.combine env [
-        Generator(generate_statement statement);
-        Verbatim("\n");
-        Generator(generate_statement_list tail)
-      ]
-
-(*-------------------------------------------------------*)
-(*---------------------fdecls----------------------------*)
-(*-------------------------------------------------------*)
-let generate_fdecl f env =
-  Environment.combine env [
-    Generator(generate_variable_type f.r_type);
-    Verbatim(" ");
-    Generator(generate_id f.name);
-    Verbatim("(");
-    Generator(generate_parameter_list f.params);
-    Verbatim("){\n");
-    Generator(generate_statement_list f.body);
-    Verbatim("}\n");
-  ]
-
-let rec generate_nonempty_fdecl_list fdecl_list env =
-  match fdecl_list with
-    | fdecl :: [] -> Environment.combine env [Generator(generate_fdecl fdecl)]
-    | fdecl :: tail ->
-      Environment.combine env [
-        Generator(generate_fdecl fdecl);
-        Verbatim("\n\n");
-        Generator(generate_nonempty_fdecl_list tail)
-      ]
-    | [] -> raise (Empty_fdecl_list)
-and generate_fdecl_list fdecl_list env =
-  match fdecl_list with
-    | [] -> Environment.combine env [Verbatim("")]
-    | decl :: tail -> Environment.combine env [Generator(generate_nonempty_fdecl_list fdecl_list)]
+        "return" ^ (generate_expression e) ^ ";\n"
+    | Return_Void ->  
+        "return;\n"
+  in 
+  sprintf statement_string
 
 
-(*-----------------------------------------------------------*)
-(*---------------------vdecl list----------------------------*)
-(*-----------------------------------------------------------*)
-let rec generate_nonempty_vdecl_list vdecl_list env =
-  match vdecl_list with
-    | vdecl :: [] -> Environment.combine env [Generator(generate_vdecl vdecl)]
-    | vdecl :: tail ->
-      Environment.combine env [
-        Generator(generate_vdecl vdecl);
-        Generator(generate_nonempty_vdecl_list tail)
-      ]
-    | [] -> raise (Empty_vdecl_list)
-and generate_vdecl_list vdecl_list env =
-  match vdecl_list with
-    | [] -> Environment.combine env [Verbatim("")]
-    | decl :: tail -> Environment.combine env [Generator(generate_nonempty_vdecl_list vdecl_list)]
+(* Generates function declarations *)
+let generate_fdecl f  =
+  let fdecl_string = 
+    (generate_variable_type f.r_type) ^ " " ^ 
+    (generate_id f.name) ^ "(" ^ 
+    (generate_parameter_list f.params) ^ "){\n" ^ 
+    (generate_statement_list f.body) ^ "}\n" 
+  in
+  sprintf fdecl_string
 
-(*------------------------------------------------------------ KERNEL CODE GENERATION ------------------------------------------------------------*)
+(* Writing out to CUDA file *)
+let write_cuda filename cuda_program_string = 
+  let file = open_out (filename ^ ".cu") in 
+  fprintf file "%s" cuda_program_string
 
-let generate_kernel_fdecl kernel_f env =
-  Environment.combine env [
-    Generator(generate_variable_type kernel_f.kernel_r_type);
-    Verbatim(" ");
-    Generator(generate_id kernel_f.kernel_name);
-    Verbatim("(");
-    Generator(generate_parameter_list kernel_f.kernel_params);
-    Verbatim("){\n");
-    Generator(generate_statement_list kernel_f.kernel_body);
-    Verbatim("}\n");
-  ]
+(* Generates the full CUDA file *)
+let generate_cuda_file filename program = 
+  let cuda_program_body = 
+    (generate_list generate_variable_statement "" (Utils.triple_fst(program))) ^ 
+    (generate_list generate_fdecl "" (Utils.triple_trd(program))) 
+  in 
+  let cuda_program_string = sprintf "
+  #include <stdio.h>
+  #include <stdlib.h>
+  #include \"cuda.h\"
+  #include <iostream>
 
-let rec generate_nonempty_kernel_fdecl_list kernel_fdecl_list env =
-  match kernel_fdecl_list with
-    | kernel_fdecl :: [] -> Environment.combine env [Generator(generate_kernel_fdecl kernel_fdecl)]
-    | kernel_fdecl :: tail ->
-      Environment.combine env [
-        Generator(generate_kernel_fdecl kernel_fdecl);
-        Verbatim("\n\n");
-        Generator(generate_nonempty_kernel_fdecl_list tail)
-      ]
-    | [] -> raise (Empty_kernel_fdecl_list)
-and generate_kernel_fdecl_list kernel_fdecl_list env =
-  match kernel_fdecl_list with
-    | [] -> Environment.combine env [Verbatim("")]
-    | decl :: tail -> Environment.combine env [Generator(generate_nonempty_kernel_fdecl_list kernel_fdecl_list)]
+  CUdevice    device;
+  CUmodule    cudaModule;
+  CUcontext   context;
+  CUfunction  function;
 
+  %s" cuda_program_body in
+  write_cuda filename cuda_program_string
 
-(*--------------------------------------------------------*)
-(*---------------------program----------------------------*)
-(*--------------------------------------------------------*)
-let generate_program program =
-  let v_list = Utils.triple_fst(program) in 
-  let kernel_f_list = Utils.triple_snd(program) in
-  let f_list = Utils.triple_trd(program) in 
-  let env = Environment.create in
-  let program, env = 
-  Environment.combine env [
-    Verbatim("#include <stdio.h>\n\
-#include <stdlib.h>\n\
-#include \"cuda.h\"\n\
-#include <iostream>\n\
-#include <assert.h>\n\
-
-CUdevice    device;\n\
-CUmodule    cudaModule;\n\
-CUcontext   context;\n\
-CUfunction  function;\n\
-int         devCount;\n\
-CUdeviceptr dev_result;\n\
-
-void checkCudaErrors(CUresult err) {\n\
-  assert(err == CUDA_SUCCESS);\n\
-}\n\
-int cudaInit(){\n\
-  // CUDA initialization\n\
-  checkCudaErrors(cuInit(0));\n\
-  checkCudaErrors(cuDeviceGetCount(&devCount));\n\
-  checkCudaErrors(cuDeviceGet(&device, 0));\n\
-  \n\
-  char name[128];\n\
-  checkCudaErrors(cuDeviceGetName(name, 128, device));\n\
-  printf(\"Using CUDA Device [0]:%s\",name);\n\
-  \n\
-  int devMajor, devMinor;\n\
-  checkCudaErrors(cuDeviceComputeCapability(&devMajor, &devMinor, device));\n\
-  printf(\"Device Compute Capability:%d.%d\",devMajor,devMinor);\n\
-  \n\
-  if (devMajor < 2) {\n\
-    printf(\"ERROR: Device 0 is not SM 2.0 or greater\");\n\
-    return 1;\n\
-  }\n\
-  checkCudaErrors(cuCtxCreate(&context, 0, device));\n\
-  return 0;\n\
-} \n\
-\n\
-char* vector_add = \".version 3.1\\n\\\n\
-.target sm_20\\n\\\n\
-.address_size 64\\n\\\n\
-.visible .entry vector_add(\\n\\\n\
-  .param .u64 kernel_param_0,\\n\\\n\
-  .param .u64 kernel_param_1,\\n\\\n\
-  .param .u64 kernel_param_2\\n\\\n\
-)\\n\\\n\
-{\\n\\\n\
-.reg .f32   %f<4>;\\n\\\n\
-.reg .s32   %r<2>;\\n\\\n\
-.reg .s64   %rl<8>;\\n\\\n\
-ld.param.u64    %rl1, [kernel_param_0];\\n\\\n\
-mov.u32         %r1, %tid.x;\\n\\\n\
-mul.wide.s32    %rl2, %r1, 4;\\n\\\n\
-add.s64         %rl3, %rl1, %rl2;\\n\\\n\
-ld.param.u64    %rl4, [kernel_param_1];\\n\\\n\
-add.s64         %rl5, %rl4, %rl2;\\n\\\n\
-ld.param.u64    %rl6, [kernel_param_2];\\n\\\n\
-add.s64         %rl7, %rl6, %rl2;\\n\\\n\
-ld.global.f32   %f1, [%rl3];\\n\\\n\
-ld.global.f32   %f2, [%rl5];\\n\\\n\
-add.f32         %f3, %f1,%f2;\\n\\\n\
-st.global.f32   [%rl7], %f3;\\n\\\n\
-ret;\\n\\\n\
-}\";\n\n");
-(* char** vector_add = [\".version 3.1\",\
-\".target sm_20\",\
-\".address_size 64\",\
-\".visible .entry vector_add(\",\
-\"  .param .u64 kernel_param_0,\",\
-\"  .param .u64 kernel_param_1,\",\
-\"  .param .u64 kernel_param_2\",\
-\")\",\
-\"{\",\
-\"  .reg .f32   %f<4>;\",\
-\"  .reg .s32   %r<2>;\",\
-\"  .reg .s64   %rl<8>;\",\
-\"  ld.param.u64    %rl1, [kernel_param_0];\",\
-\"  mov.u32         %r1, %tid.x;\",\
-\"  mul.wide.s32    %rl2, %r1, 4;\",\
-\"  add.s64         %rl3, %rl1, %rl2;\",\
-\"  ld.param.u64    %rl4, [kernel_param_1];\",\
-\"  add.s64         %rl5, %rl4, %rl2;\",\
-\"  ld.param.u64    %rl6, [kernel_param_2];\",\
-\"  add.s64         %rl7, %rl6, %rl2;\",\
-\"  ld.global.f32   %f1, [%rl3];\",\
-\"  ld.global.f32   %f2, [%rl5];\",\
-\"  add.f32         %f3, %f1, %f2;\",\
-\"  st.global.f32   [%rl7], %f3;\",\
-\"  ret\",\
-\"}\"]\n" *)
-    Generator(generate_vdecl_list v_list);
-    Generator(generate_kernel_fdecl_list kernel_f_list);
-    Generator(generate_fdecl_list f_list);
-    Verbatim("\nint main(void) {\n\
-int init_error = cudaInit();
-if( init_error != 0 ) { return 1; }\n\
-else { return vlc(); }\n\
-
-}")
-  ]
-  in program

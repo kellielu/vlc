@@ -1,9 +1,36 @@
-OBJS =  ast.cmo semant.cmo environment.cmo utils.cmo codegen.cmo parser.cmo scanner.cmo processor.cmo vlc.cmo 
+OBJS =  ast.cmo sast.cmo exceptions.ml semant.cmo utils.cmo codegen_ptx.cmo codegen_c.cmo parser.cmo scanner.cmo processor.cmo vlc.cmo 
 
-# codegen.cmo
 .PHONY:all
 all: clean vlc
 
+# Make for installing
+.PHONY:install
+install: vlc /usr/local/bin/vlc_std/vlc
+	cp vlc /usr/local/bin
+
+# Make for uninstalling
+.PHONY: uninstall
+uninstall: clean
+	rm -rf /usr/local/bin/vlc_std
+	rm -rf /usr/local/bin/vlc
+
+/usr/local/bin/vlc_std:
+	mkdir /usr/local/bin/vlc
+
+/usr/local/bin/vlc_std/vlc: /usr/local/bin/vlc_std
+	cp vlc /usr/local/bin/vlc_std/vlc
+
+# Make for testing and cleaning
+.PHONY:test
+test:
+	../test.sh
+
+.PHONY:clean
+clean:
+	rm -f parser.ml parser.mli scanner.ml *.cmo *.cmi *.output vlc
+
+
+# Make for compiler 
 vlc: $(OBJS)
 	ocamlc -o vlc $(OBJS)
 
@@ -24,33 +51,33 @@ parser.ml parser.mli: parser.mly
 
 ast.cmo:
 ast.cmx:
-environment.cmo: ast.cmo semant.cmo
-environment.cmx: ast.cmx semant.cmx
-vlc.cmo: parser.cmi codegen.cmo utils.cmo processor.cmo environment.cmo ast.cmo semant.cmo
-vlc.cmx: parser.cmx codegen.cmx utils.cmx processor.cmx environment.cmx ast.cmx semant.cmx
-semant.cmo: ast.cmo
-semant.cmx: ast.cmx
-codegen.cmo: parser.cmi environment.cmo utils.cmo ast.cmo semant.cmo
-codegen.cmx: parser.cmx environment.cmx utils.cmx ast.cmx semant.cmx
+sast.cmo: ast.cmx
+sast.cmx: ast.cmx
+exceptions.cmo:
+exceptions.cmx:
+semant.cmo: ast.cmo exceptions.cmo
+semant.cmx: ast.cmx exceptions.cmx
+utils.cmo: ast.cmo parser.cmi semant.cmo sast.cmo
+utils.cmx: ast.cmx parser.cmx semant.cmx sast.cmx 
+codegen_ptx.cmo: parser.cmi environment.cmo utils.cmo ast.cmo semant.cmo
+codegen_ptx.cmx: parser.cmx environment.cmx utils.cmx ast.cmx semant.cmx
+codegen_c.cmo: parser.cmi environment.cmo utils.cmo ast.cmo semant.cmo codegen_ptx.cmo
+codegen_c.cmx: parser.cmx environment.cmx utils.cmx ast.cmx semant.cmx codegen_ptx.cmx
 processor.cmo: scanner.cmo parser.cmi
 processor.cmx: scanner.cmx parser.cmx
-utils.cmo: ast.cmo parser.cmi semant.cmo
-utils.cmx: ast.cmx parser.cmx semant.cmx
 parser.cmo: ast.cmo parser.cmi
 parser.cmx: ast.cmx parser.cmi
 parser.cmi: ast.cmo
+vlc.cmo: parser.cmi codegen.cmo utils.cmo processor.cmo environment.cmo ast.cmo semant.cmo
+vlc.cmx: parser.cmx codegen.cmx utils.cmx processor.cmx environment.cmx ast.cmx semant.cmx
 
 
-.PHONY:test
-test:
-	dos2unix ../test.sh
-	../test.sh
-
-.PHONY:clean
-clean:
-	rm -f parser.ml parser.mli scanner.ml *.cmo *.cmi *.output vlc
 
 
+
+
+
+# Shortcut makes
 # Make for hello_host
 .PHONY:hha
 hha: vlc

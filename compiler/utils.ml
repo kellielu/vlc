@@ -56,9 +56,13 @@ let operator_to_string = function
   | Divide -> "/"
   | Modulo -> "%"
 
-let rec variable_type_to_string = function
+let data_type_to_string = function 
   | String -> "string"
   | Integer -> "int"
+  | Void -> "void"
+
+let rec variable_type_to_string = function
+  | Primitive(p) -> data_type_to_string p
   | Array(vtype,size) -> (variable_type_to_string vtype) ^ "[" ^ (string_of_int size) ^ "]" 
 
 
@@ -74,25 +78,30 @@ and constant_to_string = function
   | Constant(id,e) -> (idtos id) ^ "=" ^ (expression_to_string e)
 and higher_order_function_call_to_string fcall = (idtos fcall.function_type) ^ "(" ^ idtos(fcall.kernel_function_name) ^ "," ^ "consts(" ^ (String.concat "," (List.map constant_to_string fcall.constants)) ^ ")," ^ (String.concat "," (List.map expression_to_string fcall.arrays)) ^ ")"
 
-let vdecl_to_string vdecl = (variable_type_to_string vdecl.v_type) ^ " " ^ (idtos vdecl.name)
+let vdecl_to_string = function 
+  | Variable_Declaration(vtype,name) ->(variable_type_to_string vtype) ^ " " ^ (idtos name)
+
+let variable_statement_to_string = function
+  | Declaration(vdecl) -> (vdecl_to_string vdecl) ^ "\n" 
+  | Assignment(id,e) -> (idtos id) ^ "=" ^ (expression_to_string e) ^ "\n"
+  | Initialization(vdecl,e) -> (vdecl_to_string vdecl) ^ "=" ^ (expression_to_string e) ^ "\n"
 
 let statement_to_string = function
 	| Expression(e) -> (expression_to_string e) ^ "\n"
- 	| Declaration(vdecl) -> (vdecl_to_string vdecl) ^ "\n" 
+ 	| Variable_Statement(vstmt) -> (variable_statement_to_string vstmt)
 	| Return(e) -> "return " ^ (expression_to_string e) ^ "\n"
   | Return_Void -> "return" ^ "\n"
-	| Assignment(id,e) -> (idtos id) ^ "=" ^ (expression_to_string e) ^ "\n"
-	| Initialization(vdecl,e) -> (vdecl_to_string vdecl) ^ "=" ^ (expression_to_string e) ^ "\n"
+
 
 let fdecl_to_string fdecl = (variable_type_to_string fdecl.r_type) ^ " def " ^ (idtos fdecl.name) ^ "(" ^(String.concat "," (List.map vdecl_to_string fdecl.params)) ^ "):\n\t" ^ (String.concat "\t" (List.map statement_to_string fdecl.body)) ^ "\n"
 
 let kernel_fdecl_to_string kernel_fdecl = (variable_type_to_string kernel_fdecl.kernel_r_type) ^ " defg " ^ (idtos kernel_fdecl.kernel_name) ^ "(" ^(String.concat "," (List.map vdecl_to_string kernel_fdecl.kernel_params)) ^ "):\n\t" ^ (String.concat "\t" (List.map statement_to_string kernel_fdecl.kernel_body)) ^ "\n"
 
 let program_to_string program = 
-	(String.concat "\n" (List.map vdecl_to_string (triple_fst(program)))) ^ "\n" ^
+	(String.concat "\n" (List.map variable_statement_to_string (triple_fst(program)))) ^ "\n" ^
   (String.concat "\n" (List.map kernel_fdecl_to_string (triple_snd(program)))) ^"\n" ^
   (String.concat "\n" (List.map fdecl_to_string (triple_trd(program))))
 
 
-(* Sast helper functions *)
+(* ------------------------------------------------------------Sast Helper Functions ------------------------------------------------------------*)
 let sast_to_string sast = program_to_string sast

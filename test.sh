@@ -10,7 +10,7 @@ GCC="gcc"
 
 VLC="./compiler/vlc -c"
 
-globallog=test.log
+globallog=./tests/test.log
 rm -f $globallog
 error=0
 globalerror=0
@@ -78,10 +78,10 @@ Check() {
 
     generatedfiles=""
 
-    generatedfiles="$generatedfiles ${basename}.c ${basename}.out" &&
-    Run "$VLC" $1 ">" "${basename}.c" &&
-    Run "$GCC" "${basename}.c -o ${basename} && ./${basename}" ">" "${basename}.out" &&
-    Compare ${basename}.out ${reffile}.out ${basename}.diff
+    generatedfiles="$generatedfiles ./tests/${basename}.c ./tests/${basename}.out ./tests/${basename}" &&
+    Run "$VLC" $1 ">" "./tests/${basename}.c" &&
+    Run "$GCC" "./tests/${basename}.c -o ./tests/${basename} && ./tests/${basename}" ">" "./tests/${basename}.out" &&
+    Compare ./tests/${basename}.out ./${reffile}.out ./tests/${basename}.diff
 
     # Report the status and clean up the generated files
 

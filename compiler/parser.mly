@@ -2,10 +2,11 @@
 
     
     (* Converts keywords to appropriate datatype*)
-    let string_to_variable_type = function
+    let string_to_data_type = function
 	| "string" -> String
 	| "int" -> Integer
-	| dtype -> raise (Exceptions.Invalid_type dtype)
+    | "void" -> Void
+	| dtype -> raise (Exceptions.Invalid_data_type dtype)
 
     (* Functions for accessing a triple tuple - used for program *)
     let triple_fst (a,_,_) = a
@@ -39,7 +40,7 @@
 
 program:
     |  /* nothing */                                { [], [], [] }
-    | program vdecl TERMINATOR                      { List.rev ($2 :: List.rev (triple_fst $1)), triple_snd $1, triple_trd $1  }
+    | program variable_statement TERMINATOR                      { List.rev ($2 :: List.rev (triple_fst $1)), triple_snd $1, triple_trd $1  }
     | program kernel_fdecl                          { triple_fst $1, List.rev ($2 :: List.rev (triple_snd $1)),  triple_trd $1 }
     | program fdecl                                 { triple_fst $1, triple_snd $1, List.rev($2 :: List.rev(triple_trd $1))  }
 
@@ -107,23 +108,23 @@ nonempty_parameter_list:
     | vdecl                                         { [$1] }
 
 vdecl:
-    | variable_type identifier                      {{ 
-                                                        v_type = $1;
-                                                        name = $2;
-                                                    }}
+    | variable_type identifier                      { Variable_Declaration($1,$2)}
 
 /* Statements, expressions, and variable types*/ 
+variable_statement:
+    | vdecl                                         { Declaration($1) }
+    | identifier ASSIGNMENT expression TERMINATOR   { Assignment( $1, $3 ) }
+    | vdecl ASSIGNMENT expression TERMINATOR        { Initialization ($1, $3) }
+
 function_body:
     | /* nothing */                                 { [] }
     | statement function_body                       { $1::$2 }
     
 statement:
-    | expression TERMINATOR                         { Expression($1) }
-    | vdecl TERMINATOR                              { Declaration($1) }  
+    | expression TERMINATOR                         { Expression($1) } 
     | RETURN expression TERMINATOR                  { Return($2) }
     | RETURN TERMINATOR                             { Return_Void }
-    | identifier ASSIGNMENT expression TERMINATOR   { Assignment( $1, $3 ) }
-    | vdecl ASSIGNMENT expression TERMINATOR        { Initialization ($1, $3) }
+    | variable_statement                            { Variable_Statement($1) } 
 
 expression_list:
     | /* nothing */                                 { [] }   
@@ -146,8 +147,10 @@ expression:
     | expression MODULO expression                  { Binop($1, Modulo, $3)}
     | higher_order_function_call                    { Higher_Order_Function_Call($1)}
 
+data_type:
+    | DATATYPE                                      { string_to_data_type $1 }
 variable_type:
-    | DATATYPE                                      { string_to_variable_type $1 }
+    | data_type                                     { Primitive($1) }
     | variable_type array_dimension_list                            
         { 
             let rec create_array vtype dim_list= 
