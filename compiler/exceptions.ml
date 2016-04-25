@@ -14,7 +14,11 @@ exception Missing_eof
 (*-------------------------------------Semantic Analyzer-------------------------------------*)
 exception Cannot_infer_expression_type
 exception Exception of string
-
+exception Already_declared
+exception Name_not_found of string
+exception Invalid_environment
+exception Variable_not_found_in_scope
+exception Function_not_defined
 (*-------------------------------------Codegen C-------------------------------------*)
 exception Unknown_variable_type
 exception Unknown_data_type

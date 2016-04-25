@@ -1,6 +1,6 @@
 .PHONY: install
 install:
-	cd compiler && $(MAKE) install
+	cd compiler && $(MAKE) all && $(MAKE) install
 
 .PHONY: uninstall
 uninstall:
@@ -8,10 +8,9 @@ uninstall:
 
 .PHONY:test
 test:
-	dos2unix test.sh
 	./test.sh
 
 clean:
 	cd compiler && $(MAKE) clean
-	rm tests/test.log
+	rm tests/*.c tests/*.log
 	

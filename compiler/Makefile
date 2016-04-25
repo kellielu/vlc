@@ -15,10 +15,10 @@ uninstall: clean
 	rm -rf /usr/local/bin/vlc
 
 /usr/local/bin/vlc_std:
-	mkdir /usr/local/bin/vlc
+	mkdir /usr/local/bin/vlc_std
 
 /usr/local/bin/vlc_std/vlc: /usr/local/bin/vlc_std
-	cp vlc /usr/local/bin/vlc_std/vlc
+	cp vlc /usr/local/bin/vlc_std/
 
 # Make for testing and cleaning
 .PHONY:test
@@ -59,23 +59,17 @@ semant.cmo: ast.cmo exceptions.cmo
 semant.cmx: ast.cmx exceptions.cmx
 utils.cmo: ast.cmo parser.cmi semant.cmo sast.cmo
 utils.cmx: ast.cmx parser.cmx semant.cmx sast.cmx 
-codegen_ptx.cmo: parser.cmi environment.cmo utils.cmo ast.cmo semant.cmo
-codegen_ptx.cmx: parser.cmx environment.cmx utils.cmx ast.cmx semant.cmx
-codegen_c.cmo: parser.cmi environment.cmo utils.cmo ast.cmo semant.cmo codegen_ptx.cmo
-codegen_c.cmx: parser.cmx environment.cmx utils.cmx ast.cmx semant.cmx codegen_ptx.cmx
+codegen_ptx.cmo: parser.cmi utils.cmo ast.cmo semant.cmo
+codegen_ptx.cmx: parser.cmx utils.cmx ast.cmx semant.cmx
+codegen_c.cmo: parser.cmi utils.cmo ast.cmo semant.cmo codegen_ptx.cmo
+codegen_c.cmx: parser.cmx utils.cmx ast.cmx semant.cmx codegen_ptx.cmx
 processor.cmo: scanner.cmo parser.cmi
 processor.cmx: scanner.cmx parser.cmx
 parser.cmo: ast.cmo parser.cmi
 parser.cmx: ast.cmx parser.cmi
 parser.cmi: ast.cmo
-vlc.cmo: parser.cmi codegen.cmo utils.cmo processor.cmo environment.cmo ast.cmo semant.cmo
-vlc.cmx: parser.cmx codegen.cmx utils.cmx processor.cmx environment.cmx ast.cmx semant.cmx
-
-
-
-
-
-
+vlc.cmo: parser.cmi codegen_ptx.cmo codegen_c.cmo utils.cmo processor.cmo ast.cmo semant.cmo
+vlc.cmx: parser.cmx codegen_ptx.cmx codegen_c.cmx utils.cmx processor.cmx ast.cmx semant.cmx
 
 # Shortcut makes
 # Make for hello_host

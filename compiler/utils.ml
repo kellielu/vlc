@@ -1,6 +1,6 @@
 open Ast
 open Parser
-open Semant
+(* open Sast *)
 
 (* let type_to_string = function
 	| String -> "string"
@@ -8,11 +8,10 @@ open Semant
 
 (*------------------------------------------------------------General Helper Functions------------------------------------------------------------*)
 
-(* Used to access members of our 'program' type, which is a triple tuple *)
+(* Used to access members of our sast 'program' type, which is a triple tuple *)
 let triple_fst (a,_,_) = a
 let triple_snd (_,a,_) = a
 let triple_trd (_,_,a) = a
-
 
 (*------------------------------------------------------------Parser Debugging Functions------------------------------------------------------------*)
 let token_to_string = function
@@ -47,61 +46,80 @@ let token_list_to_string token_list =
 (*------------------------------------------------------------Code Generation Helper Functions and Program(Ast) Printing Functions------------------------------------------------------------*)
 
 let idtos = function
-  | Identifier(s) -> s
+  | Ast.Identifier(s) -> s
 
 let operator_to_string = function
-  | Add -> "+"
-  | Subtract -> "-"
-  | Multiply -> "*"
-  | Divide -> "/"
-  | Modulo -> "%"
+  | Ast.Add -> "+"
+  | Ast.Subtract -> "-"
+  | Ast.Multiply -> "*"
+  | Ast.Divide -> "/"
+  | Ast.Modulo -> "%"
 
 let data_type_to_string = function 
-  | String -> "string"
-  | Integer -> "int"
-  | Void -> "void"
+  | Ast.String -> "string"
+  | Ast.Integer -> "int"
+  | Ast.Void -> "void"
 
 let rec variable_type_to_string = function
-  | Primitive(p) -> data_type_to_string p
-  | Array(vtype,size) -> (variable_type_to_string vtype) ^ "[" ^ (string_of_int size) ^ "]" 
+  | Ast.Primitive(p) -> data_type_to_string p
+  | Ast.Array(vtype,size) -> (variable_type_to_string vtype) ^ "[" ^ (string_of_int size) ^ "]" 
 
 
 let rec expression_to_string = function
-  | Binop(e1, o, e2) -> (expression_to_string e1) ^ (operator_to_string o) ^ (expression_to_string e2)
-	| String_Literal(s) -> "\"" ^ s ^ "\""
-	| Integer_Literal(i) -> string_of_int i
-  | Array_Literal(e_list) -> "{" ^ String.concat "," (List.map expression_to_string e_list) ^ "}"
-	| Function_Call(id, e_list) -> (idtos id) ^ "(" ^ (String.concat "," (List.map expression_to_string e_list)) ^ ")" 
-	| Identifier_Expression(id) -> (idtos id)
-  | Higher_Order_Function_Call(fcall) -> higher_order_function_call_to_string fcall
+  | Ast.Binop(e1, o, e2) -> (expression_to_string e1) ^ (operator_to_string o) ^ (expression_to_string e2)
+	| Ast.String_Literal(s) -> "\"" ^ s ^ "\""
+	| Ast.Integer_Literal(i) -> string_of_int i
+  | Ast.Array_Literal(e_list) -> "{" ^ String.concat "," (List.map expression_to_string e_list) ^ "}"
+	| Ast.Function_Call(id, e_list) -> (idtos id) ^ "(" ^ (String.concat "," (List.map expression_to_string e_list)) ^ ")" 
+	| Ast.Identifier_Expression(id) -> (idtos id)
+  | Ast.Higher_Order_Function_Call(fcall) -> higher_order_function_call_to_string fcall
 and constant_to_string = function
-  | Constant(id,e) -> (idtos id) ^ "=" ^ (expression_to_string e)
-and higher_order_function_call_to_string fcall = (idtos fcall.function_type) ^ "(" ^ idtos(fcall.kernel_function_name) ^ "," ^ "consts(" ^ (String.concat "," (List.map constant_to_string fcall.constants)) ^ ")," ^ (String.concat "," (List.map expression_to_string fcall.arrays)) ^ ")"
+  | Ast.Constant(id,e) -> (idtos id) ^ "=" ^ (expression_to_string e)
+and higher_order_function_call_to_string fcall = (idtos fcall.higher_order_function_type) ^ "(" ^ idtos(fcall.kernel_function_name) ^ "," ^ "consts(" ^ (String.concat "," (List.map constant_to_string fcall.constants)) ^ ")," ^ (String.concat "," (List.map expression_to_string fcall.input_arrays)) ^ ")"
 
 let vdecl_to_string = function 
-  | Variable_Declaration(vtype,name) ->(variable_type_to_string vtype) ^ " " ^ (idtos name)
+  | Ast.Variable_Declaration(vtype,name) ->(variable_type_to_string vtype) ^ " " ^ (idtos name)
 
 let variable_statement_to_string = function
-  | Declaration(vdecl) -> (vdecl_to_string vdecl) ^ "\n" 
-  | Assignment(id,e) -> (idtos id) ^ "=" ^ (expression_to_string e) ^ "\n"
-  | Initialization(vdecl,e) -> (vdecl_to_string vdecl) ^ "=" ^ (expression_to_string e) ^ "\n"
+  | Ast.Declaration(vdecl) -> (vdecl_to_string vdecl) ^ "\n" 
+  | Ast.Assignment(id,e) -> (idtos id) ^ "=" ^ (expression_to_string e) ^ "\n"
+  | Ast.Initialization(vdecl,e) -> (vdecl_to_string vdecl) ^ "=" ^ (expression_to_string e) ^ "\n"
 
 let statement_to_string = function
-	| Expression(e) -> (expression_to_string e) ^ "\n"
- 	| Variable_Statement(vstmt) -> (variable_statement_to_string vstmt)
-	| Return(e) -> "return " ^ (expression_to_string e) ^ "\n"
-  | Return_Void -> "return" ^ "\n"
+	| Ast.Expression(e) -> (expression_to_string e) ^ "\n"
+ 	| Ast.Variable_Statement(vstmt) -> (variable_statement_to_string vstmt)
+	| Ast.Return(e) -> "return " ^ (expression_to_string e) ^ "\n"
+  | Ast.Return_Void -> "return" ^ "\n"
 
 
-let fdecl_to_string fdecl = (variable_type_to_string fdecl.r_type) ^ " def " ^ (idtos fdecl.name) ^ "(" ^(String.concat "," (List.map vdecl_to_string fdecl.params)) ^ "):\n\t" ^ (String.concat "\t" (List.map statement_to_string fdecl.body)) ^ "\n"
+let fdecl_to_string fdecl = 
+  (variable_type_to_string fdecl.return_type) ^ 
+  (if fdecl.is_kernel_function = false then " def " else " defg ") ^ 
+  (idtos fdecl.name) ^ "(" ^(String.concat "," (List.map vdecl_to_string fdecl.params)) ^ "):\n\t" ^ (String.concat "\t" (List.map statement_to_string fdecl.body)) ^ "\n"
 
-let kernel_fdecl_to_string kernel_fdecl = (variable_type_to_string kernel_fdecl.kernel_r_type) ^ " defg " ^ (idtos kernel_fdecl.kernel_name) ^ "(" ^(String.concat "," (List.map vdecl_to_string kernel_fdecl.kernel_params)) ^ "):\n\t" ^ (String.concat "\t" (List.map statement_to_string kernel_fdecl.kernel_body)) ^ "\n"
-
+(* let kernel_fdecl_to_string kernel_fdecl = (variable_type_to_string kernel_fdecl.kernel_r_type) ^ " defg " ^ (idtos kernel_fdecl.kernel_name) ^ "(" ^(String.concat "," (List.map vdecl_to_string kernel_fdecl.kernel_params)) ^ "):\n\t" ^ (String.concat "\t" (List.map statement_to_string kernel_fdecl.kernel_body)) ^ "\n"
+ *)
 let program_to_string program = 
-	(String.concat "\n" (List.map variable_statement_to_string (triple_fst(program)))) ^ "\n" ^
-  (String.concat "\n" (List.map kernel_fdecl_to_string (triple_snd(program)))) ^"\n" ^
-  (String.concat "\n" (List.map fdecl_to_string (triple_trd(program))))
-
+	(String.concat "\n" (List.map variable_statement_to_string (fst(program)))) ^ "\n" ^
+  (String.concat "\n" (List.map fdecl_to_string (snd(program))))
 
 (* ------------------------------------------------------------Sast Helper Functions ------------------------------------------------------------*)
 let sast_to_string sast = program_to_string sast
+
+
+(* let s_variable_statement_to_string = function
+  | Sast.Declaration(vdecl) -> (s_vdecl_to_string vdecl) ^ "\n" 
+  | Sast.Assignment(id,e) -> (idtos id) ^ "=" ^ (s_expression_to_string e) ^ "\n"
+  | Sast.Initialization(vdecl,e) -> (s_vdecl_to_string vdecl) ^ "=" ^ (s_expression_to_string e) ^ "\n"
+
+let s_ptx_fdecl_to_string ptx_fdecl = 
+
+let s_fdecl_to_string c_fdecl = 
+  (s_variable_type_to_string c_fdecl.c_fdecl_return_type) ^ " def " ^ 
+  (idtos c_fdecl.c_fdecl_name) ^ "(" ^(String.concat "," (List.map s_vdecl_to_string c_fdecl.c_fdecl_params)) ^ "):\n\t" ^ (String.concat "\t" (List.map s_statement_to_string c_fdecl.c_fdecl_body)) ^ "\n"
+
+let sast_to_string sast = 
+  (String.concat "\n" (List.map s_variable_statement_to_string (Utils.triple_fst(program))) ^ "\n" ^
+  (String.concat "\n" (List.map s_ptx_fdecl_to_string (Utils.triple_snd(program ))) ^ "\n" ^ 
+  (String.concat "\n" (List.map s_fdecl_to_string (Utils.triple_trd(program))))
+ *)

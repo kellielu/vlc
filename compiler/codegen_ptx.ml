@@ -1,7 +1,9 @@
 open Sast
 open Utils
 open Exceptions
-
+(* For sprintf *)
+open Printf
+open String
 (*------------------------------------------------------------ KERNEL CODE GENERATION ------------------------------------------------------------*)
 (* 
 let generate_kernel_fdecl kernel_f  =
@@ -39,9 +41,7 @@ and generate_kernel_fdecl_list kernel_fdecl_list  =
 
 (* Generate id *)
 let generate_id id  = 
-  let id_string = Utils.idtos(id) in
-  match id_string with
-    | _ as identifier -> sprintf identifier
+  sprintf "%s" (Utils.idtos(id))
 (* Calls generate_func for every element of the list and concatenates results with specified concat symbol
    Used if you need to generate a list of something - e.x. list of statements, list of params *)
 let generate_list generate_func concat mylist = 
@@ -53,20 +53,22 @@ let generate_list generate_func concat mylist =
 (* Generates the ptx function string *)
 (* Fill in once you have the generation for other ptx types in the sast *)
 let generate_ptx_function ptx_function = 
-	sprintf (generate_id ptx_function.name)
+	sprintf "test"
 
 (* Writing out to PTX file *)
 let write_ptx filename ptx_string = 
   let file = open_out (filename ^ ".ptx") in 
-  sprintf file "%s" ptx_string
+  fprintf file "%s" ptx_string
 
 (* Main function for generating all ptx files*)
 let rec generate_ptx_function_files program = 
   let ptx_function_list = Utils.triple_snd(program) in
-	match ptx_function_list with
-		| [] -> 
-		| hd::tl ->
-			write_ptx (hd.name) (generate_ptx_function hd);
-			generate_ptx_function_files tl
+  let rec generate_ptx_files ptx_func_list =
+  	match ptx_func_list with
+  		| [] -> ()
+  		| hd::tl ->
+  			write_ptx (Utils.idtos(hd.ptx_fdecl_name)) (generate_ptx_function hd);
+  			generate_ptx_files tl
+  in generate_ptx_files ptx_function_list
 
 

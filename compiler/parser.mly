@@ -39,10 +39,9 @@
 %%
 
 program:
-    |  /* nothing */                                { [], [], [] }
-    | program variable_statement TERMINATOR                      { List.rev ($2 :: List.rev (triple_fst $1)), triple_snd $1, triple_trd $1  }
-    | program kernel_fdecl                          { triple_fst $1, List.rev ($2 :: List.rev (triple_snd $1)),  triple_trd $1 }
-    | program fdecl                                 { triple_fst $1, triple_snd $1, List.rev($2 :: List.rev(triple_trd $1))  }
+    |  /* nothing */                                             { [], [] } /* variable statements, function declarations */ 
+    | program variable_statement TERMINATOR                      { List.rev ($2 :: List.rev (fst $1)), snd $1 }
+    | program fdecl                                              { fst $1, List.rev($2 :: List.rev(snd $1))  }
 
 identifier:
     | IDENTIFIER                                    { Identifier($1)}
@@ -51,21 +50,20 @@ identifier:
 fdecl:
     | variable_type DEF identifier LPAREN parameter_list RPAREN COLON INDENT function_body DEDENT
                                                     {{ 
-                                                        r_type = $1;
+                                                        is_kernel_function = false;
+                                                        return_type = $1;
                                                         name = $3;
                                                         params = $5;
                                                         body = $9;
                                                     }}
-
-kernel_fdecl:
     | variable_type DEFG identifier LPAREN parameter_list RPAREN COLON INDENT function_body DEDENT
                                                     {{
-                                                        kernel_r_type = $1;
-                                                        kernel_name = $3;
-                                                        kernel_params = $5;
-                                                        kernel_body = $9;
+                                                        is_kernel_function = true;
+                                                        return_type = $1;
+                                                        name = $3;
+                                                        params = $5;
+                                                        body = $9;
                                                     }}
-
 
 /* Constant parameters for higher order function calls */
 constant:
@@ -84,17 +82,17 @@ nonempty_constant_list:
 higher_order_function_call:
     | identifier LPAREN identifier COMMA CONSTS LPAREN constant_list RPAREN COMMA nonempty_expression_list RPAREN
         {{
-            function_type = $1;
+            higher_order_function_type = $1;
             kernel_function_name = $3;
             constants = $7;
-            arrays = $10;
+            input_arrays = $10;
         }}
     | identifier LPAREN identifier COMMA nonempty_expression_list RPAREN
         {{
-            function_type = $1;
+            higher_order_function_type = $1;
             kernel_function_name = $3;
             constants = [];
-            arrays = $5;
+            input_arrays = $5;
         }}
 
 
@@ -112,7 +110,7 @@ vdecl:
 
 /* Statements, expressions, and variable types*/ 
 variable_statement:
-    | vdecl                                         { Declaration($1) }
+    | vdecl TERMINATOR                              { Declaration($1) }
     | identifier ASSIGNMENT expression TERMINATOR   { Assignment( $1, $3 ) }
     | vdecl ASSIGNMENT expression TERMINATOR        { Initialization ($1, $3) }
 
@@ -161,9 +159,11 @@ variable_type:
             in create_array $1 $2
              
         }
+array_dimension:
+    | LBRACKET INTEGER_LITERAL RBRACKET                                 { $2 }
 
 array_dimension_list:
-    | LBRACKET INTEGER_LITERAL RBRACKET                              { [$2]}
-    | LBRACKET INTEGER_LITERAL RBRACKET  array_dimension_list        {  $2 :: $4 }
+    | array_dimension                                                   {[$1]}
+    | array_dimension array_dimension_list                              { $1 :: $2 }
 
     

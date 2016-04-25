@@ -28,10 +28,10 @@ type expression =
 and constant = 
     | Constant of identifier * expression
 and higher_order_function_call = {
-    f_type                  : identifier; (* Map or reduce *)
-    kernel_function_name    : identifier;
-    constants               : constant list;
-    arrays                  : expression list; (* Check in semantic analyzer that type is array*)
+    higher_order_function_type                      : identifier; (* Map or reduce *)
+    kernel_function_name                            : identifier;
+    constants                                       : constant list;
+    input_arrays                                    : expression list; (* Check in semantic analyzer that type is array*)
 }
 
 type variable_statement = 
@@ -46,20 +46,12 @@ type statement =
     | Return_Void
 	
 type fdecl = {
-    r_type      : variable_type;
-    name        : identifier;
-    params      : vdecl list;    
-    body        : statement list;
+    is_kernel_function                              : bool; (* Host or Kernel *)
+    return_type                                     : variable_type;
+    name                                            : identifier;
+    params                                          : vdecl list;    
+    body                                            : statement list;
 }
-
-type kernel_fdecl = {
-    kernel_r_type      : variable_type;
-    kernel_name        : identifier;
-    kernel_params      : vdecl list;
-    kernel_body        : statement list;
-}
-
-
 
 (* Program Definition *)
-type program = variable_statement list * kernel_fdecl list * fdecl list
+type program = variable_statement list * fdecl list
