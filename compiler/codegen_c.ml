@@ -1,23 +1,9 @@
 open Sast
-open Utils
-open Exceptions
+(* open Exceptions *)
 open Codegen_ptx 
 
 (* For sprintf *)
 open Printf
-open String
-
-let builtin_functions = ["print"]
-
-let is_builtin_function name =
-  List.exists (fun function_name -> function_name = name) builtin_functions
-
-let rec get_array_dimensions vtype dimensions = 
-  match vtype with
-  | Array(t,n) -> 
-      get_array_dimensions t (List.rev(n::dimensions))
-  | Primitive(p) -> dimensions
-  | _ -> raise Exceptions.Unknown_variable_type
 
 (*-------------------------------------Generating Functions-------------------------------------*)
 
@@ -35,6 +21,7 @@ let generate_operator operator  =
     | Multiply -> "*"
     | Divide -> "/"
     | Modulo -> "%"
+(*     | _ -> raise Exceptions.Unknown_operator *)
   in
   sprintf "%s" op
 
@@ -44,6 +31,7 @@ let generate_data_type dtype =
       | String -> "char *"
       | Integer -> "int"
       | Void -> "void"
+(*       | _ -> raise Exceptions.Unknown_data_type *)
     in sprintf "%s" data_type
 
 (* Generate variable type *)
@@ -54,7 +42,8 @@ let rec generate_variable_type variable_type  =
       match t with
         | Array(t1,n1) -> generate_variable_type t1 
         | Primitive(p) -> generate_data_type p
-        | _ -> raise Exceptions.Unknown_variable_type
+(*         | _ -> raise Exceptions.Unknown_variable_type
+    | _ -> raise Exceptions.Unknown_variable_type *)
   in sprintf "%s" vtype
 
 (* Generate id *)
@@ -125,6 +114,8 @@ let generate_vdecl d  =
         | Primitive(p) ->
             let param_string = (generate_data_type p) ^ " " ^ (generate_id id) in 
             sprintf "%s" param_string
+(*         | _ -> raise Exceptions.Unknown_variable_type
+  | _ -> raise Exceptions.Unknown_type_of_vdecl *)
 
 let generate_param d =
   match d with 
@@ -145,6 +136,8 @@ let generate_param d =
         | Primitive(p) ->
             let param_string = (generate_data_type p) ^ " " ^ (generate_id id) in 
             sprintf "%s" param_string
+(*         | _ -> raise Exceptions.Unknown_variable_type
+    | _ -> raise Exceptions.Unknown_type_of_param *)
 
  (* Generate expressions - including higher order function calls - and constants *)
 let rec generate_expression expression  =
@@ -165,8 +158,10 @@ let rec generate_expression expression  =
         (generate_id id)
     | Kernel_Function_Call(kfcall) -> generate_kernel_function_call kfcall
     | Higher_Order_Function_Call(fcall) -> 
-      match Utils.idtos(fcall.function_type) with
+      match Utils.idtos(fcall.higher_order_function_type) with
         | "map" | "reduce" ->  generate_higher_order_function_call fcall
+        | _ -> raise Exceptions.Unknown_higher_order_function_call
+(*     | _ -> raise Exceptions.Unknown_type_of_expression *)
     
   in sprintf "%s" expr
 (* Generates CUDA statements that copy constants from host to gpu *)
@@ -178,6 +173,7 @@ and generate_constant_on_gpu const  =
           generate_mem_cpy_statement_host_to_device const 1 
     | Array(vtype,length) ->
         "vlcarray fill"
+(*     | _ -> raise Exceptions.Unknown_variable_type *)
   in 
   sprintf "%s" mem_alloc_constant_string
 and generate_kernel_function_call kfcall = sprintf "hi" (* Why do we need semicolon??????*)
@@ -241,6 +237,7 @@ let generate_variable_statement vstatement =
         (generate_id id) ^ "=" ^ (generate_expression e) ^ ";\n"
     | Initialization(d,e) ->
         (generate_vdecl d) ^ "=" ^ (generate_expression e) ^ ";\n"
+(*     | _ -> raise Exceptions.Unknown_variable_statement *)
   in sprintf "%s" vstatement_string
 
 (* Generates statements *)
@@ -254,6 +251,7 @@ let generate_statement statement  =
         "return" ^ (generate_expression e) ^ ";\n"
     | Return_Void ->  
         "return;\n"
+(*     | _ -> raise Exceptions.Unknown_type_of_statement *)
   in sprintf "%s" statement_string
 
 
@@ -278,23 +276,21 @@ let generate_cuda_file filename program =
     (generate_list generate_variable_statement "" (Utils.triple_fst(program))) ^ 
     (generate_list generate_fdecl "" (Utils.triple_trd(program))) 
   in 
-  let cuda_program_string = sprintf "
-  #include <stdio.h>
-  #include <stdlib.h>
-  #include \"cuda.h\"
-  #include <iostream>
-
-  CUdevice    device;
-  CUmodule    cudaModule;
-  CUcontext   context;
-  CUfunction  function;
-
+  let cuda_program_string = sprintf "\n\
+  #include <stdio.h>\n\
+  #include <stdlib.h>\n\
+  #include \"cuda.h\"\n\
+  #include <iostream>\n\
+  CUdevice    device;\n\
+  CUmodule    cudaModule;\n\
+  CUcontext   context;\n\
+  CUfunction  function;\n\
   %s" cuda_program_body in
   write_cuda filename cuda_program_string
 
 (* Generate program *)
 let generate_program cuda_filename program = 
   generate_cuda_file cuda_filename program;
-  Codegen_ptx.generate_ptx_function_files program;
+  Codegen_ptx.generate_ptx_function_files program
   
 

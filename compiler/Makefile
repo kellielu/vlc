@@ -1,4 +1,4 @@
-OBJS =  ast.cmo sast.cmo exceptions.ml semant.cmo utils.cmo codegen_ptx.cmo codegen_c.cmo parser.cmo scanner.cmo processor.cmo vlc.cmo 
+OBJS =  ast.cmo sast.cmo exceptions.ml utils.cmo semant.cmo codegen_ptx.cmo codegen_c.cmo parser.cmo scanner.cmo processor.cmo vlc.cmo 
 
 .PHONY:all
 all: clean vlc
@@ -44,21 +44,21 @@ parser.ml parser.mli: parser.mly
 	ocamlyacc -v parser.mly
 
 %.cmo: %.ml
-	ocamlc -w A -c $<
+	ocamlc -w Aelz -c $<
 
 %.cmi: %.mlix
-	ocamlc -w A -c $<
+	ocamlc -w Aelz -c $<
 
 ast.cmo:
 ast.cmx:
-sast.cmo: ast.cmx
+sast.cmo: ast.cmo
 sast.cmx: ast.cmx
 exceptions.cmo:
 exceptions.cmx:
-semant.cmo: ast.cmo exceptions.cmo
-semant.cmx: ast.cmx exceptions.cmx
-utils.cmo: ast.cmo parser.cmi semant.cmo sast.cmo
-utils.cmx: ast.cmx parser.cmx semant.cmx sast.cmx 
+semant.cmo: ast.cmo exceptions.cmo utils.cmo sast.cmo
+semant.cmx: ast.cmx exceptions.cmx utils.cmx sast.cmx
+utils.cmo: ast.cmo parser.cmi sast.cmo
+utils.cmx: ast.cmx parser.cmx sast.cmx 
 codegen_ptx.cmo: parser.cmi utils.cmo ast.cmo semant.cmo
 codegen_ptx.cmx: parser.cmx utils.cmx ast.cmx semant.cmx
 codegen_c.cmo: parser.cmi utils.cmo ast.cmo semant.cmo codegen_ptx.cmo
@@ -68,8 +68,8 @@ processor.cmx: scanner.cmx parser.cmx
 parser.cmo: ast.cmo parser.cmi
 parser.cmx: ast.cmx parser.cmi
 parser.cmi: ast.cmo
-vlc.cmo: parser.cmi codegen_ptx.cmo codegen_c.cmo utils.cmo processor.cmo ast.cmo semant.cmo
-vlc.cmx: parser.cmx codegen_ptx.cmx codegen_c.cmx utils.cmx processor.cmx ast.cmx semant.cmx
+vlc.cmo: parser.cmi codegen_ptx.cmo codegen_c.cmo utils.cmo processor.cmo ast.cmo sast.cmo semant.cmo
+vlc.cmx: parser.cmx codegen_ptx.cmx codegen_c.cmx utils.cmx processor.cmx ast.cmx sast.cmx semant.cmx
 
 # Shortcut makes
 # Make for hello_host

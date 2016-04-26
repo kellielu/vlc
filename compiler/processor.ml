@@ -8,7 +8,7 @@ let get_tokens lexbuf =
   let rec next lexbuf token_list = 
   match Scanner.token lexbuf with
     | DEDENT_EOF(c) as eof-> eof :: token_list
-    | t -> t :: (next lexbuf token_list)
+    | _ as token -> token :: (next lexbuf token_list)
   in next lexbuf []
 
 (* Replaces DEDENT_COUNT with DEDENTS *)

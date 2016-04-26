@@ -8,11 +8,6 @@
     | "void" -> Void
 	| dtype -> raise (Exceptions.Invalid_data_type dtype)
 
-    (* Functions for accessing a triple tuple - used for program *)
-    let triple_fst (a,_,_) = a
-    let triple_snd (_,a,_) = a
-    let triple_trd (_,_,a) = a
-
 %}
 
 %token LPAREN RPAREN LBRACKET RBRACKET LCURLY RCURLY INDENT DEDENT COLON TERMINATOR EOF COMMA

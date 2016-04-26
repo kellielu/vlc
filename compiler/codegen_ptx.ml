@@ -1,9 +1,7 @@
 open Sast
-open Utils
 open Exceptions
 (* For sprintf *)
 open Printf
-open String
 (*------------------------------------------------------------ KERNEL CODE GENERATION ------------------------------------------------------------*)
 (* 
 let generate_kernel_fdecl kernel_f  =
@@ -52,8 +50,9 @@ let generate_list generate_func concat mylist =
 
 (* Generates the ptx function string *)
 (* Fill in once you have the generation for other ptx types in the sast *)
-let generate_ptx_function ptx_function = 
-	sprintf "test"
+let generate_ptx_function ptx_function =
+  let ptx_func = "test" in 
+	sprintf "%s" ptx_func
 
 (* Writing out to PTX file *)
 let write_ptx filename ptx_string = 
@@ -61,7 +60,7 @@ let write_ptx filename ptx_string =
   fprintf file "%s" ptx_string
 
 (* Main function for generating all ptx files*)
-let rec generate_ptx_function_files program = 
+let generate_ptx_function_files program = 
   let ptx_function_list = Utils.triple_snd(program) in
   let rec generate_ptx_files ptx_func_list =
   	match ptx_func_list with
