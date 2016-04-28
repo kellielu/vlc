@@ -37,11 +37,12 @@ rule token = parse
 	| '%' { MODULO }
 
 	(* Keywords *)
-	| ("string" | "int" | "void") as input { DATATYPE(input) }
-	| "return" { RETURN }
-	| "def"	   { DEF }
-	| "defg"   { DEFG }
-	| "consts" { CONSTS }
+	| '~'											{ TILDA }
+	| ("string" | "int" | "void") as input 			{ DATATYPE(input) }
+	| "return" 										{ RETURN }
+	| "def"	   										{ DEF }
+	| "defg"   										{ DEFG }
+	| "consts" 										{ CONSTS }
 
 	(* Identifier and Literals *)
 	| (letter | '_')(letter | digit | '_')* as id { IDENTIFIER(id) }

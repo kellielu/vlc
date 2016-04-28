@@ -71,7 +71,7 @@ let rec expression_to_string = function
 	| Ast.Integer_Literal(i) -> string_of_int i
   | Ast.Array_Literal(e_list) -> "{" ^ String.concat "," (List.map expression_to_string e_list) ^ "}"
 	| Ast.Function_Call(id, e_list) -> (idtos id) ^ "(" ^ (String.concat "," (List.map expression_to_string e_list)) ^ ")" 
-	| Ast.Identifier_Expression(id) -> (idtos id)
+	| Ast.Identifier_Literal(id) -> (idtos id)
   | Ast.Higher_Order_Function_Call(fcall) -> higher_order_function_call_to_string fcall
 and constant_to_string = function
   | Ast.Constant(id,e) -> (idtos id) ^ "=" ^ (expression_to_string e)
