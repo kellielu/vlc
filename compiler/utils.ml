@@ -82,7 +82,7 @@ let vdecl_to_string = function
 
 let variable_statement_to_string = function
   | Ast.Declaration(vdecl) -> (vdecl_to_string vdecl) ^ "\n" 
-  | Ast.Assignment(id,e) -> (idtos id) ^ "=" ^ (expression_to_string e) ^ "\n"
+  | Ast.Assignment(e1,e2) -> (expression_to_string e1) ^ "=" ^ (expression_to_string e2) ^ "\n"
   | Ast.Initialization(vdecl,e) -> (vdecl_to_string vdecl) ^ "=" ^ (expression_to_string e) ^ "\n"
 
 let statement_to_string = function

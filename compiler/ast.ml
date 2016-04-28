@@ -54,7 +54,7 @@ and higher_order_function_call = {
 type variable_statement = 
     | Declaration of vdecl
     | Initialization of vdecl * expression
-    | Assignment of identifier * expression
+    | Assignment of expression * expression
 
 type statement = 
     | Variable_Statement of variable_statement

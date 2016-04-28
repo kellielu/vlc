@@ -127,9 +127,9 @@ parameter_list:
 
 /* Statements */ 
 variable_statement:
-    | vdecl TERMINATOR                              { Declaration($1) }
-    | identifier ASSIGNMENT expression TERMINATOR   { Assignment( $1, $3 ) }
-    | vdecl ASSIGNMENT expression TERMINATOR        { Initialization ($1, $3) }
+    | vdecl TERMINATOR                                          { Declaration($1) }
+    | assignment_expression ASSIGNMENT expression TERMINATOR    { Assignment( $1, $3 ) }
+    | vdecl ASSIGNMENT expression TERMINATOR                    { Initialization ($1, $3) }
     
 statement:
     | expression TERMINATOR                         { Expression($1) } 
@@ -155,6 +155,18 @@ indent_block:
 
 
 /* Expressions */
+array_literal:
+    | LCURLY nonempty_expression_list RCURLY                        { Array_Literal($2)}
+
+array_expression:
+    | identifier                                                    { Identifier_Literal($1) }
+    | array_literal                                                 { $1 }
+
+ /* Expressions that can be assigned on the right side of the assignment statement */
+assignment_expression:
+    | identifier                                                    { Identifier_Literal($1) }
+    | array_expression array_accessor_list                          { Array_Accessor($1,$2) }
+
 expression:
     | identifier LPAREN expression_list RPAREN                      { Function_Call($1,$3) }
     | higher_order_function_call                                    { Higher_Order_Function_Call($1)}
@@ -165,7 +177,7 @@ expression:
     | INTEGER_LITERAL                                               { Integer_Literal($1) }
     | BOOLEAN_LITERAL                                               { Boolean_Literal($1) }
     | FLOATING_POINT_LITERAL                                        { Floating_Point_Literal($1) }
-    | LCURLY nonempty_expression_list RCURLY                        { Array_Literal($2)}
+    | array_literal                                                 { $1 }
     | identifier                                                    { Identifier_Literal($1)}
 
     | expression AND expression                                     { Binop($1, And, $3) }
@@ -189,7 +201,7 @@ expression:
     | variable_type LPAREN expression RPAREN                        { Cast($1, $3)}
 
     | expression IF LPAREN expression RPAREN ELSE expression        { Ternary_Expression($1,$4,$7) }
-    | expression array_accessor_list                                { Array_Accessor($1,$2) }
+    | array_expression array_accessor_list                          { Array_Accessor($1,$2) }
 
 
 nonempty_expression_list:
