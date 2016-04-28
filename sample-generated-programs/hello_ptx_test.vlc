@@ -2,9 +2,16 @@
 int defg add(int x, int y):
 	return scale * (x + y)
 
-int defg vector_add(int[] a, int[] b):
-	index = i
-	if(index )
+int defg vector_add(int a, int b):
+	int index = a
+	if(index == 1):
+		index = 5
+	for (int i = 0, i < 2, i = i + 1):
+		print(i)
+	while(i < 3):
+		print(i)
+	index = 5 if (i == 2) else 2
+	a[4]
 	
 
 int def vlc():
@@ -12,7 +19,7 @@ int def vlc():
 	int[5] a = {1,2,3,4,5}
 	int[5] b = {1,2,3,4,5}
 
-	int[5] c = map(add, consts(scale = 4) , a, b)
+	int[5] c = ~map(add, consts(scale = 4),a,b)
 	int[5] d = vector_add(a,b)
 
 	print(d)

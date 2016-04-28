@@ -41,7 +41,7 @@ type expression =
     | Binop of expression * binary_operator * expression
     | Unop of expression * unary_operator
     | Array_Accessor of expression * expression list (* Array, indexes *)
-    | Ternary_Expression of expression * expression * expression
+    | Ternary of expression * expression * expression
 and constant = 
     | Constant of identifier * expression
 and higher_order_function_call = {

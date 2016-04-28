@@ -22,7 +22,7 @@ let file_in = open_in filename in
       let program = Processor.parser token_list in
 (*       let sast = Semant.analyze program in *)
       match action with
-          Tokens ->
+        | Tokens ->
             print_string (Utils.token_list_to_string token_list)
         | Ast ->
             print_string (Utils.program_to_string program)

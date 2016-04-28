@@ -28,11 +28,21 @@ let token_to_string = function
   | INTEGER_LITERAL(i) -> "INTEGER_LITERAL(" ^ string_of_int i ^ ")"
   | DEDENT_COUNT(i) -> "DEDENT_COUNT(" ^ string_of_int i ^ ")"
   | STRING_LITERAL(s) -> "STRINGLITERAL(" ^ s ^ ")"
+  | FLOATING_POINT_LITERAL(f) -> "FLOATING_POINT_LITERAL(" ^ string_of_float f ^ ")"
+  | BOOLEAN_LITERAL(b) -> "BOOLEAN_LITERAL" ^ string_of_bool b ^ ")"
   | RETURN -> "RETURN"
   | DATATYPE(a) -> "DATATYPE(" ^ a ^ ")"
   | DEDENT_EOF(i) -> "DEDENT_EOF(" ^ string_of_int i ^ ")"
   | LCURLY -> "LCURLY" | RCURLY -> "RCURLY" | LBRACKET -> "LBRACKET" | RBRACKET -> "RBRACKET"
-  | CONSTS -> "CONSTS"
+  | CONSTS -> "CONSTS" | TILDA -> "TILDA"
+  | BITSHIFT_RIGHT -> "BITSHIFT_RIGHT" | BITSHIFT_LEFT -> "BITSHIFT_LEFT"
+  | AND -> "AND" | OR -> "OR" | NOT -> "NOT"
+  | EQUAL -> "EQUAL" | NOT_EQUAL -> "NOT_EQUAL" 
+  | GREATER_THAN -> "GREATER_THAN" | GREATER_THAN_EQUAL -> "GREATER_THAN_EQUAL"
+  | LESS_THAN -> "LESS_THAN" | LESS_THAN_EQUAL -> "LESS_THAN_EQUAL"
+  | IF -> "IF" | ELSE -> "ELSE" | WHILE -> "WHILE" | FOR -> "FOR"
+  | CONTINUE -> "CONTINUE" | BREAK -> "BREAK"
+
 
 let token_list_to_string token_list = 
  	let rec helper token_list acc_string = 
@@ -44,52 +54,87 @@ let token_list_to_string token_list =
  	helper token_list ""
 
 (*------------------------------------------------------------Code Generation Helper Functions and Program(Ast) Printing Functions------------------------------------------------------------*)
-
-let idtos = function
-  | Ast.Identifier(s) -> s
-
-let operator_to_string = function
+let binary_operator_to_string = function
   | Ast.Add -> "+"
   | Ast.Subtract -> "-"
   | Ast.Multiply -> "*"
   | Ast.Divide -> "/"
   | Ast.Modulo -> "%"
+  | Ast.And -> "and"
+  | Ast.Or -> "or"
+  | Ast.Equal -> "=="
+  | Ast.Not_Equal -> "!="
+  | Ast.Greater_Than -> ">"
+  | Ast.Greater_Than_Equal -> ">="
+  | Ast.Less_Than -> "<"
+  | Ast.Less_Than_Equal -> "<="
+
+let unary_operator_to_string = function
+  | Ast.Not -> "not"
+  | Ast.Bitshift_Left -> "<<"
+  | Ast.Bitshift_Right -> "<<"
+
+let idtos = function
+  | Ast.Identifier(s) -> s
 
 let data_type_to_string = function 
   | Ast.String -> "string"
   | Ast.Integer -> "int"
   | Ast.Void -> "void"
+  | Ast.Boolean -> "bool"
+  | Ast.Float -> "float"
+
 
 let rec variable_type_to_string = function
   | Ast.Primitive(p) -> data_type_to_string p
   | Ast.Array(vtype,size) -> (variable_type_to_string vtype) ^ "[" ^ (string_of_int size) ^ "]" 
 
+let vdecl_to_string = function 
+  | Ast.Variable_Declaration(vtype,name) ->(variable_type_to_string vtype) ^ " " ^ (idtos name)
 
 let rec expression_to_string = function
-  | Ast.Binop(e1, o, e2) -> (expression_to_string e1) ^ (operator_to_string o) ^ (expression_to_string e2)
-	| Ast.String_Literal(s) -> "\"" ^ s ^ "\""
-	| Ast.Integer_Literal(i) -> string_of_int i
-  | Ast.Array_Literal(e_list) -> "{" ^ String.concat "," (List.map expression_to_string e_list) ^ "}"
-	| Ast.Function_Call(id, e_list) -> (idtos id) ^ "(" ^ (String.concat "," (List.map expression_to_string e_list)) ^ ")" 
-	| Ast.Identifier_Literal(id) -> (idtos id)
+  | Ast.Function_Call(id, e_list) -> (idtos id) ^ "(" ^ (String.concat "," (List.map expression_to_string e_list)) ^ ")" 
   | Ast.Higher_Order_Function_Call(fcall) -> higher_order_function_call_to_string fcall
+  | Ast.String_Literal(s) -> "\"" ^ s ^ "\""
+	| Ast.Integer_Literal(i) -> string_of_int i
+  | Ast.Boolean_Literal(b) -> string_of_bool b
+  | Ast.Floating_Point_Literal(f)-> string_of_float f
+  | Ast.Array_Literal(e_list) -> "{" ^ String.concat "," (List.map expression_to_string e_list) ^ "}"
+  | Ast.Identifier_Literal(id) -> (idtos id)
+  | Ast.Cast(vtype,e) -> (variable_type_to_string vtype) ^ "(" ^ expression_to_string e ^ ")"
+  | Ast.Binop(e1, o, e2) -> (expression_to_string e1) ^ (binary_operator_to_string o) ^ (expression_to_string e2)
+  | Ast.Unop(e, o) -> 
+    (match o with 
+        | Ast.Not -> (unary_operator_to_string o) ^ (expression_to_string e)
+        | _ -> (expression_to_string e) ^ (unary_operator_to_string o))
+  | Ast.Array_Accessor(e,e_list) -> (expression_to_string e) ^ "[" ^ (String.concat "][" (List.map expression_to_string e_list)) ^ "]"
+  | Ast.Ternary(e1,e2,e3) -> (expression_to_string e1) ^ " if(" ^ (expression_to_string e2) ^ ") else " ^ (expression_to_string e3)
 and constant_to_string = function
   | Ast.Constant(id,e) -> (idtos id) ^ "=" ^ (expression_to_string e)
 and higher_order_function_call_to_string fcall = (idtos fcall.higher_order_function_type) ^ "(" ^ idtos(fcall.kernel_function_name) ^ "," ^ "consts(" ^ (String.concat "," (List.map constant_to_string fcall.constants)) ^ ")," ^ (String.concat "," (List.map expression_to_string fcall.input_arrays)) ^ ")"
 
-let vdecl_to_string = function 
-  | Ast.Variable_Declaration(vtype,name) ->(variable_type_to_string vtype) ^ " " ^ (idtos name)
+
 
 let variable_statement_to_string = function
   | Ast.Declaration(vdecl) -> (vdecl_to_string vdecl) ^ "\n" 
   | Ast.Assignment(e1,e2) -> (expression_to_string e1) ^ "=" ^ (expression_to_string e2) ^ "\n"
   | Ast.Initialization(vdecl,e) -> (vdecl_to_string vdecl) ^ "=" ^ (expression_to_string e) ^ "\n"
 
-let statement_to_string = function
+let rec statement_to_string = function
+  | Ast.Variable_Statement(vstmt) -> (variable_statement_to_string vstmt)
 	| Ast.Expression(e) -> (expression_to_string e) ^ "\n"
- 	| Ast.Variable_Statement(vstmt) -> (variable_statement_to_string vstmt)
+  | Ast.Block(smtm_list) -> "\t" ^ String.concat "\t" (List.map statement_to_string smtm_list)
+  | Ast.If(e,block1, block2) -> 
+      (match block2 with
+      | Block([]) -> "if(" ^ (expression_to_string e) ^ "):\n" ^ (statement_to_string block1)
+      | _ -> "if(" ^ (expression_to_string e) ^ "):\n" ^ (statement_to_string block1) ^ "else:\n" ^ (statement_to_string block2))
+  | Ast.While(e,block) -> 
+      "while(" ^ (expression_to_string e) ^ "):\n" ^ (statement_to_string block)
+  | Ast.For(smtm1, e, smtm2, block) -> "for(" ^ (statement_to_string smtm1) ^ "," ^ (expression_to_string e) ^ "," ^ (statement_to_string smtm2) ^ "):\n" ^ (statement_to_string block)
 	| Ast.Return(e) -> "return " ^ (expression_to_string e) ^ "\n"
   | Ast.Return_Void -> "return" ^ "\n"
+  | Ast.Continue -> "continue" ^ "\n"
+  | Ast.Break -> "break" ^ "\n"
 
 
 let fdecl_to_string fdecl = 

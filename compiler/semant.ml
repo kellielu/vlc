@@ -210,6 +210,9 @@ let rec infer_type expression =
         | None -> raise Exceptions.Empty_array_expression_list in
   match expression with
     | Ast.String_Literal(_) -> Ast.Primitive(Ast.String)
+    | Ast.Integer_Literal(_) -> Ast.Primitive(Ast.Integer)
+    | Ast.Floating_Point_Literal(_) -> Ast.Primitive(Ast.Float)
+    | Ast.Boolean_Literal(_) -> Ast.Primitive(Ast.Boolean)
     | Ast.Array_Literal(expr_list) ->
        let f expression = infer_type expression in
        Ast.Array(match_type (List.map f expr_list),(List.length expr_list))
@@ -236,7 +239,7 @@ let is_one_layer_array expression =
     match expression with 
     | Ast.Array_Literal(e_list) as array_literal -> 
         let arr = infer_type array_literal in
-          match arr with 
+          match arr with
           | Ast.Array(vtype,size) ->
               if size > 1 then false else true
           | _ -> raise Exceptions.Not_an_array_expression

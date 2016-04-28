@@ -12,43 +12,86 @@
 let letter = ['a'-'z' 'A'-'Z']
 let digit = ['0'-'9']
 let whitespace = [' ' '\t']
+let sign = ['+' '-']
+let exp = ['e' 'E']
 let newline = '\n' | "\r\n"
 
 rule token = parse
-	| newline { indent lexbuf}
-	| whitespace { token lexbuf }
+    | whitespace* "//"         			{ single_line_comment lexbuf }
+  	| whitespace* "/*"         			{ multi_line_comment lexbuf }
+	| newline 							{ indent lexbuf }
+	| whitespace 						{ token lexbuf }
 
 	(* Punctuation *)
-	| '(' { LPAREN }
-	| ')' { RPAREN }
-	| ':' { COLON }
-	| '=' { ASSIGNMENT }
-	| '[' { LBRACKET }
-	| ']' { RBRACKET }
-	| '{' { LCURLY }
-	| '}' { RCURLY }
-	| ',' { COMMA }	
+	| '(' 		{ LPAREN }
+	| ')' 		{ RPAREN }
+	| ':' 		{ COLON }
+	| '=' 		{ ASSIGNMENT }
+	| '[' 		{ LBRACKET }
+	| ']' 		{ RBRACKET }
+	| '{' 		{ LCURLY }
+	| '}' 		{ RCURLY }
+	| ',' 		{ COMMA }	
 
-	(*Arithmetic Operators*)
-	| '+' { ADD }
-	| '-' { SUBTRACT }
-	| '*' { MULTIPLY }
-	| '/' { DIVIDE }
-	| '%' { MODULO }
+	(* Arithmetic Operators *)
+	| '+' 		{ ADD }
+	| '-' 		{ SUBTRACT }
+	| '*' 		{ MULTIPLY }
+	| '/' 		{ DIVIDE }
+	| '%' 		{ MODULO }
+	| ">>" 		{ BITSHIFT_RIGHT }
+	| "<<"		{ BITSHIFT_LEFT }
 
-	(* Keywords *)
-	| '~'											{ TILDA }
-	| ("string" | "int" | "void") as input 			{ DATATYPE(input) }
-	| "return" 										{ RETURN }
-	| "def"	   										{ DEF }
-	| "defg"   										{ DEFG }
-	| "consts" 										{ CONSTS }
+	(* Logic Operators *)
+	| "and"  	{ AND }
+	| "or"	 	{ OR }
+	| "not" 	{ NOT }
+
+	(* Comparison Operators *)
+	| "==" 		{ EQUAL }
+	| "!="		{ NOT_EQUAL }
+	| ">"		{ GREATER_THAN }
+	| ">="		{ GREATER_THAN_EQUAL }
+	| "<"		{ LESS_THAN }
+	| "<=" 		{ LESS_THAN_EQUAL}
+
+	(* Datatypes *)
+	| ("string" | "int" | "void" | "float" | "bool") as input { DATATYPE(input) }
+
+	(* Conditionals and Loops *)
+	(* 	| "elif" 		{ ELSEIF }*)
+	| "if" 			{ IF }
+	| "else"   		{ ELSE }
+	| "for" 		{ FOR }
+	| "while"		{ WHILE }
+	| "break"		{ BREAK }
+	| "continue"	{ CONTINUE }
+
+	(* Function Declarations and Attributes *)
+	| '~' 			{ TILDA }
+	| "return" 		{ RETURN }
+	| "def"	   		{ DEF }
+	| "defg"   		{ DEFG }
+	| "consts" 		{ CONSTS }
 
 	(* Identifier and Literals *)
 	| (letter | '_')(letter | digit | '_')* as id { IDENTIFIER(id) }
-	| '"' (([' '-'!' '#'-'&' '('-'[' ']'-'~'] | '\\' [ '\\' '"' 'n' 'r' 't' '''])* as stringliteral) '"' { STRING_LITERAL(stringliteral) }
-	| digit* as integerliteral { INTEGER_LITERAL(int_of_string integerliteral) }
-	| eof { get_eof() }
+	| '"' (([' '-'!' '#'-'&' '('-'[' ']'-'~'] | '\\' [ '\\' '"' 'n' 'r' 't' '''])* as stringlit) '"' 										{ STRING_LITERAL(stringlit) }
+	| digit* as intlit 																														{ INTEGER_LITERAL(int_of_string intlit) }
+	| (sign? digit+ '.' digit*(exp sign? digit+)) | (exp? digit* '.' digit+ (exp sign? digit+)) | (sign? digit exp sign? digit+) as fplit 	{ FLOATING_POINT_LITERAL(float_of_string fplit) }
+	| ("true" | "false") as booleanlit 																										{ BOOLEAN_LITERAL(bool_of_string booleanlit)}
+	| eof 																																	{ get_eof() }
+
+(* Blocks for comments *)
+and single_line_comment = parse
+	| newline 							{ indent lexbuf }
+	| eof 								{ get_eof() }
+	| _ 								{ single_line_comment lexbuf }
+
+and multi_line_comment = parse
+	| newline 							{ multi_line_comment lexbuf }
+	| "*/"								{ token lexbuf }
+	| _ 								{ multi_line_comment lexbuf }
 
 (* Block for handling white space delimiting *)
 and indent = parse
@@ -84,3 +127,4 @@ and indent = parse
 	{
 		Stack.push 0 indent_stack
 	}
+
