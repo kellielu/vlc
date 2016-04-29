@@ -1,6 +1,4 @@
-
-
-								
+				
 
 int hello
 				
@@ -15,20 +13,24 @@ int def add_three(int a, int b, int c):
 
 					
 
-	return a + b + c
 
-				
+	return a + b + c
 
 int def vlc():
 
-	hello = 4
-
-	hi = 5
 
 
 
-	int a = 5
-	int b = 6
+
 
 	print("success")
+
+
 	return 0
+
+
+
+
+
+
+				

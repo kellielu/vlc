@@ -6,7 +6,7 @@
 #  Compile, run, and check the output of each expected-to-work test
 #  Compile and check the error of each expected-to-fail test
 
-GCC="gcc"
+NVCC="nvcc"
 
 VLC="./compiler/vlc -c"
 
@@ -82,6 +82,10 @@ Check() {
     Run "$VLC" $1 ">" "./tests/${basename}.c" &&
     Run "$GCC" "./tests/${basename}.c -o ./tests/${basename} && ./tests/${basename}" ">" "./tests/${basename}.out" &&
     Compare ./tests/${basename}.out ./${reffile}.out ./tests/${basename}.diff
+    # generatedfiles="$generatedfiles ${basename}.cu ${basename}.out" &&
+    # Run "$VLC" $1 ">" "${basename}.cu" &&
+    # Run "$NVCC" "${basename}.cu -o ${basename} && ./${basename}" ">" "${basename}.out" &&
+    # Compare ${basename}.out ${reffile}.out ${basename}.diff
 
     # Report the status and clean up the generated files
 
