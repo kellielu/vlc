@@ -81,7 +81,12 @@ type c_operator =
 
 type c_data_type = 
 	| String 
+	| Byte
 	| Integer 
+	| Long
+	| Float
+	| Double
+	| Boolean
 	| Void 
 
 type c_variable_type = 

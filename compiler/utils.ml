@@ -79,10 +79,14 @@ let idtos = function
 
 let data_type_to_string = function 
   | Ast.String -> "string"
+  | Ast.Byte -> "byte"
   | Ast.Integer -> "int"
+  | Ast.Long -> "long"
+  | Ast.Float -> "float"
+  | Ast.Double -> "double"
   | Ast.Void -> "void"
   | Ast.Boolean -> "bool"
-  | Ast.Float -> "float"
+
 
 
 let rec variable_type_to_string = function
