@@ -118,9 +118,9 @@ let rec infer_type expression env =
        Array(match_type (List.map f expr_list),(List.length expr_list))
     | _ -> raise (Exceptions.Cannot_infer_expression_type)
 
-let convert_sast ast = 
+(* let convert_sast ast =  *)
   (* Converts ast to sast *)
 
 (* Main function for Sast *)
-let analyze ast =  convert_sast ast
+(* let analyze ast =  convert_sast ast *)
 

@@ -108,14 +108,14 @@ type c_higher_order_function_call = {
     kernel_return_array_name 			: identifier;
     (* Name of kernel function that is called from host (would be kernel function corresponding to map/reduce) *)
     kernel_function    					: identifier;
-    constants               			: identifier list;
+    constants2               			: identifier list;
 }
 
 (* Type for calling defg functions directly from host *)
 type c_kernel_function_call = {
 	kernel_function 				: identifier; (* Name of the function that is called from the host *)
 	(* Input argument information*)
-	host_input_arg_values 			: expression list; (* Host names for arguments. If none, the arbitrary names are given.*)
+	host_input_arg_values 			: ptx_expression list; (* Host names for arguments. If none, the arbitrary names are given.*)
 	host_input_arg_types 			: c_variable_type list;
 	host_input_arg_names 			: identifier list;
 
@@ -124,7 +124,7 @@ type c_kernel_function_call = {
 }
 
 type c_expression =
-    | Binop of c_expression * operator * c_expression
+    | Binop of c_expression * c_operator * c_expression
 	| String_Literal of string
 	| Integer_Literal of int
     | Array_Literal of c_expression list 
