@@ -56,7 +56,7 @@ rule token = parse
 	| "<=" 		{ LESS_THAN_EQUAL}
 
 	(* Datatypes *)
-	| ("string" | "int" | "void" | "float" | "bool") as input { DATATYPE(input) }
+	| ("string" | "byte" | "int" | "long" | "float"| "double" | "bool" |"void"    ) as input { DATATYPE(input) }
 
 	(* Conditionals and Loops *)
 	(* 	| "elif" 		{ ELSEIF }*)

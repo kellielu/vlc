@@ -68,6 +68,11 @@ type ptx_fdecl = {
 	ptx_dependent_functions 					: identifier list;
 }
 
+
+
+
+
+
 (* -----------------------------------------C types -----------------------------------------*)
 
 (*---------------------------------- Unnecessary?????????---------------------------------- *)
@@ -76,7 +81,12 @@ type c_operator =
 
 type c_data_type = 
 	| String 
+	| Byte
 	| Integer 
+	| Long
+	| Float
+	| Double
+	| Boolean
 	| Void 
 
 type c_variable_type = 

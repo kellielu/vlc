@@ -12,5 +12,5 @@ test:
 
 clean:
 	cd compiler && $(MAKE) clean
-	rm tests/*.c tests/*.log
+	rm -f tests/*.cu tests/*.log
 	

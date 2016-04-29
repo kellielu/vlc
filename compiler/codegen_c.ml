@@ -28,9 +28,14 @@ let generate_operator operator  =
 (* Generate data type*)
 let generate_data_type dtype = 
     let data_type = match dtype with 
-      | String -> "char *"
-      | Integer -> "int"
-      | Void -> "void"
+        | String -> "char *"
+        | Byte -> "signed char"
+        | Integer -> "int"
+        | Long -> "long"
+        | Float -> "float"
+        | Double -> "double"
+        | Boolean -> "bool"
+        | Void -> "void"
 (*       | _ -> raise Exceptions.Unknown_data_type *)
     in sprintf "%s" data_type
 
@@ -281,6 +286,7 @@ let generate_cuda_file filename program =
   #include <stdlib.h>\n\
   #include \"cuda.h\"\n\
   #include <iostream>\n\
+  #include <vlc.hpp>\n\
   CUdevice    device;\n\
   CUmodule    cudaModule;\n\
   CUcontext   context;\n\
