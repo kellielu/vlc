@@ -68,11 +68,11 @@ let binary_operator_to_string = function
   | Ast.Greater_Than_Equal -> ">="
   | Ast.Less_Than -> "<"
   | Ast.Less_Than_Equal -> "<="
+  | Ast.Bitshift_Left -> "<<"
+  | Ast.Bitshift_Right -> "<<"
 
 let unary_operator_to_string = function
   | Ast.Not -> "not"
-  | Ast.Bitshift_Left -> "<<"
-  | Ast.Bitshift_Right -> "<<"
 
 let idtos = function
   | Ast.Identifier(s) -> s

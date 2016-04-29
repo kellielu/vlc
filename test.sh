@@ -78,16 +78,10 @@ Check() {
 
     generatedfiles=""
 
-    generatedfiles="$generatedfiles ./tests/${basename}.c ./tests/${basename}.out ./tests/${basename}" &&
-    Run "$VLC" $1 ">" "./tests/${basename}.c" &&
-    Run "$GCC" "./tests/${basename}.c -o ./tests/${basename} && ./tests/${basename}" ">" "./tests/${basename}.out" &&
+    generatedfiles="$generatedfiles ./tests/${basename}.cu ./tests/${basename}.out ./tests/${basename}" &&
+    Run "$VLC" $1 ">" "./tests/${basename}.cu" &&
+    Run "$NVCC" "./tests/${basename}.cu -o ./tests/${basename} && ./tests/${basename}" ">" "./tests/${basename}.out" &&
     Compare ./tests/${basename}.out ./${reffile}.out ./tests/${basename}.diff
-    # generatedfiles="$generatedfiles ${basename}.cu ${basename}.out" &&
-    # Run "$VLC" $1 ">" "${basename}.cu" &&
-    # Run "$NVCC" "${basename}.cu -o ${basename} && ./${basename}" ">" "${basename}.out" &&
-    # Compare ${basename}.out ${reffile}.out ${basename}.diff
-
-    # Report the status and clean up the generated files
 
     if [ $error -eq 0 ] ; then
 	if [ $keep -eq 0 ] ; then

@@ -182,8 +182,8 @@ expression:
     | expression MULTIPLY expression                                    { Binop($1, Multiply, $3) }
     | expression DIVIDE expression                                      { Binop($1, Divide, $3) }
     | expression MODULO expression                                      { Binop($1, Modulo, $3)}
-    | expression BITSHIFT_RIGHT                                         { Unop($1, Bitshift_Right) }
-    | expression BITSHIFT_LEFT                                          { Unop($1, Bitshift_Left) }
+    | expression BITSHIFT_RIGHT expression                              { Binop($1, Bitshift_Right,$3) }
+    | expression BITSHIFT_LEFT expression                               { Binop($1, Bitshift_Left,$3) }
     | variable_type LPAREN expression RPAREN                            { Cast($1, $3)}
 
     | expression IF LPAREN expression RPAREN ELSE expression            { Ternary($1,$4,$7) }
@@ -220,7 +220,7 @@ nonempty_array_expression_list:
  /* Expressions that can be assigned on the right side of the assignment statement */
 assignment_expression:
     | identifier                                                        { Identifier_Literal($1) }
-    | array_expression nonempty_array_accessor_list                              { Array_Accessor($1,$2) }
+    | array_expression nonempty_array_accessor_list                     { Array_Accessor($1,$2) }
 
 
 /* Variable types  and Data types */

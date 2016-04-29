@@ -5,9 +5,8 @@ type binary_operator =
 (*     | Exp | Dot | Matrix_Multiplication *)
     | And | Or
     | Equal | Not_Equal | Greater_Than | Less_Than | Greater_Than_Equal | Less_Than_Equal
-
-type unary_operator = 
     | Bitshift_Right | Bitshift_Left 
+type unary_operator = 
     | Not 
 
 type identifier = 
