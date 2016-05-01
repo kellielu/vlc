@@ -14,7 +14,7 @@ CUDA Nvidia Toolkit
     sudo apt-get install cuda
 
 ####For MacOS:
-Download the CUDA Nvidia Toolkit for Mac from https://developer.nvidia.com/cuda-downloads
+Follow the download instructions for the CUDA Nvidia Toolkit for Mac from https://developer.nvidia.com/cuda-downloads
 
 If you do not have Homebrew, install it by running the script:
 
@@ -24,7 +24,7 @@ Then run:
     brew install ocaml
 
 ####For Windows
-Download the CUDA Nvidia Toolkit for Windows from https://developer.nvidia.com/cuda-downloads
+Follow the download instructions for the CUDA Nvidia Toolkit for Windows from https://developer.nvidia.com/cuda-downloads
 
 ### Installing and Uninstalling
 Change directory on Terminal/Console to PATH/vlc_folder and run:
@@ -39,5 +39,11 @@ To uninstall, run:
 To run VLC after installation, simply run 
 
     vlc [mode] <source_file>
+    mode:
+        -r: compiles and runs source_file
+        -c: compiles source_file down to CUDA and PTX files  in local directory
+        -s: prints sast(semantically analyzed abstract syntax tree) as a program
+        -a: prints ast(abstract syntax tree) as a program 
+        -t: prints tokens read in by scanner
 
 in the folder where you would like the compiled files to exist.
