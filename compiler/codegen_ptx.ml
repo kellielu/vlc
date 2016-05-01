@@ -58,6 +58,17 @@ let generate_ptx_binary_operator operator =
   in
   sprintf "%s" op
 
+let generate_ptx_binary_type binary_type = 
+  let t = match binary_type with
+    | U16 -> ".u16"
+    | U32 -> ".u32"
+    | U64 -> ".u64"
+    | S16 -> ".s16"
+    | S32 -> ".s32"
+    | S64 -> ".s64"
+  in
+  sprintf "%s" t
+
 (* Generates the ptx function string *)
 (* Fill in once you have the generation for other ptx types in the sast *)
 let generate_ptx_function ptx_function =

@@ -28,7 +28,7 @@ type ptx_vdecl =
     | Ptx_Vdecl of ptx_variable_type * Ast.identifier
 
 type ptx_expression =
-    | Ptx_Binop of ptx_expression * ptx_binary_operator * * ptx_binary_type * ptx_expression
+    | Ptx_Binop of ptx_expression * ptx_binary_operator *  ptx_binary_type * ptx_expression
 	| Ptx_Integer_Literal of int
     | Ptx_Array_Literal of ptx_expression list 
 	| Ptx_Function_Call of Ast.identifier * ptx_expression list
