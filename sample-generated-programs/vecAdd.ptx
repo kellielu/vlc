@@ -29,3 +29,8 @@
   st.global.f32   [%rl7], %f3;
   ret;
 }
+
+
+To generate, 
+
+count number of parameters and then have a ld for each 

@@ -1,6 +1,7 @@
 open Ast
 (* Contains sast type definitions for conversions during semantic analysis *)
 (* -----------------------------------------PTX types -----------------------------------------*)
+
 type ptx_operator =
     | Ptx_Add | Ptx_Subtract | Ptx_Multiply | Ptx_Divide | Ptx_Modulo | Ptx_Sqrt
 
@@ -76,18 +77,29 @@ type ptx_fdecl = {
 (* -----------------------------------------C types -----------------------------------------*)
 
 (*---------------------------------- Unnecessary?????????---------------------------------- *)
-type c_operator =
+type c_binary_operator =
     | Add | Subtract | Multiply | Divide | Modulo
+(*     | Plus_Equal | Subtract_Equal | Multiply_Equal | Divide_Equal  *)
+(*     | Exp | Dot | Matrix_Multiplication *)
+    | And | Or | Xor
+    | Equal | Not_Equal | Greater_Than | Less_Than | Greater_Than_Equal | Less_Than_Equal
+    | Bitshift_Right | Bitshift_Left 
+type c_unary_operator = 
+    | Not | Negate
+    | Plus_Plus | Minus_Minus
 
 type c_data_type = 
-	| String 
-	| Byte
-	| Integer 
-	| Long
-	| Float
-	| Double
-	| Boolean
-	| Void 
+	| String
+    | Byte
+    | Unsigned_Byte
+    | Integer
+    | Unsigned_Integer
+    | Long
+    | Unsigned_Long
+    | Float
+    | Double
+    | Boolean
+    | Void
 
 type c_variable_type = 
 	| Primitive of c_data_type
@@ -133,14 +145,20 @@ type c_kernel_function_call = {
 }
 
 type c_expression =
-    | Binop of c_expression * c_operator * c_expression
-	| String_Literal of string
-	| Integer_Literal of int
-    | Array_Literal of c_expression list 
-	| Function_Call of Ast.identifier * c_expression list
-	| Identifier_Expression of Ast.identifier
+    | Function_Call of Ast.identifier * c_expression list
     | Higher_Order_Function_Call of c_higher_order_function_call
     | Kernel_Function_Call of c_kernel_function_call
+    | String_Literal of string
+    | Integer_Literal of int
+    | Boolean_Literal of bool
+    | Floating_Point_Literal of float
+    | Array_Literal of c_expression list
+    | Identifier_Literal of Ast.identifier 
+    | Cast of c_variable_type * c_expression
+    | Binop of c_expression * c_binary_operator * c_expression
+    | Unop of c_expression * c_unary_operator
+    | Array_Accessor of c_expression * c_expression list (* Array, indexes *)
+    | Ternary of c_expression * c_expression * c_expression (* expression if true, condition, expression if false *)
 
 type c_variable_statement = 
     | Declaration of c_vdecl
@@ -150,8 +168,14 @@ type c_variable_statement =
 type c_statement = 
     | Variable_Statement of c_variable_statement
     | Expression of c_expression
+    | Block of c_statement list (* Used for if, else, for, while blocks *)
+    | If of c_expression * c_statement * c_statement (* expression-condition, statement-if block, statement-optional else block *)
+    | While of c_expression * c_statement
+    | For of c_statement * c_expression * c_statement * c_statement
     | Return of c_expression
     | Return_Void
+    | Continue
+    | Break
 
 type c_fdecl = {
     c_fdecl_return_type     : c_variable_type;

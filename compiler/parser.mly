@@ -1,11 +1,19 @@
-%{ open Ast;; open Exceptions;;
+%{ open Ast;; (*open Exceptions;;*)
 
     
-    (* Converts keywords to appropriate datatype*)
+    (* Converts keywords to appropriate datatype *)
     let string_to_data_type = function
 	| "string" -> String
-	| "int" -> Integer
+    | "bool" -> Boolean
     | "void" -> Void
+    | "ubyte" -> Unsigned_Byte
+    | "byte" -> Byte
+    | "uint" -> Unsigned_Integer
+	| "int" -> Integer
+    | "ulong" -> Unsigned_Long
+    | "long" -> Long
+    | "float" -> Float 
+    | "double" -> Double
 	| dtype -> raise (Exceptions.Invalid_data_type dtype)
 
 %}
@@ -15,8 +23,9 @@
 %token <int> DEDENT_EOF, DEDENT_COUNT
 
 %token ADD SUBTRACT MULTIPLY DIVIDE MODULO
+%token PLUS_PLUS MINUS_MINUS
 %token BITSHIFT_RIGHT BITSHIFT_LEFT
-%token AND OR NOT 
+%token AND OR NOT XOR
 %token EQUAL NOT_EQUAL GREATER_THAN GREATER_THAN_EQUAL LESS_THAN LESS_THAN_EQUAL
 %token IF ELSE WHILE FOR
 %token CONTINUE BREAK 
@@ -31,15 +40,16 @@
 %token <string> IDENTIFIER
 %token <string> DATATYPE
 
-%nonassoc ELSE
+%nonassoc ELSE NOELSE
 %right ASSIGNMENT
 %left IF
 %left LBRACKET RBRACKET
 %left EQUAL NOT_EQUAL GREATER_THAN GREATER_THAN_EQUAL LESS_THAN LESS_THAN_EQUAL
-%left AND NOT OR
+%left AND NOT OR XOR
 %left BITSHIFT_RIGHT BITSHIFT_LEFT
-%left ADD SUBTRACT 
+%left ADD SUBTRACT PLUS_PLUS MINUS_MINUS
 %left MULTIPLY DIVIDE MODULO
+%right NEGATE 
 
 %start program  
 %type <Ast.program> program
@@ -135,15 +145,15 @@ statement:
     | RETURN TERMINATOR                                                 { Return_Void }
     | CONTINUE TERMINATOR                                                                       { Continue }
     | BREAK TERMINATOR                                                                          { Break }
-    | IF LPAREN expression RPAREN COLON indent_block                                            { If($3, Block($6), Block([])) }   
-    | IF LPAREN expression RPAREN COLON indent_block ELSE indent_block                          { If($3, Block($6), Block($8)) }
+    | IF LPAREN expression RPAREN COLON indent_block %prec NOELSE                               { If($3, Block($6), Block([])) }   
+    | IF LPAREN expression RPAREN COLON indent_block ELSE COLON indent_block                    { If($3, Block($6), Block($9)) }
     | FOR LPAREN for_statement COMMA expression COMMA for_statement RPAREN COLON indent_block   { For($3,$5,$7,Block($10)) }
     | WHILE LPAREN expression RPAREN COLON indent_block                                         { While($3, Block($6)) }
     | variable_statement                                                                        { Variable_Statement($1) } 
 
 nonempty_statement_list:
     | statement                                                         { [$1] }
-    | nonempty_statement_list statement                                 { $2 :: $1 }
+    | nonempty_statement_list statement                                 { List.rev($2 :: List.rev($1)) }
 
     /* Group of statements */
 indent_block:
@@ -168,6 +178,7 @@ expression:
 
     | expression AND expression                                         { Binop($1, And, $3) }
     | expression OR  expression                                         { Binop($1, Or, $3) }
+    | expression XOR expression                                         { Binop($1, Xor, $3) }
     | NOT expression                                                    { Unop($2, Not) }
 
     | expression EQUAL expression                                       { Binop($1, Equal, $3) }
@@ -177,7 +188,10 @@ expression:
     | expression LESS_THAN expression                                   { Binop($1, Less_Than, $3) }
     | expression LESS_THAN_EQUAL expression                             { Binop($1, Less_Than_Equal, $3)}
 
+    | SUBTRACT expression                                               { Unop($2,Negate) }
     | expression ADD expression                                         { Binop($1, Add, $3) }
+    | expression PLUS_PLUS                                              { Unop($1,Plus_Plus)}
+    | expression MINUS_MINUS                                            { Unop($1, Minus_Minus)}
     | expression SUBTRACT expression                                    { Binop($1, Subtract, $3) }
     | expression MULTIPLY expression                                    { Binop($1, Multiply, $3) }
     | expression DIVIDE expression                                      { Binop($1, Divide, $3) }
@@ -212,6 +226,7 @@ array_literal:
 array_expression:
     | identifier                                                        { Identifier_Literal($1) }
     | array_literal                                                     { $1 }
+
 
 nonempty_array_expression_list:
     | array_expression                                                  { [$1] }

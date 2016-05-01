@@ -22,6 +22,7 @@ let token_to_string = function
   | DEF -> "DEF" | DEFG -> "DEFG"
   | ASSIGNMENT -> "ASSIGNMENT" 
   | ADD -> "ADD" | SUBTRACT -> "SUBTRACT" | MULTIPLY -> "MULTIPLY" 
+  | PLUS_PLUS -> "PLUS_PLUS" | MINUS_MINUS -> "MINUS_MINUS"
   | DIVIDE -> "DIVIDE" | MODULO -> "MODULO"
   | EOF -> "EOF" 
   | IDENTIFIER(s) -> "IDENTIFIER(" ^ s ^ ")"
@@ -36,7 +37,7 @@ let token_to_string = function
   | LCURLY -> "LCURLY" | RCURLY -> "RCURLY" | LBRACKET -> "LBRACKET" | RBRACKET -> "RBRACKET"
   | CONSTS -> "CONSTS" | TILDA -> "TILDA"
   | BITSHIFT_RIGHT -> "BITSHIFT_RIGHT" | BITSHIFT_LEFT -> "BITSHIFT_LEFT"
-  | AND -> "AND" | OR -> "OR" | NOT -> "NOT"
+  | AND -> "AND" | OR -> "OR" | NOT -> "NOT" | XOR -> "XOR"
   | EQUAL -> "EQUAL" | NOT_EQUAL -> "NOT_EQUAL" 
   | GREATER_THAN -> "GREATER_THAN" | GREATER_THAN_EQUAL -> "GREATER_THAN_EQUAL"
   | LESS_THAN -> "LESS_THAN" | LESS_THAN_EQUAL -> "LESS_THAN_EQUAL"
@@ -62,6 +63,7 @@ let binary_operator_to_string = function
   | Ast.Modulo -> "%"
   | Ast.And -> "and"
   | Ast.Or -> "or"
+  | Ast.Xor -> "xor"
   | Ast.Equal -> "=="
   | Ast.Not_Equal -> "!="
   | Ast.Greater_Than -> ">"
@@ -73,6 +75,9 @@ let binary_operator_to_string = function
 
 let unary_operator_to_string = function
   | Ast.Not -> "not"
+  | Ast.Negate -> "-"
+  | Ast.Plus_Plus -> "++"
+  | Ast.Minus_Minus -> "--"
 
 let idtos = function
   | Ast.Identifier(s) -> s
@@ -80,8 +85,11 @@ let idtos = function
 let data_type_to_string = function 
   | Ast.String -> "string"
   | Ast.Byte -> "byte"
+  | Ast.Unsigned_Byte -> "ubyte"
   | Ast.Integer -> "int"
+  | Ast.Unsigned_Integer -> "uint"
   | Ast.Long -> "long"
+  | Ast.Unsigned_Long -> "ulong"
   | Ast.Float -> "float"
   | Ast.Double -> "double"
   | Ast.Void -> "void"
@@ -131,7 +139,7 @@ let rec statement_to_string = function
   | Ast.If(e,block1, block2) -> 
       (match block2 with
       | Block([]) -> "if(" ^ (expression_to_string e) ^ "):\n" ^ (statement_to_string block1)
-      | _ -> "if(" ^ (expression_to_string e) ^ "):\n" ^ (statement_to_string block1) ^ "else:\n" ^ (statement_to_string block2))
+      | _ -> "if(" ^ (expression_to_string e) ^ "):\n" ^ (statement_to_string block1) ^ "else with " ^(expression_to_string e)^ ":\n" ^ (statement_to_string block2))
   | Ast.While(e,block) -> 
       "while(" ^ (expression_to_string e) ^ "):\n" ^ (statement_to_string block)
   | Ast.For(smtm1, e, smtm2, block) -> "for(" ^ (statement_to_string smtm1) ^ "," ^ (expression_to_string e) ^ "," ^ (statement_to_string smtm2) ^ "):\n" ^ (statement_to_string block)

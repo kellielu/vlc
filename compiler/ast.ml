@@ -1,13 +1,13 @@
 type binary_operator =
     | Add | Subtract | Multiply | Divide | Modulo
 (*     | Plus_Equal | Subtract_Equal | Multiply_Equal | Divide_Equal  *)
-(*     | Plus_Plus | Minus_Minus *)
 (*     | Exp | Dot | Matrix_Multiplication *)
-    | And | Or
+    | And | Or | Xor
     | Equal | Not_Equal | Greater_Than | Less_Than | Greater_Than_Equal | Less_Than_Equal
     | Bitshift_Right | Bitshift_Left 
 type unary_operator = 
-    | Not 
+    | Not  | Negate
+    | Plus_Plus | Minus_Minus
 
 type identifier = 
     Identifier of string
@@ -15,15 +15,13 @@ type identifier =
 type data_type = 
     | String
     | Byte
-    | UnsignedByte
+    | Unsigned_Byte
     | Integer
-    | UnsignedIntegers
+    | Unsigned_Integer
     | Long
-    | UnsignedLong
+    | Unsigned_Long
     | Float
-    | UnsignedFloat
     | Double
-    | UnsignedDouble
     | Boolean
     | Void
 
