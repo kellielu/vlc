@@ -1,6 +1,6 @@
 { 
 	open Parser 
-	open Exceptions
+	(*open Exceptions*)
 
 	let indent_stack = Stack.create()
 
@@ -41,11 +41,14 @@ rule token = parse
 	| '%' 		{ MODULO }
 	| ">>" 		{ BITSHIFT_RIGHT }
 	| "<<"		{ BITSHIFT_LEFT }
+	| "++"		{ PLUS_PLUS }
+	| "--"		{ MINUS_MINUS }
 
 	(* Logic Operators *)
 	| "and"  	{ AND }
 	| "or"	 	{ OR }
 	| "not" 	{ NOT }
+	| "xor" 	{ XOR }
 
 	(* Comparison Operators *)
 	| "==" 		{ EQUAL }
@@ -56,7 +59,12 @@ rule token = parse
 	| "<=" 		{ LESS_THAN_EQUAL}
 
 	(* Datatypes *)
-	| ("string" | "byte" | "int" | "long" | "float"| "double" | "bool" |"void"    ) as input { DATATYPE(input) }
+	| ("string" 
+		| "bool" 	| "void" 
+		| "ubyte" 	| "byte" 
+		| "uint"	| "int" 
+		| "ulong" 	| "long"
+		| "float"	| "double") as input { DATATYPE(input) }
 
 	(* Conditionals and Loops *)
 	(* 	| "elif" 		{ ELSEIF }*)

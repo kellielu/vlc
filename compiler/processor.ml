@@ -1,5 +1,5 @@
 open Parser
-open Exceptions
+(* open Exceptions *)
 
 let last_token = ref EOF
 

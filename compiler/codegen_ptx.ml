@@ -1,5 +1,5 @@
 open Sast
-open Exceptions
+(* open Exceptions *)
 (* For sprintf *)
 open Printf
 (*------------------------------------------------------------ KERNEL CODE GENERATION ------------------------------------------------------------*)

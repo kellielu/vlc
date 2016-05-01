@@ -1,6 +1,6 @@
 open Sast
 (* open Exceptions *)
-open Codegen_ptx 
+(* open Codegen_ptx *) 
 
 (* For sprintf *)
 open Printf
@@ -14,29 +14,49 @@ let generate_list generate_func concat mylist =
   sprintf "%s" list_string
 
 (* Generate operators *)
-let generate_operator operator  =
+let generate_binary_operator operator  =
   let op = match operator with
     | Add -> "+"
     | Subtract -> "-"
     | Multiply -> "*"
     | Divide -> "/"
     | Modulo -> "%"
-(*     | _ -> raise Exceptions.Unknown_operator *)
+    | And -> "&&"
+    | Or -> "||"
+    | Xor -> "^"
+    | Equal -> "=="
+    | Not_Equal -> "!="
+    | Greater_Than -> ">"
+    | Less_Than -> "<"
+    | Greater_Than_Equal -> ">=" 
+    | Less_Than_Equal -> "<="
+    | Bitshift_Right -> ">>"
+    | Bitshift_Left -> "<<"
   in
   sprintf "%s" op
+
+let generate_unary_operator operator = 
+  let op = match operator with 
+    | Not -> "!"
+    | Negate -> "-"
+    | Plus_Plus -> "++"
+    | Minus_Minus -> "--"
+  in sprintf "%s" op
 
 (* Generate data type*)
 let generate_data_type dtype = 
     let data_type = match dtype with 
         | String -> "char *"
+        | Unsigned_Byte -> "unsigned char"
         | Byte -> "signed char"
+        | Unsigned_Integer -> "unsigned int"
         | Integer -> "int"
+        | Unsigned_Long -> "unsigned long"
         | Long -> "long"
         | Float -> "float"
         | Double -> "double"
         | Boolean -> "bool"
         | Void -> "void"
-(*       | _ -> raise Exceptions.Unknown_data_type *)
     in sprintf "%s" data_type
 
 (* Generate variable type *)
@@ -44,11 +64,9 @@ let rec generate_variable_type variable_type  =
   let vtype = match variable_type with
     | Primitive(p) -> generate_data_type p
     | Array(t,n) -> 
-      match t with
+      (match t with
         | Array(t1,n1) -> generate_variable_type t1 
-        | Primitive(p) -> generate_data_type p
-(*         | _ -> raise Exceptions.Unknown_variable_type
-    | _ -> raise Exceptions.Unknown_variable_type *)
+        | Primitive(p) -> generate_data_type p)
   in sprintf "%s" vtype
 
 (* Generate id *)
@@ -147,27 +165,34 @@ let generate_param d =
  (* Generate expressions - including higher order function calls - and constants *)
 let rec generate_expression expression  =
   let expr = match expression with
-    | Binop(e1, o, e2) -> 
-        (generate_expression e1) ^ " " ^ (generate_operator o) ^ " " ^ (generate_expression e2)
     | Function_Call(id, expr_list) ->
         (generate_id id) ^ "(" ^ generate_list generate_expression "," expr_list ^ ")"
+    | Higher_Order_Function_Call(fcall) -> generate_higher_order_function_call fcall
+    | Kernel_Function_Call(kfcall) -> generate_kernel_function_call kfcall
     | String_Literal(s) -> 
         "\"" ^ s ^ "\""
     | Integer_Literal(i) -> 
         string_of_int i
+    | Boolean_Literal(b) -> 
+        string_of_bool b
+    | Floating_Point_Literal(f) ->
+        string_of_float f
     | Array_Literal(s) -> 
         "vlcarray fill"
         (* Fill in with VLC_Array*)
         (* sprintf "{" ^ (generate_expression_list s) ^ "}" *)
-    | Identifier_Expression(id) -> 
+    | Identifier_Literal(id) -> 
         (generate_id id)
-    | Kernel_Function_Call(kfcall) -> generate_kernel_function_call kfcall
-    | Higher_Order_Function_Call(fcall) -> 
-      match Utils.idtos(fcall.higher_order_function_type) with
-        | "map" | "reduce" ->  generate_higher_order_function_call fcall
-        | _ -> raise Exceptions.Unknown_higher_order_function_call
-(*     | _ -> raise Exceptions.Unknown_type_of_expression *)
-    
+    | Cast(vtype,e) ->
+        "(" ^ (generate_variable_type vtype) ^ ")" ^ (generate_expression e)
+    | Binop(e1, o, e2) -> 
+        (generate_expression e1) ^ " " ^ (generate_binary_operator o) ^ " " ^ (generate_expression e2)
+    | Unop(e,o) ->
+        (match o with 
+        | Not | Negate  -> (generate_unary_operator o) ^ (generate_expression e)
+        | Plus_Plus | Minus_Minus -> (generate_expression e) ^ (generate_unary_operator o))
+    | Array_Accessor(e,e_list) -> (generate_expression e) ^ "[" ^ (generate_list generate_expression "][" e_list) ^ "]"
+    | Ternary(e1,e2,e3) -> "(" ^ (generate_expression e2) ^ ") ? " ^ (generate_expression e1) ^ ":" ^ (generate_expression e3)
   in sprintf "%s" expr
 (* Generates CUDA statements that copy constants from host to gpu *)
 and generate_constant_on_gpu const  = 
@@ -186,6 +211,8 @@ and generate_kernel_function_call kfcall = sprintf "hi" (* Why do we need semico
 (* Generates statements for higher order map or reduce calls *)
 and generate_higher_order_function_call fcall = 
     let higher_order_function_call_string = 
+      match Utils.idtos(fcall.higher_order_function_type) with
+      | "map" -> 
     (* Fill in with VLC_Array *)
       "{0};\n" ^ 
     (* Initializes CUDA driver and loads needed function *)
@@ -228,8 +255,56 @@ and generate_higher_order_function_call fcall =
     (* Cleanup *)
     generate_list generate_mem_cleanup "\n" fcall.input_arrays_info ^ "\n" ^ 
     generate_mem_cleanup fcall.return_array_info ^ "\n" ^ 
+    generate_list generate_mem_cleanup "\n" fcall.constants ^ "\n" ^
     "checkCudaErrors(cuModuleUnload(cudaModule));\n" ^ 
     "checkCudaErrors(cuCtxDestroy(context));\n"
+    | "reduce" ->
+    (* Fill in with VLC_Array *)
+      "{0};\n" ^ 
+    (* Initializes CUDA driver and loads needed function *)
+      "checkCudaErrors(cuCtxCreate(&context, 0, device));\n" ^ 
+      "std::ifstream t(\"" ^ Utils.idtos fcall.applied_kernel_function ^ ".ptx\");\n" ^ 
+      "if (!t.is_open()) {\n" ^
+          " std::cerr << \"" ^ Utils.idtos fcall.applied_kernel_function ^ ".ptx not found\n\";\n" ^
+          "return 1;\n" ^
+      "}\n" ^
+      "std::string " ^ Utils.idtos fcall.applied_kernel_function ^ "_str" ^ "((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());\n" ^ 
+      "checkCudaErrors(cuModuleLoadDataEx(&cudaModule," ^ (Utils.idtos fcall.applied_kernel_function) ^ "_str" ^ ", 0, 0, 0));\n" ^ 
+      "checkCudaErrors(cuModuleGetFunction(&function, cudaModule, \"" ^ (Utils.idtos fcall.applied_kernel_function) ^ "_str" ^ "\"));\n" ^ 
+    (* Copies over constants *)
+      generate_list generate_constant_on_gpu "\n" fcall.constants ^ "\n" ^
+    (* Allocates GPU pointers for input and result array *)
+    let rec get_kernel_names a_info_list name_list = 
+      match a_info_list with 
+        | [] -> name_list 
+        | hd::tl -> get_kernel_names tl (Utils.idtos(hd.kernel_name)::name_list) 
+    in
+    let kernel_names = (get_kernel_names fcall.input_arrays_info []) in
+      generate_list generate_device_ptr "\n" kernel_names ^ "\n" ^ 
+      generate_device_ptr (Utils.idtos((fcall.return_array_info).kernel_name))  ^ "\n" ^
+    (* Allocations memory and copies input arrays over to GPU memory *)
+      generate_mem_alloc_host_to_device fcall ^ "\n" ^
+      generate_mem_cpy_host_to_device fcall ^
+
+    (* Sets Kernel params and other information needed to call cuLaunchKernel *)
+      generate_kernel_params fcall.input_arrays_info ^ "\n" ^
+      "unsigned int blockSizeX = 16;\n" ^ 
+      "unsigned int blockSizeY = 1;\n" ^
+      "unsigned int blockSizeZ = 1;\n" ^
+      "unsigned int gridSizeX = 1;\n" ^
+      "unsigned int gridSizeY = 1;\n" ^
+      "unsigned int gridSizeZ = 1;\n" ^
+    (* Launches kernel *)
+      "checkCudaErrors(cuLaunchKernel(function, gridSizeX, gridSizeY, gridSizeZ, blockSizeX, blockSizeY, blockSizeZ,0, NULL, KernelParams, NULL));\n" ^
+    (* Copies result array back to host *)
+      "checkCudaErrors(cuMemcpyDtoH(c," ^ Utils.idtos((fcall.return_array_info).host_name) ^ ", sizeof(" ^ generate_variable_type ((fcall.return_array_info).variable_type) ^ ")*" ^ string_of_int fcall.array_length ^ "));\n" ^ 
+    (* Cleanup *)
+    generate_list generate_mem_cleanup "\n" fcall.input_arrays_info ^ "\n" ^ 
+    generate_mem_cleanup fcall.return_array_info ^ "\n" ^ 
+    generate_list generate_mem_cleanup "\n" fcall.constants ^ "\n" ^
+    "checkCudaErrors(cuModuleUnload(cudaModule));\n" ^ 
+    "checkCudaErrors(cuCtxDestroy(context));\n"
+   | _ -> raise Exceptions.Unknown_higher_order_function_call
    in sprintf "%s" higher_order_function_call_string
 
 
@@ -246,16 +321,27 @@ let generate_variable_statement vstatement =
   in sprintf "%s" vstatement_string
 
 (* Generates statements *)
-let generate_statement statement  =
+let rec generate_statement statement  =
   let statement_string = match statement with
     | Variable_Statement(vsmtm) -> 
         generate_variable_statement vsmtm  
     | Expression(e) -> 
         (generate_expression e) ^ ";\n"
+    | Block(stmt_list) -> generate_list generate_statement "" stmt_list
+    | If(e,stmt1,stmt2) -> 
+        (match stmt2 with 
+        | Block([]) -> "if(" ^ (generate_expression e) ^ "){\n" ^ (generate_statement stmt1) ^ "}\n"
+        | _ -> "if(" ^ (generate_expression e) ^ "){\n" ^ (generate_statement stmt1) ^ "}\n" ^ "else{\n" ^ (generate_statement stmt2) ^ "}\n")
+    | While(e,stmt) -> "while(" ^ (generate_expression e) ^ "){\n" ^ (generate_statement stmt) ^ "}\n"
+    | For(stmt1,e,stmt2,stmt3) -> "for(" ^ (generate_statement stmt1) ^ (generate_expression e) ^ ";" ^ (generate_statement stmt2) ^ "){\n" ^ (generate_statement stmt3) ^ "}\n"
     | Return(e) ->
         "return" ^ (generate_expression e) ^ ";\n"
     | Return_Void ->  
         "return;\n"
+    | Continue ->
+        "continue;\n"
+    | Break ->
+        "break;\n"
 (*     | _ -> raise Exceptions.Unknown_type_of_statement *)
   in sprintf "%s" statement_string
 

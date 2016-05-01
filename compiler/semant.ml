@@ -1,7 +1,7 @@
 open Ast 
-open Sast
-open Utils
-open Exceptions
+(* open Sast
+open Utils 
+open Exceptions *)
 
 (* Maps variable name to variable type and value *)
 module Variable_Map = Map.Make(String);;
@@ -133,7 +133,7 @@ let pop_scope scope env =
 
 
 
-(* Checks if variable has been declared - is valid -  in the scope *)
+(* Checks if variable has been declared - is valid - in the scope *)
 let is_variable_in_scope id env = 
     let rec check_scopes scope_stack = 
       match scope_stack with
@@ -226,23 +226,19 @@ let check_unique_id id env =
   if (is_variable_in_scope id env)= true then raise Exceptions.Variable_already_declared
 
 
-
-
 (* Note: for host only! Checks that a variable in assignments and expressions have been declared*)
 let check_var_is_declared id env = 
   if (is_variable_in_scope id env)= false then (raise Exceptions.Variable_not_declared)
 
 
-
-(* Check that array is acceptable for builtin array operations *)
+(* Check that array has only one dimension - used for certain operations *)
 let is_one_layer_array expression = 
     match expression with 
     | Ast.Array_Literal(e_list) as array_literal -> 
         let arr = infer_type array_literal in
-          match arr with
-          | Ast.Array(vtype,size) ->
-              if size > 1 then false else true
-          | _ -> raise Exceptions.Not_an_array_expression
+          (match arr with
+          | Ast.Array(vtype,size) -> if size > 1 then false else true
+          | _ -> raise Exceptions.Not_an_array_expression)
     | _ -> raise Exceptions.Not_an_array_expression
 
 
