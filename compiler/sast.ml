@@ -1,6 +1,8 @@
 open Ast
 (* Contains sast type definitions for conversions during semantic analysis *)
 (* -----------------------------------------PTX types -----------------------------------------*)
+type ptx_data_movement = 
+	| Ptx_Move | Ptx_Load | Ptx_Store
 
 type ptx_binary_operator =
     | Ptx_Add | Ptx_Subtract | Ptx_Multiply | Ptx_Divide | Ptx_Modulo
@@ -8,6 +10,7 @@ type ptx_binary_operator =
 type ptx_data_type =
 	| U16 | U32 | U64 | S16 | S32 | S64
 
+(* should use this as our information about global/param etc.*)
 type ptx_variable_type = 
 	| Ptx_Primitive of ptx_data_type
 	| Ptx_Array of ptx_variable_type * int 					(* 'int' refers to the length of the array *)
@@ -29,6 +32,7 @@ type ptx_parameter =
 
 type ptx_expression =
 	| Ptx_reg_declaration of ptx_register_decl
+	| Ptx_movement of ptx_data_movement * ptx_data_type * ptx_variable_type * ptx_parameter * ptx_parameter
 	| Ptx_Binop of ptx_binary_operator * ptx_data_type * ptx_parameter * ptx_parameter * ptx_parameter
 	| Ptx_Return
 (*     | Ptx_Array_Literal of ptx_expression list 

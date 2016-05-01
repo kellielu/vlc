@@ -78,7 +78,7 @@ let generate_ptx_variable_type vtype =
 let generate_ptx_vdecl dtype vtype id =
   let v =
     ".param " ^ generate_ptx_data_type dtype ^ " " ^ generate_ptx_variable_type vtype
-    ^ generate_id id 
+    ^ " " ^ generate_id id 
   in
   sprintf "%s" v
 
