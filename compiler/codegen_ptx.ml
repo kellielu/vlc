@@ -69,6 +69,26 @@ let generate_ptx_data_type data_type =
   in
   sprintf "%s" t
 
+let generate_ptx_variable_type vtype =
+  let v = ""
+  (* TODO *)
+  in
+  sprintf "%s" v
+
+let generate_ptx_vdecl dtype vtype id =
+  let v =
+    ".param " ^ generate_ptx_data_type dtype ^ " " ^ generate_ptx_variable_type vtype
+    ^ generate_id id 
+  in
+  sprintf "%s" v
+
+let generate_ptx_register_decl declaration =
+  let r = match declaration with 
+  | Register_Declaration(dtype, name, size ) -> ".reg " ^ generate_ptx_data_type dtype 
+      ^ "   %" ^ name ^ "<" ^ string_of_int size ^ ">;\n"
+  in
+  sprintf "%s" r
+
 let generate_ptx_register register =
   let r = match register with
     | Register(s, i) -> "%" ^ s ^ string_of_int i
@@ -85,6 +105,7 @@ let generate_ptx_parameter parameter =
 
 let generate_ptx_expression expression =
   let e = match expression with
+  | Ptx_reg_declaration(r) -> generate_ptx_register_decl(r)
   | Ptx_Binop(o, t, p1, p2, p3) -> generate_ptx_binary_operator(o) ^ generate_ptx_data_type(t) 
       ^ "     " ^ generate_ptx_parameter(p1) ^ ", " ^ generate_ptx_parameter(p2) ^ ", " 
       ^ generate_ptx_parameter(p3) ^ ";\n"

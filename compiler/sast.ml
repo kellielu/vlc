@@ -26,10 +26,9 @@ type ptx_parameter =
 	| Parameter_constant of int 
 	| Parameter_variable of Ast.identifier
 
-type ptx_vdecl = 
-    | Ptx_Vdecl of ptx_data_type * (* need something about global/ptrs here*) ptx_variable_type * Ast.identifier
 
 type ptx_expression =
+	| Ptx_reg_declaration of ptx_register_decl
 	| Ptx_Binop of ptx_binary_operator * ptx_data_type * ptx_parameter * ptx_parameter * ptx_parameter
 	| Ptx_Return
 (*     | Ptx_Array_Literal of ptx_expression list 
@@ -43,15 +42,11 @@ type ptx_subroutine = {
 }
 
 type ptx_statement = 
-
-(*     | Ptx_Declaration of ptx_vdecl *)
 (*     | Ptx_Initialization of ptx_vdecl * ptx_expression *)
 (*     | Ptx_Assignment of Ast.identifier * ptx_expression *)
     | Ptx_expression of ptx_expression
     | Ptx_subroutine of ptx_subroutine
-(*     | Ptx_Return of ptx_expression
-    | Ptx_Return_Void
- *)
+
 type ptx_function_type = 
 	| Global 
 	| Device 
@@ -62,7 +57,16 @@ type ptx_constant =
 	ptx_constant_variable_type					: ptx_variable_type;
 }
 
+type ptx_vdecl = 
+    | Ptx_Vdecl of ptx_data_type * (* need something about global/ptrs here*) ptx_variable_type * Ast.identifier
 
+
+(* ptx fdecl is the entire file
+	it seems it really only needs to be composed of a few parts - a name, a variable declaration list
+	and a statement list
+
+	register_decl list should go inside body generated from semantic analyzer
+*)
 type ptx_fdecl = {
 	(* Global or Device *)
 	ptx_fdecl_type 								: ptx_function_type; (* probably not needed *)
@@ -77,12 +81,8 @@ type ptx_fdecl = {
 		If this constant list doesn't match the constant list of the higher order function, throw error in semant.ml *)
 	ptx_consts 									: ptx_constant list; (* probably not needed*)
 
-	(* Declares the virtual registers that are needed for the function *)
-	register_decls 								: ptx_register_decl list;
 	(* Statements within the function *)
 	ptx_fdecl_body 								: ptx_statement list;
-	(* Functions that are called within this function*)
-	ptx_dependent_functions 					: identifier list;
 }
 
 
