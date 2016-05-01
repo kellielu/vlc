@@ -294,13 +294,18 @@ let check_ast ast = ast
 (* Main function for checking the sast after conversion (really just have to check for the map/reduce constant types) *)
 let check_sast sast = sast
 
+let convert_variable_statement_list input = input
+
+let convert_fdecl_list input = (input, input)
+
+
 (* Main function for converting ast to sast *)
-(* let convert_ast_to_sast checked_ast = 
+let convert_ast_to_sast checked_ast = 
   let vstmt_list                    = convert_variable_statement_list (fst(checked_ast)) in
   let ptx_fdecl_list,c_fdecl_list   = convert_fdecl_list (snd(checked_ast)) in
   let sast                          = (vstmt_list,ptx_fdecl_list,c_fdecl_list) in 
-  sast *)
-let convert_ast_to_sast ast = ast
+  sast
+(* let convert_ast_to_sast ast = ast *)
 
 (* Main function for Sast *)
 let analyze ast =  

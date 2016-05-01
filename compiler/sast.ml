@@ -2,8 +2,11 @@ open Ast
 (* Contains sast type definitions for conversions during semantic analysis *)
 (* -----------------------------------------PTX types -----------------------------------------*)
 
-type ptx_operator =
-    | Ptx_Add | Ptx_Subtract | Ptx_Multiply | Ptx_Divide | Ptx_Modulo | Ptx_Sqrt
+type ptx_binary_operator =
+    | Ptx_Add | Ptx_Subtract | Ptx_Multiply | Ptx_Divide | Ptx_Modulo
+
+type ptx_binary_type =
+	| U16 | U32 | U64 | S16 | S32 | S64
 
 type ptx_data_type = 
 	| Ptx_Integer
@@ -25,7 +28,7 @@ type ptx_vdecl =
     | Ptx_Vdecl of ptx_variable_type * Ast.identifier
 
 type ptx_expression =
-    | Ptx_Binop of ptx_expression * ptx_operator * ptx_expression
+    | Ptx_Binop of ptx_expression * ptx_binary_operator * * ptx_binary_type * ptx_expression
 	| Ptx_Integer_Literal of int
     | Ptx_Array_Literal of ptx_expression list 
 	| Ptx_Function_Call of Ast.identifier * ptx_expression list

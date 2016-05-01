@@ -48,6 +48,16 @@ let generate_list generate_func concat mylist =
 
 (*--------------------------------------------------------------------------*)
 
+let generate_ptx_binary_operator operator = 
+  let op = match operator with
+    | Ptx_Add -> "add"
+    | Ptx_Subtract -> "sub"
+    | Ptx_Multiply -> "mul"
+    | Ptx_Divide -> "div"
+    | Ptx_Modulo -> "rem"
+  in
+  sprintf "%s" op
+
 (* Generates the ptx function string *)
 (* Fill in once you have the generation for other ptx types in the sast *)
 let generate_ptx_function ptx_function =
