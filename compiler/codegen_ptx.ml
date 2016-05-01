@@ -79,6 +79,7 @@ let generate_ptx_parameter parameter =
   let p = match parameter with 
     | Parameter_register(r) -> generate_ptx_register(r)
     | Parameter_constant(c) -> string_of_int c
+    | Parameter_variable(v) -> "[" ^ generate_id v ^ "]"
   in
   sprintf "%s" p
 
@@ -98,10 +99,10 @@ let generate_ptx_subroutine subroutine =
   in
   sprintf "%s" s
 
-
 let generate_ptx_statement statement =
   let s = match statement with
   | Ptx_expression(e) -> generate_ptx_expression(e)
+  | Ptx_subroutine(s) -> generate_ptx_subroutine(s)
   in 
   sprintf "%s" s
 

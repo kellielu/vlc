@@ -24,9 +24,10 @@ type ptx_register =
 type ptx_parameter = 
 	| Parameter_register of ptx_register
 	| Parameter_constant of int 
+	| Parameter_variable of Ast.identifier
 
 type ptx_vdecl = 
-    | Ptx_Vdecl of ptx_data_type * ptx_variable_type * Ast.identifier
+    | Ptx_Vdecl of ptx_data_type * (* need something about global/ptrs here*) ptx_variable_type * Ast.identifier
 
 type ptx_expression =
 	| Ptx_Binop of ptx_binary_operator * ptx_data_type * ptx_parameter * ptx_parameter * ptx_parameter
