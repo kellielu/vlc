@@ -26,22 +26,31 @@ type ptx_parameter =
 	| Parameter_constant of int 
 
 type ptx_vdecl = 
-    | Ptx_Vdecl of ptx_variable_type * Ast.identifier
+    | Ptx_Vdecl of ptx_data_type * ptx_variable_type * Ast.identifier
 
-(* type ptx_expression =
-    | Ptx_Array_Literal of ptx_expression list 
+type ptx_expression =
+	| Ptx_Binop of ptx_binary_operator * ptx_data_type * ptx_parameter * ptx_parameter * ptx_parameter
+	| Ptx_Return
+(*     | Ptx_Array_Literal of ptx_expression list 
 	| Ptx_Function_Call of Ast.identifier * ptx_expression list
-	| Ptx_Identifier_Expression of Ast.identifier *)
+	| Ptx_Identifier_Expression of Ast.identifier
+ *)
+
+type ptx_subroutine = {
+	routine_name								: Ast.identifier;
+	routine_expressions							: ptx_expression list;
+}
 
 type ptx_statement = 
-	| Ptx_Binop of ptx_binary_operator * ptx_data_type * ptx_parameter * ptx_parameter
+
 (*     | Ptx_Declaration of ptx_vdecl *)
 (*     | Ptx_Initialization of ptx_vdecl * ptx_expression *)
-(*     | Ptx_Assignment of Ast.identifier * ptx_expression
-    | Ptx_Expression of ptx_expression
-    | Ptx_Return of ptx_expression
-    | Ptx_Return_Void *)
-
+(*     | Ptx_Assignment of Ast.identifier * ptx_expression *)
+    | Ptx_expression of ptx_expression
+    | Ptx_subroutine of ptx_subroutine
+(*     | Ptx_Return of ptx_expression
+    | Ptx_Return_Void
+ *)
 type ptx_function_type = 
 	| Global 
 	| Device 
@@ -52,18 +61,21 @@ type ptx_constant =
 	ptx_constant_variable_type					: ptx_variable_type;
 }
 
+
 type ptx_fdecl = {
 	(* Global or Device *)
-	ptx_fdecl_type 								: ptx_function_type;
-	(* Return type *)
-	ptx_fdecl_return_type 						: ptx_variable_type;
+	ptx_fdecl_type 								: ptx_function_type; (* probably not needed *)
+
 	(* Name of the function *)
 	ptx_fdecl_name 								: Ast.identifier;
+
 	(* Expected parameters of the function *)
 	ptx_fdecl_params 							: ptx_vdecl list;
+
 	(* List of constants that function needs to know - aka variables that aren't in scope of function when it goes through semantic analyzer 
 		If this constant list doesn't match the constant list of the higher order function, throw error in semant.ml *)
-	ptx_consts 									: ptx_constant list; 
+	ptx_consts 									: ptx_constant list; (* probably not needed*)
+
 	(* Declares the virtual registers that are needed for the function *)
 	register_decls 								: ptx_register_decl list;
 	(* Statements within the function *)

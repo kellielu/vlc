@@ -82,12 +82,29 @@ let generate_ptx_parameter parameter =
   in
   sprintf "%s" p
 
-let generate_ptx_statement statement =
-  let s = match statement with
-  | Ptx_Binop(o, t, p1, p2) -> generate_ptx_binary_operator(o) ^ generate_ptx_data_type(t) ^ "     " ^
-      generate_ptx_parameter(p1) ^ " " ^ generate_ptx_parameter(p2)
+let generate_ptx_expression expression =
+  let e = match expression with
+  | Ptx_Binop(o, t, p1, p2, p3) -> generate_ptx_binary_operator(o) ^ generate_ptx_data_type(t) 
+      ^ "     " ^ generate_ptx_parameter(p1) ^ ", " ^ generate_ptx_parameter(p2) ^ ", " 
+      ^ generate_ptx_parameter(p3) ^ ";\n"
+  | Ptx_Return -> "ret;\n"
+  in
+  sprintf "%s" e
+
+let generate_ptx_subroutine subroutine = 
+  let s =
+  generate_id subroutine.routine_name ^ ": \n" ^
+  generate_list generate_ptx_expression "" subroutine.routine_expressions
   in
   sprintf "%s" s
+
+
+let generate_ptx_statement statement =
+  let s = match statement with
+  | Ptx_expression(e) -> generate_ptx_expression(e)
+  in 
+  sprintf "%s" s
+
 
 (* Generates the ptx function string *)
 (* Fill in once you have the generation for other ptx types in the sast *)
