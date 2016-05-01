@@ -58,8 +58,8 @@ let generate_ptx_binary_operator operator =
   in
   sprintf "%s" op
 
-let generate_ptx_binary_type binary_type = 
-  let t = match binary_type with
+let generate_ptx_data_type data_type = 
+  let t = match data_type with
     | U16 -> ".u16"
     | U32 -> ".u32"
     | U64 -> ".u64"
