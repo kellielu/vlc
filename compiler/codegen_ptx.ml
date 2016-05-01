@@ -69,6 +69,26 @@ let generate_ptx_data_type data_type =
   in
   sprintf "%s" t
 
+let generate_ptx_register register =
+  let r = match register with
+    | Register(s, i) -> "%" ^ s ^ string_of_int i
+  in
+  sprintf "%s" r
+
+let generate_ptx_parameter parameter =
+  let p = match parameter with 
+    | Parameter_register(r) -> generate_ptx_register(r)
+    | Parameter_constant(c) -> string_of_int c
+  in
+  sprintf "%s" p
+
+let generate_ptx_statement statement =
+  let s = match statement with
+  | Ptx_Binop(o, t, p1, p2) -> generate_ptx_binary_operator(o) ^ generate_ptx_data_type(t) ^ "     " ^
+      generate_ptx_parameter(p1) ^ " " ^ generate_ptx_parameter(p2)
+  in
+  sprintf "%s" s
+
 (* Generates the ptx function string *)
 (* Fill in once you have the generation for other ptx types in the sast *)
 let generate_ptx_function ptx_function =

@@ -18,26 +18,29 @@ type ptx_register_decl =
 
 type ptx_register = 
 	| Register of string * int 								(* register name,  register number *)
-	| Typed_Register of ptx_data_type * string * int 		(* type, register name, register number *)
-	| Special_Register of string 							(* register name *)
+(* Not sure what this is	| Typed_Register of ptx_data_type * string * int 		(* type, register name, register number *) *)
+(* Implement later	| Special_Register of string 							(* register name *) *)
+
+type ptx_parameter = 
+	| Parameter_register of ptx_register
+	| Parameter_constant of int 
 
 type ptx_vdecl = 
     | Ptx_Vdecl of ptx_variable_type * Ast.identifier
 
-type ptx_expression =
-    | Ptx_Binop of ptx_expression * ptx_binary_operator *  ptx_data_type * ptx_expression
-	| Ptx_Integer_Literal of int
+(* type ptx_expression =
     | Ptx_Array_Literal of ptx_expression list 
 	| Ptx_Function_Call of Ast.identifier * ptx_expression list
-	| Ptx_Identifier_Expression of Ast.identifier
+	| Ptx_Identifier_Expression of Ast.identifier *)
 
 type ptx_statement = 
-    | Ptx_Declaration of ptx_vdecl
-    | Ptx_Initialization of ptx_vdecl * ptx_expression
-    | Ptx_Assignment of Ast.identifier * ptx_expression
+	| Ptx_Binop of ptx_binary_operator * ptx_data_type * ptx_parameter * ptx_parameter
+(*     | Ptx_Declaration of ptx_vdecl *)
+(*     | Ptx_Initialization of ptx_vdecl * ptx_expression *)
+(*     | Ptx_Assignment of Ast.identifier * ptx_expression
     | Ptx_Expression of ptx_expression
     | Ptx_Return of ptx_expression
-    | Ptx_Return_Void
+    | Ptx_Return_Void *)
 
 type ptx_function_type = 
 	| Global 
