@@ -48,11 +48,35 @@ let generate_list generate_func concat mylist =
 
 (*--------------------------------------------------------------------------*)
 
+(* Generates vdecl*)
+let generate_ptx_vdecl v = 1
+
+(* Generates register declaration *)
+let generate_ptx_register_decl rd = 1
+
+(* Generates statements *)
+let generate_ptx_statement s = 1
+
+(* Generates expressiosn *)
+let generate_ptx_expression e = 1
+
+
 (* Generates the ptx function string *)
-(* Fill in once you have the generation for other ptx types in the sast *)
-let generate_ptx_function ptx_function =
-  let ptx_func = "test" in 
-	sprintf "%s" ptx_func
+let generate_ptx_function f =
+  let ptx_function_body = 
+    ".visible .entry " ^ f.ptx_fdecl_name ^ "(" ^ (generate_list generate_ptx_vdecl "," f.ptx_fdecl_params) ^ ")\n" ^ 
+    "{" ^ 
+    (generate_list generate_ptx_register_decl "\n" f.register_declarations ) ^ "\n" ^ 
+    (generate_list generate_ptx_statement "" f.ptx_fdecl_body) ^ 
+    "}"
+  in
+  let ptx_function_string = sprintf "
+  .version 3.1
+  .target sm_20
+  .address_size 64
+  %s" ptx_function_body 
+  in 
+	sprintf "%s" ptx_function_body
 
 (* Writing out to PTX file *)
 let write_ptx filename ptx_string = 

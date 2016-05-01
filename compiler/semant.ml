@@ -53,14 +53,10 @@ type environment = {
 let builtin_functions = ["print";"map";"reduce"]
 
 
-
 (* Checks if function is a builtin function *)
 (* Used to check function declarations to make sure they aren't declaring anything with the same name *)
 let is_builtin_function id =
   List.exists (fun function_name -> function_name = id) builtin_functions
-
-
-
 
 
 (* Creates a function_info record with information *)
@@ -71,8 +67,6 @@ let create_function_info ftype rtype args df name = {
   function_args                   = args;
   dependent_functions             = df;
 }
-
-
 
 
 (* Function for adding initializing host function map, adds builtin functions to host function map*)
@@ -90,8 +84,6 @@ let init_host_function_map =
   add_functions fmap builtin_function_info_structs
 
 
-
-
 (* Creates a new environment *)
 let init_env = {
   variable_scope_stack        = Variable_Map.empty :: [];
@@ -99,8 +91,6 @@ let init_env = {
   host_function_map           = init_host_function_map;
   is_gpu_env                  = false;
 }
-
-
 
 
 (* Updates the environment *)
@@ -112,14 +102,10 @@ let update_env vscope_stack kfmap hfmap is_gpu = {
 }
 
 
-
-
 (* Pushes a new scope on top of the  variable_scope_stack *)
 let push_scope scope env = 
     let new_scope_stack = scope :: env.variable_scope_stack in
     update_env new_scope_stack env.kernel_function_map env.host_function_map env.is_gpu_env
-
-
 
 
 (* Pops a scope from the top of the variable_scope_stack *)
@@ -129,8 +115,6 @@ let pop_scope scope env =
         | [] -> raise Exceptions.Cannot_pop_empty_variable_scope_stack
         | hd :: tl -> tl
     in update_env new_scope_stack env.kernel_function_map env.host_function_map env.is_gpu_env
-
-
 
 
 (* Checks if variable has been declared - is valid - in the scope *)
@@ -147,8 +131,6 @@ let is_variable_in_scope id env =
       in check_scopes env.variable_scope_stack
 
 
-
-
 (* Searches variable in scope for CUDA C and returns its type *)
 let get_variable_type id env = 
   let rec check_scopes scope_stack = 
@@ -163,14 +145,9 @@ let get_variable_type id env =
 
 
 
-
-
 (* Checks if function is valid in the environment *)
 let is_function_in_scope id env = 
   (Function_Map.mem id env.host_function_map) || (Function_Map.mem id env.kernel_function_map)
-
-
-
 
 
 
@@ -280,7 +257,7 @@ let update_scope identifier variable_type (str, env) =
   else
     (str, set_var_type identifier variable_type env) *)
 
-
+let analyze_variable_statement
 
 (* ----------------------------------- Functions for converting ast to sast (Also performs advanced checking) -----------------------------------*)
 
@@ -290,7 +267,11 @@ let update_scope identifier variable_type (str, env) =
 (*-----------------------------------Main functions for semantic analysis-----------------------------------*)
 
 (* Main function for walking through ast and doing semantic checking *)
-let check_ast ast = ast
+let check_ast ast env = 
+  analyze_variable_statement(fst(ast));
+  analyze_fdecl(snd(ast));
+  ast
+
 
 (* Main function for checking the sast after conversion (really just have to check for the map/reduce constant types) *)
 let check_sast sast = sast
@@ -305,7 +286,8 @@ let convert_ast_to_sast ast = ast
 
 (* Main function for Sast *)
 let analyze ast =  
-  let checked_ast = check_ast ast in 
+  let env = init_env in
+  let checked_ast = check_ast ast env in 
   let sast = convert_ast_to_sast checked_ast in 
   let checked_sast = check_sast sast in 
   checked_sast

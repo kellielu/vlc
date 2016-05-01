@@ -1,7 +1,8 @@
 open Ast
 (* Contains sast type definitions for conversions during semantic analysis *)
-(* -----------------------------------------PTX types -----------------------------------------*)
+(* -----------------------------------------Our New PTX types -----------------------------------------*)
 
+(* -----------------------------------------PTX types -----------------------------------------*)
 type ptx_operator =
     | Ptx_Add | Ptx_Subtract | Ptx_Multiply | Ptx_Divide | Ptx_Modulo | Ptx_Sqrt
 
@@ -62,7 +63,7 @@ type ptx_fdecl = {
 		If this constant list doesn't match the constant list of the higher order function, throw error in semant.ml *)
 	ptx_consts 									: ptx_constant list; 
 	(* Declares the virtual registers that are needed for the function *)
-	register_decls 								: ptx_register_decl list;
+	register_decls 								: ptx_register_dec4l list;
 	(* Statements within the function *)
 	ptx_fdecl_body 								: ptx_statement list;
 	(* Functions that are called within this function*)
