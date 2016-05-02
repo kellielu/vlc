@@ -20,14 +20,14 @@ let file_in = open_in filename in
       let lexbuf = Lexing.from_channel file_in in
       let token_list = Processor.get_token_list lexbuf in
       let program = Processor.parser token_list in
-(*       let sast = Semant.analyze program in *)
+      let sast = Semant.analyze program in
       match action with
         | Tokens ->
             print_string (Utils.token_list_to_string token_list)
         | Ast ->
             print_string (Utils.program_to_string program)
-(*         | Sast -> 
+        | Sast -> 
             print_string (Utils.sast_to_string sast)
         | Compile ->
-            ignore(Codegen_c.generate_program filename sast) *)
-(*         | Run -> (*Acts as an interpreter*) *)
+            ignore(Codegen_c.generate_program filename sast)
+(*         | Run -> Acts as an interpreter *)

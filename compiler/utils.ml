@@ -161,7 +161,7 @@ let program_to_string program =
   (String.concat "\n" (List.map fdecl_to_string (snd(program))))
 
 (* ------------------------------------------------------------Sast Helper Functions ------------------------------------------------------------*)
-let sast_to_string sast = program_to_string sast
+let sast_to_string sast = "nothing right now"
 
 
 (* let s_variable_statement_to_string = function

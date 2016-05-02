@@ -2,12 +2,11 @@ open Ast
 (* Contains sast type definitions for conversions during semantic analysis *)
 (* -----------------------------------------Our New PTX types -----------------------------------------*)
 
-(* -----------------------------------------PTX types -----------------------------------------*)
-type ptx_operator =
-    | Ptx_Add | Ptx_Subtract | Ptx_Multiply | Ptx_Divide | Ptx_Modulo | Ptx_Sqrt
+type ptx_binary_operator =
+    | Ptx_Add | Ptx_Subtract | Ptx_Multiply | Ptx_Divide | Ptx_Modulo
 
-type ptx_data_type = 
-	| Ptx_Integer
+type ptx_data_type =
+	| U16 | U32 | U64 | S16 | S32 | S64
 
 type ptx_variable_type = 
 	| Ptx_Primitive of ptx_data_type
@@ -19,26 +18,34 @@ type ptx_register_decl =
 
 type ptx_register = 
 	| Register of string * int 								(* register name,  register number *)
-	| Typed_Register of ptx_data_type * string * int 		(* type, register name, register number *)
-	| Special_Register of string 							(* register name *)
+(* Not sure what this is	| Typed_Register of ptx_data_type * string * int 		(* type, register name, register number *) *)
+(* Implement later	| Special_Register of string 							(* register name *) *)
 
-type ptx_vdecl = 
-    | Ptx_Vdecl of ptx_variable_type * Ast.identifier
+type ptx_parameter = 
+	| Parameter_register of ptx_register
+	| Parameter_constant of int 
+	| Parameter_variable of Ast.identifier
+
 
 type ptx_expression =
-    | Ptx_Binop of ptx_expression * ptx_operator * ptx_expression
-	| Ptx_Integer_Literal of int
-    | Ptx_Array_Literal of ptx_expression list 
+	| Ptx_reg_declaration of ptx_register_decl
+	| Ptx_Binop of ptx_binary_operator * ptx_data_type * ptx_parameter * ptx_parameter * ptx_parameter
+	| Ptx_Return
+(*     | Ptx_Array_Literal of ptx_expression list 
 	| Ptx_Function_Call of Ast.identifier * ptx_expression list
 	| Ptx_Identifier_Expression of Ast.identifier
+ *)
+
+type ptx_subroutine = {
+	routine_name								: Ast.identifier;
+	routine_expressions							: ptx_expression list;
+}
 
 type ptx_statement = 
-    | Ptx_Declaration of ptx_vdecl
-    | Ptx_Initialization of ptx_vdecl * ptx_expression
-    | Ptx_Assignment of Ast.identifier * ptx_expression
-    | Ptx_Expression of ptx_expression
-    | Ptx_Return of ptx_expression
-    | Ptx_Return_Void
+(*     | Ptx_Initialization of ptx_vdecl * ptx_expression *)
+(*     | Ptx_Assignment of Ast.identifier * ptx_expression *)
+    | Ptx_expression of ptx_expression
+    | Ptx_subroutine of ptx_subroutine
 
 type ptx_function_type = 
 	| Global 
@@ -50,24 +57,33 @@ type ptx_constant =
 	ptx_constant_variable_type					: ptx_variable_type;
 }
 
+type ptx_vdecl = 
+    | Ptx_Vdecl of ptx_data_type * (* need something about global/ptrs here*) ptx_variable_type * Ast.identifier
+
+
+(* ptx fdecl is the entire file
+	it seems it really only needs to be composed of a few parts - a name, a variable declaration list
+	and a statement list
+
+	register_decl list should go inside body generated from semantic analyzer
+*)
 type ptx_fdecl = {
 	(* Global or Device *)
-	ptx_fdecl_type 								: ptx_function_type;
-	(* Return type *)
-	ptx_fdecl_return_type 						: ptx_variable_type;
+	ptx_fdecl_type 								: ptx_function_type; (* probably not needed *)
+
 	(* Name of the function *)
 	ptx_fdecl_name 								: Ast.identifier;
+
 	(* Expected parameters of the function *)
 	ptx_fdecl_params 							: ptx_vdecl list;
+
 	(* List of constants that function needs to know - aka variables that aren't in scope of function when it goes through semantic analyzer 
 		If this constant list doesn't match the constant list of the higher order function, throw error in semant.ml *)
 	ptx_consts 									: ptx_constant list; 
 	(* Declares the virtual registers that are needed for the function *)
-	register_decls 								: ptx_register_dec4l list;
+	register_decls 								: ptx_register_decl list;
 	(* Statements within the function *)
 	ptx_fdecl_body 								: ptx_statement list;
-	(* Functions that are called within this function*)
-	ptx_dependent_functions 					: identifier list;
 }
 
 
@@ -119,30 +135,30 @@ type c_kernel_variable_info = {
 }
 
 type c_higher_order_function_call = {
-		(* Map or reduce *)
-		higher_order_function_type 				: Ast.identifier; 
-		(* Name of kernel function that is called from host (would be kernel function corresponding to map/reduce) *)
-	    applied_kernel_function    				: Ast.identifier;
-		(* List of constants passed into map and reduce *)
-		constants 								: c_kernel_variable_info list;
-		(* Size of input and return arrays *)
-		array_length 							: int;
-		(* Input array information 
-			--If an array has no name (just simply passed in as something like {1,2,3}) then it is given a temporary generated name *)
-		input_arrays_info						: c_kernel_variable_info list; (* type, host name, kernel name *)
-	    (* Return array information *)	
-	    return_array_info              			: c_kernel_variable_info; (* type, host name, kernel name*)    
+	(* Map or reduce *)
+	higher_order_function_type 				: Ast.identifier; 
+	(* Name of kernel function that is called from host (would be kernel function corresponding to map/reduce) *)
+    applied_kernel_function    				: Ast.identifier;
+	(* List of constants passed into map and reduce *)
+	constants 								: c_kernel_variable_info list;
+	(* Size of input and return arrays *)
+	array_length 							: int;
+	(* Input array information 
+		--If an array has no name (just simply passed in as something like {1,2,3}) then it is given a temporary generated name *)
+	input_arrays_info						: c_kernel_variable_info list; (* type, host name, kernel name *)
+    (* Return array information *)	
+    return_array_info              			: c_kernel_variable_info; (* type, host name, kernel name*)    
 }
 
 (* Type for calling defg functions directly from host *)
 type c_kernel_function_call = {
-		(* Name of the function that is called from the host *)
-		kernel_function 						: Ast.identifier; 
-		(* Input array information 
-			--If an array has no name (just simply passed in as something like {1,2,3}) then it is given a temporary generated name *)
-		input_args_info							: c_kernel_variable_info list; (* type, host name, kernel name *)
-	    (* Return array information *)
-	    return_arg_info              			: c_kernel_variable_info; (* type, host name, kernel name*)
+	(* Name of the function that is called from the host *)
+	kernel_function 						: Ast.identifier; 
+	(* Input array information 
+		--If an array has no name (just simply passed in as something like {1,2,3}) then it is given a temporary generated name *)
+	input_args_info							: c_kernel_variable_info list; (* type, host name, kernel name *)
+    (* Return array information *)
+    return_arg_info              			: c_kernel_variable_info; (* type, host name, kernel name*)
 }
 
 type c_expression =
