@@ -61,8 +61,13 @@ type ptx_constant =
 	ptx_constant_variable_type					: ptx_variable_type;
 }
 
+type ptx_variable_space = 
+	| Global 
+	| Local 
+	| Shared
+
 type ptx_vdecl = 
-    | Ptx_Vdecl of ptx_data_type * (* need something about global/ptrs here*) ptx_variable_type * Ast.identifier
+    | Ptx_Vdecl of ptx_data_type * ptx_variable_space(* need something about global/ptrs here*) ptx_variable_type * Ast.identifier
 
 
 (* ptx fdecl is the entire file

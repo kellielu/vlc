@@ -1,6 +1,6 @@
 open Ast 
-(* open Sast
-open Utils 
+open Sast
+(* open Utils 
 open Exceptions *)
 
 (* Maps variable name to variable type and value *)
@@ -15,6 +15,23 @@ let map_name_counter = ref 0
 (* For generating names for each reduce function *)
 let reduce_name_counter = ref 0
 
+(* For generating register counters for datatypes *)
+let 
+(*-----------------------------------Generates Symbols Based on Counters-----------------------------------*)
+let generate_device_pointer_name () = 
+    let name = (string_of_int dev_name_counter) in 
+    incr dev_name_counter; 
+    name
+
+let generate_map_function_name () = 
+    let name = (string_of_int map_name_counter) in 
+    incr map_name_counter; 
+    name
+
+let generate_reduce_function_name () = 
+    let name = (string_of_int reduce_name_counter) in 
+    incr reduce_name_counter
+    name
 
 (*-----------------------------------Types for Semantic Analysis-----------------------------------*)
 (* Three types of functions *)
@@ -262,37 +279,67 @@ let update_scope identifier variable_type (str, env) =
 (*-----------------------------------Main functions for semantic analysis-----------------------------------*)
 
 (* Main function for walking through ast and doing semantic checking *)
-let check_ast ast env = 
+(* let check_ast ast env = 
   analyze_variable_statement(fst(ast));
   analyze_fdecl(snd(ast));
-  ast
+  ast *)
 
 
-(* Main function for checking the sast after conversion (really just have to check for the map/reduce constant types) *)
+(* (* Main function for checking the sast after conversion (really just have to check for the map/reduce constant types) *)
 let check_sast sast = sast
 
-(* Main function for converting ast to sast 
+ Main function for converting ast to sast 
   Vlc -> c is simple, just convert it normally. We have to do some more sophisticated
   stuff for vlc ast -> ptx sast. 
-*)
+ *)
 
-let convert_variable_statement_list input = input
+ 
 
-let convert_fdecl_list input = (input, input)
+let convert_to_ptx_fdecl fdecl env = (fdecl,env)
 
-let convert_ast_to_sast checked_ast = 
-  let vstmt_list                    = convert_variable_statement_list (fst(checked_ast)) in
-  let ptx_fdecl_list,c_fdecl_list   = convert_fdecl_list (snd(checked_ast)) in
-  let sast                          = (vstmt_list,ptx_fdecl_list,c_fdecl_list) in 
+let convert_to_c_fdecl fdecl env = (fdecl,env)
+  (* env.push *)
+  (* env.pop *)
+
+let convert_to_c_variable_statement vstmt env = 
+    match vstmt with 
+      | Ast.Declaration(vdecl) -> 
+        let c_vdecl, new_env = convert_
+        in Sast.Declaration(c_vdecl),new_env
+
+(* Converts global vstmt list into c vstmt list *)
+let convert_to_c_variable_statement_list vstmt_list c_vstmt_list env =
+    match vstmt_list with 
+      | [] -> (c_vstmt_list,env)
+      | hd::tl -> 
+          let c_vstmt, new_env = convert_to_c_variable_statement hd env in
+          convert_to_c_variable_statement_list tl List.reverse(hd::List.reverse(c_vstmt_list))
+
+(* Converts a list of function declarations to ptx and c functions *)
+let convert_fdecl_list fdecl_list ptx_fdecl_list c_fdecl_list env = 
+    match fdecl_list with 
+      | [] -> (ptx_fdecl_list,c_fdecl_list,env)
+      | hd::tl -> 
+        (match hd.is_kernel_function with
+          | true -> 
+              let ptx_fdecl, new_env = convert_to_ptx_fdecl hd env in
+              convert_fdecl_list tl List.reverse(ptx_fdecl::List.reverse(ptx_fdecl_list)) c_fdecl_list new_env
+          | false ->
+              let c_fdecl, new_env = convert_to_c_fdecl hd env in 
+              convert_fdecl_list tl ptx_fdecl_list List.reverse(c_fdecl::List.reverse(c_fdecl_list)) new_env
+        )
+
+(* Main function for converting ast to sast *)
+let convert ast env = 
+  let vstmt_list,env1                     = convert_to_c_variable_statement_list (fst(checked_ast)) [] env in
+  let ptx_fdecl_list,c_fdecl_list, env2   = convert_fdecl_list (snd(checked_ast)) [] [] env1 in
+  let sast                                = (vstmt_list,ptx_fdecl_list,c_fdecl_list) in 
   sast
-(* let convert_ast_to_sast ast = ast *)
 
 (* Main function for Sast *)
 let analyze ast =  
   let env = init_env in
-  let checked_ast = check_ast ast env in 
-  let sast = convert_ast_to_sast checked_ast in 
-  let checked_sast = check_sast sast in 
-  checked_sast
+  let sast = convert ast env in
+  sast
 
 
