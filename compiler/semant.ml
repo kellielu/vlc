@@ -167,7 +167,8 @@ let get_variable_type id env =
             check_scopes larger_scopes
   in check_scopes env.variable_scope_stack
 
-
+(* Helper function that returns checks types are the same *)
+let check_types t1 t2 = (t1 = t2)
 
 (* Checks if function is valid in the environment *)
 let is_function_in_scope id env = 
@@ -217,15 +218,15 @@ let rec infer_type expression =
     | Ast.Boolean_Literal(_) -> Ast.Primitive(Ast.Boolean)
     | Ast.Array_Literal(expr_list) ->
        let f expression = infer_type expression in
-       Ast.Array(match_type (List.map f expr_list),(List.length expr_list))
+      Ast.Array(match_type (List.map f expr_list),(List.length expr_list))
     | _ -> raise (Exceptions.Cannot_infer_expression_type)
 
 
 
 
 (* Checks a variable declaration and initialization to ensure variable hasn't already been declared *)
-let check_unique_id id env = 
-  if (is_variable_in_scope id env)= true then raise Exceptions.Variable_already_declared
+let check_already_declared id env = 
+  if (is_variable_in_scope id env)= true then false
 
 
 (* Note: for host only! Checks that a variable in assignments and expressions have been declared*)
@@ -247,13 +248,13 @@ let is_one_layer_array expression =
 
 
 (* Checks binary operators *)
-(* let check_binop binop e1 e2 host_env = 
+let check_binop binop e1 e2 env = 
   match binop with 
     | Ast.Add
     | Ast.Subtract 
     | Ast.Multiply 
     | Ast.Divide 
-    | Ast.Modulo *)
+    | Ast.Modulo
 
 
 (*-----------------------------------------------------*)
@@ -311,16 +312,105 @@ let check_sast sast = sast
  }
 
 let convert_to_ptx_fdecl fdecl env = (fdecl,env)
+(* env.push *)
+(* env.pop *)
 
 let convert_to_c_fdecl fdecl env = (fdecl,env)
   (* env.push *)
   (* env.pop *)
 
+(* Converts a list of something to another list *)
+let rec convert_list func ast_list sast_list= 
+  match ast_list with 
+    | [] -> sast_list
+    | hd:tl -> 
+      let sast_type = func hd in 
+        convert_list func tl (List.reverse(hd::List.reverse(sast_list)))
+
+let convert_to_c_data_type dtype env = 
+      | Ast.Integer -> Sast.Integer
+      | Ast.Float -> Sast.Float
+      | Ast.String -> Sast.String
+      | Ast.Boolean -> Sast.Boolean
+      | Ast.Void -> Sast.Void
+
+let convert_to_c_variable_type vtype env = 
+      | Ast.Primitive(p) -> Sast.Primitive((convert_to_c_data_type p))
+      | Ast.Array(t,n) ->
+          (match t with 
+            | Ast.Array(t,n) -> Sast.Array((convert_to_c_variable_type t),n)
+            | Ast.Primitive(p) -> Sast.Primitive((convert_to_c_data_type p))
+          )
+
+let convert_to_c_vdecl vdecl env  = 
+    match vdecl with 
+      | Ast.Variable_Declaration(vtype,id) ->
+          if(check_already_declared id) = true then raise Exceptions.Variable_already_declared
+          else
+            let new_vmap = Variable_Map.add in
+            let new_env = update_env in
+            let c_vtype, new_env = convert_to_c_variable_type vtype new_env in
+            Sast.Variable_Declaration(c_vtype,id),new_env
+
+let same_types_list type_list = 
+  let main_type = (List.hd type_list) in 
+  List.map same_types main_type type_list
+
+let rec convert_to_c_expression e env = 
+    match e with 
+      | Ast.Function_Call(id,e_list) ->
+        (* Check that function exists in environment *)
+        let check_exists = (is_function_in_scope id) in
+        (* Check that function arguments match that of function declaration *)
+        let f_info = (get_function_info id env) in
+        let f_arg_types = f_info.function_args in 
+          let check_args expected_arg_types f_args = List.map2 same_types expected_arg_types f_args in
+          check_args f_arg_types (List.map infer_type f_info.function_args)
+        in
+        in Sast.Function_Call(id,(convert_list convert_to_c_expression e_list))
+      | Ast.String_Literal(s) -> Sast.String_Literal(s)
+      | Ast.Integer_Literal(i) -> Sast.Integer_Literal(i)
+      | Ast.Boolean_Literal(b) -> Sast.Boolean_Literal(b)
+      | Ast.Floating_Point_Literal(f) -> Sast.Floating_Point_Literal(f)
+      | Ast.Array_Literal(e_list) -> 
+          (* Check all elements of the array are the same type *)
+          let type_list = (convert_list infer_type e_list) in 
+          in same_types_list type_list in
+          (* Get dimensions *)
+          let array_vtype = 
+            let f expression = infer_type expression in
+            Ast.Array(match_type (List.map f expr_list),(List.length expr_list)) in
+            let array_dim = get_array_dimensions array_vtype in
+            Sast.Array_Literal((convert_list convert_to_c_expression e_list),array_dim)
+
+
+
 let convert_to_c_variable_statement vstmt env = 
     match vstmt with 
-      | Ast.Declaration(vdecl) -> 
-        let c_vdecl, new_env = convert_
-        in Sast.Declaration(c_vdecl),new_env
+      | Ast.Declaration(vdecl) -> (* Check that it isn't already declared *) 
+            let c_vdecl, new_env = convert_to_c_vdecl vdecl env in
+            Sast.Declaration(c_vdecl),new_env
+      | Ast.Initialization(vdecl,e) ->
+            let c_vdecl, env1 = convert_to_c_vdecl vdecl env in
+            let c_e, env2 = convert_to_c_expression e env1 in
+            Sast.Initialization(c_vdecl,c_e),env2
+      | Ast.Assignment(e1,e2) -> 
+            (* Check that identifiers are declared *)
+            let id = match e1 with 
+              | Ast.Identifier(id) -> if check_already_declared = true then id else (raise Exceptions.Name_not_found(id))
+              | Ast.Array_Accessor(e,e_list)->
+                    (match e with 
+                      | Ast.Identifier -> if check_already_declared = true then id else (raise Exceptions.Name_not_found(id))
+                      | _ -> (raise Exceptions.Cannot_assign_expression)
+                    )
+              | _ -> raise Exceptions.Cannot_assign_expression
+            in 
+            (* Checks that both sides have the same type *)
+            let check_types = if same_types((get_variable_type id env) (infer_type e2) = false then (raise Exceptions.Type_mismatch("Incompatible types for assignment")) else () in
+            (* Convert to sast representations *)
+            let c_e1, env1 = convert_to_c_expression e env in 
+            let c_e2, env2 = convert_to_c_expression e env1 in 
+            Sast.Assignment(c_e1, c_e2), env2
 
 (* Converts global vstmt list into c vstmt list *)
 let convert_to_c_variable_statement_list vstmt_list c_vstmt_list env =

@@ -14,14 +14,8 @@ type identifier =
 
 type data_type = 
     | String
-    | Byte
-    | Unsigned_Byte
     | Integer
-    | Unsigned_Integer
-    | Long
-    | Unsigned_Long
     | Float
-    | Double
     | Boolean
     | Void
 

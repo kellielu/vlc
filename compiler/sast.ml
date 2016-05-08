@@ -163,7 +163,7 @@ type c_expression =
     | Integer_Literal of int
     | Boolean_Literal of bool
     | Floating_Point_Literal of float
-    | Array_Literal of c_expression list
+    | Array_Literal of c_expression list * int list
     | Identifier_Literal of Ast.identifier 
     | Cast of c_variable_type * c_expression
     | Binop of c_expression * c_binary_operator * c_expression

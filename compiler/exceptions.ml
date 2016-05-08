@@ -25,6 +25,7 @@ exception Not_an_array_expression
 exception Type_mismatch of string
 exception Empty_array_expression_list
 exception Variable_not_declared
+exception Cannot_assign_expression
 (*-------------------------------------Codegen C-------------------------------------*)
 exception Unknown_variable_type
 exception Unknown_operator
