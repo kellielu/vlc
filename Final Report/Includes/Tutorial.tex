@@ -1,0 +1,62 @@
+\begin{homeworkProblem}
+	\chapter{Language Tutorial}
+	\section{Installation}
+	\subsection{Hardware Requirements:}
+	A functioning NVIDIA GPU is required.
+	\subsection{Software Requirements:}
+	Ocaml CUDA Nvidia Toolkit
+	\subsection{For Ubuntu Linux:}
+	\begin{minted}[breaklines,linenos]{bash}
+    $ sudo apt-get install ocaml
+    $ sudo dpkg -i cuda-repo-ubuntu-1404_7.5-18_amd64.deb
+    $ sudo apt-get update
+    $ sudo apt-get install cuda
+	\end{minted}
+	
+	\subsection{For MacOS:}
+    Follow the download instructions for the Nvidia Toolkit for Mac found here\footnote{https://developer.nvidia.com/cuda-downloads}.\\
+    If you do not have Homebrew, install it by running the script:
+    \begin{minted}[breaklines,linenos]{bash}
+    $ /user/bin/ruby -e "\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+	\end{minted}
+	
+	Then run:
+	\begin{minted}[breaklines]{bash}
+    $ brew install ocaml
+	\end{minted}
+
+    \subsection{For Windows}
+    Follow the download instructions for the CUDA Nvidia Toolkit for Windows here\footnote{https://developer.nvidia.com/cuda-downloads}\\
+    
+    Once everything is installed, clone the git repository to your desired directory:
+	\begin{minted}[breaklines]{bash}
+    $ cd PATH
+    $ git clone https://github.com/Wumpkins/vlc.git
+	\end{minted}
+
+
+	\section{Using the Compiler}
+
+    \subsection{Installing and Uninstalling}
+    Change the directory on your terminal or console to PATH/vlc\textunderscore folder
+    \begin{minted}[breaklines]{bash}
+    $ make install
+	\end{minted}
+	
+	To uninstall, run:
+	\begin{minted}[breaklines]{bash}
+    $ make uninstall
+	\end{minted}
+
+    \subsection{Running VLC}
+	\begin{minted}[breaklines]{bash}
+$ vlc [mode] <source_file>
+mode:
+    -r: compiles and runs source_file
+    -c compiles source_file down to CUDA and PTX files in current directory
+    -s: prints sast (semantically analyzed abstract syntax tree) to console
+    -a: prints ast (abstract syntax tree) to console
+    -t: prints tokens read in by scanner
+	\end{minted}
+
+\end{homeworkProblem}

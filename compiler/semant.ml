@@ -333,11 +333,11 @@ let convert_fdecl_list fdecl_list ptx_fdecl_list c_fdecl_list env =
 
 (* Main function for converting ast to sast *)
 let convert ast env = (ast env)
-(*   let vstmt_list,env1                     = convert_to_c_variable_statement_list (fst(checked_ast)) [] env in
+  let vstmt_list,env1                     = convert_to_c_variable_statement_list (fst(checked_ast)) [] env in
   let ptx_fdecl_list,c_fdecl_list, env2   = convert_fdecl_list (snd(checked_ast)) [] [] env1 in
   let sast                                = (vstmt_list,ptx_fdecl_list,c_fdecl_list) in 
   sast
- *)
+
 (* Main function for Sast *)
 let analyze ast =  
   let env = init_env in

@@ -1,0 +1,6 @@
+#Unsupported PTX argument
+string defg add(string x, string y):
+    return x
+
+int def vlc():
+    return 0

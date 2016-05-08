@@ -1,0 +1,162 @@
+\begin{homeworkProblem}
+	\section{Statements}
+	A statement forms a complete unit of execution. Most statements are expression statements and have the form \newline
+	\textit{expression ;}
+	\newline
+	\newline
+	So that several statements can be used where one is expected, the compound statement is provided:
+	\newline
+	\textit{compound-statement:}\newline
+	\textit{ $\left\{ statement-list \right\}$ }
+	\newline
+	\newline
+	\textit{statement-list}:\newline
+	\textit{statement statement-list}
+	
+	\subsection{Control Flow Statements}
+	The statements inside source files are generally executed from top to bottom, in the order that they appear. Control flow statements, however, break up the flow of execution by employing decision making, looping, and branching, enabling your program to conditionally execute particular blocks of code. This section describes the conditional statements (if-then, if-then-else), looping statements (for, while), and branching statements (break, continue, return) supported by the Dice programming language.
+	
+	\subsubsection{Conditional Statement}
+	The forms of the conditional statement are:\newline
+	\textbf{if} ( \textit{expression} ) \textit{statement}
+	\newline
+	\textbf{if} ( \textit{expression} ) \textit{statement} (\textbf{else if} \textit{statement})* \textbf{else} \textit{statement}
+	\newline
+	\newline
+	The expression enclosed in balanced parentheses is evaluated and if it is \textbf{true}, the first substatement is executed. In the second case, if the expression evaluates to \textbf{false} and there is an \textbf{else-if} clause, then the substatement in the \textbf{else-if} clause is executed. If the expression evaluates to \textbf{false} and no \textbf{else-if} clause exists, then the substatement in the \textbf{else} clause is executed. As usual, the \textbf{else} ambiguity is resolved by connecting an else with the last encountered elseless if.
+	
+	\subsubsection{Looping}
+	The while statement has the form
+	\newline
+	\textbf{while} ( \textit{expression} ) \textit{statement}
+	\newline
+	The substatement is executed repeatedly so long as the value of the expression remains non-zero. The test takes place before each execution of the statement.
+	\newline
+	\newline
+	The \textbf{for} statement has the form:
+	\newline
+	\textbf{for} (\textit{expression\textsubscript{opt}} ; \textit{expression\textsubscript{opt}} ; \textit{expression\textsubscript{opt}}) \textit{expression}
+	\newline
+	This statement is equivalent to:
+	\begin{minted}{java}
+		while (expression-2) {
+			statement
+			expression-3 ;
+		}
+	\end{minted}
+	Thus the first expression specifies initialization for the loop; the second specifies a test, made before each iteration, such that the loop is exited when the expression becomes \textbf{false}; the third expression typically specifies an incrementation which is performed after each iteration.
+	Any or all of the expressions may be dropped. A missing expression-2 makes the implied while clause equiva- lent to ‘‘while( \textbf{true} )’’; other missing expressions are simply dropped from the expansion above.
+	
+	\subsubsection{Branching}
+	The statement
+	\newline
+	\newline
+	\textbf{break};
+	\newline
+	\newline
+	causes termination of the outermost enclosing \textbf{while} or \textbf{for} statement; control passes to the statement following the terminated statement.
+	
+	The statement 
+	\newline
+	\newline
+	\textbf{continue};
+	\newline
+	\newline
+	causes control to pass to the loop-continuation portion of the outermost enclosing \textbf{while} or \textbf{for} statement; that is to the end of the loop.
+	
+	A function returns to its caller by means of the return statement, which has one of the forms:
+	\newline
+	\newline
+	\textbf{return};
+	\newline
+	\textbf{return} ( \textit{expression} );
+	
+	In the first case no value is returned. In the second case, the value of the expression is returned to the caller of the function. If a function has no \textbf{return} statement, then it returns with no returned value. 
+	
+	\subsection{File Inclusion}
+	If a .dice file contains a statement of the following form:
+	\newline
+	\textbf{include}(\textit{expression});
+	\newline
+	where the expression is a string literal that specifies the path to another .dice file, then all classes defined in that file are available to be used in definitions of classes in the .dice file in which the include statement appears. Include statements must appear before other types of statements in a .dice file.
+	
+	\subsection{Declaration Statements}
+	\subsubsection{Instance Field Declaration}
+	A field declaration statement declares an instance field of a class and has the following form:
+	\newline
+	\textit{scope} \textit{type-specifier} \textit{identifier} ;
+	\newline
+	\textit{scope}: \textbf{public} $|$ \textbf{private}
+	\newline
+	\textit{type-specifier}: \textit{type} $|$ \textbf{class} \textit{identifier} $|$ \textbf{class} \textit{identifier}[] $|$ \textit{type}[]
+	\newline
+	\textit{type}: any primitive type in Dice
+	\newline
+	Note that this is the only legal format of a field declaration statement; assignment statements are not a valid way to declare instance fields in Dice.
+	
+	\subsubsection{Local Variable Declaration}
+	\textit{type-specifier} \textit{identifier} ;
+	\newline
+	\textit{type-specifier}: \textit{type} $|$ \textbf{class} \textit{identifier} $|$ \textbf{class} \textit{identifier}[] $|$ \textit{type}[]
+	\newline
+	\textit{type}: any primitive type in Dice
+	
+	\subsubsection{Instance Method Declaration}
+	A method declaration statement declares an instance method of a class and has the following form:
+	\newline
+	\textit{scope} \textit{type} \textit{name} (\textit{formal-list\textsubscript{opt}}) $\left\{ \textit{statement-list\textsubscript{opt}} \right\}$
+	\newline
+	\textit{scope}: \textbf{public} $|$ \textbf{private}
+	\newline
+	\textit{type-specifier}: \textit{type} $|$ \textbf{class} \textit{identifier} $|$ \textbf{class} \textit{identifier}[] | \textit{type}[]
+	\newline
+	\textit{type}: Any primitive or non-primitive type in Dice, or \textbf{void}. If the \textit{type} is \textbf{void}, then the method being declared returns no value.
+	\newline
+	\textit{name}: \textbf{main} $|$ \textit{identifier}
+	\newline
+	Only one method per program may be declared with the \textit{name} \textbf{main}.
+	\newline
+	\textit{identifier}: Any identifier, exluding the following, which are names of built-in functions in Dice:
+	\newline
+	\begin{center}
+		\begin{tabular}{ccccc}
+			\textbf{print} & \textbf{input} & \textbf{malloc} & \textbf{open} \\
+			\textbf{close} & \textbf{read} & \textbf{write} & \textbf{lseek} \\
+			\textbf{exit} & \textbf{realloc} & \textbf{getchar}
+		\end{tabular}
+	\end{center}
+	\textit{formal}: \textit{type-specifier} \textit{identifier}
+	\newline
+	\textit{statement}: \textit{local-variable-declaration} $|$ \textit{expression-statement}
+	\newline
+	\textit{expression-statement}: \textit{assignment-expression-statement} $|$ \textit{function-call-expression-statement}
+	
+	\subsubsection{Constructor Declaration}
+	A constructor declaration statement has the following form:
+	\newline
+	\textbf{constructor} (\textit{formal-list\textsubscript{opt}}) $\left\{ \textit{statement-list\textsubscript{opt}} \right\}$
+	\newline
+	\textit{formal}: \textit{type-specifier} \textit{identifier}
+	\newline
+	\textit{type-specifier}: \textit{type} $|$ \textbf{class} \textit{identifier} $|$ \textbf{class} \textit{identifier}[] | \textit{type}[]
+	\newline
+	\textit{type}: any primitive type in Dice
+	\newline
+	\textit{statement}: \textit{local-variable-declaration} $|$ \textit{expression-statement}
+	\newline
+	\textit{expression-statement}: \textit{assignment-expression-statement} $|$ \textit{function-call-expression-statement}
+	
+	\subsubsection{Class Declaration}
+	A class declaration statement has one of the following forms:
+	\newline
+	\textbf{class} \textit{identifier} $\left\{ \textit{cbody} \right\}$
+	\newline
+	\textbf{class} \textit{identifier} \textbf{extends} \textit{identifier} $\left\{ \textit{cbody} \right\}$
+	\newline
+	\textit{identifier}: The \textit{identifier} that follows the keyword \textbf{extends} must be the name of another class declared in the same program. The \textit{identifier} that follows the keyword \textbf{class} must not be identical to the name of any other class declared in the same program.
+	\newline
+	\textit{cbody}: $\left\{ \textit{statement-list\textsubscript{opt}} \right\}$
+	\newline
+	\textit{statement}: \textit{instance-field-declaration} $|$ \textit{instance-method-declaration} $|$ \textit{constructor-declaration}
+	
+\end{homeworkProblem}
