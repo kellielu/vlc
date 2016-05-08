@@ -10,8 +10,10 @@ module Function_Map = Map.Make(String);;
 
 (* For generating names for the device pointers *)
 let dev_name_counter = ref 0
-(* For generating names for each map function *)
-let map_name_counter = ref 0
+(* For generating names for each ptx map function *)
+let map_ptx_name_counter = ref 0
+(* For generating names for each c map function *)
+let map_c_name_counter = ref 0
 (* For generating names for each reduce function *)
 let reduce_name_counter = ref 0
 
@@ -23,9 +25,14 @@ let generate_device_pointer_name () =
     incr dev_name_counter; 
     name
 
-let generate_map_function_name () = 
-    let name = (string_of_int map_name_counter) in 
-    incr map_name_counter; 
+let generate_map_c_function_name () = 
+    let name = (string_of_int map_c_name_counter) in 
+    incr map_c_name_counter; 
+    name
+
+let generate_map_ptx_function_name () = 
+    let name = (string_of_int map_ptx_name_counter) in 
+    incr map_ptx_name_counter; 
     name
 
 let generate_reduce_function_name () = 
@@ -187,6 +194,7 @@ let rec get_array_dimensions vtype dimensions =
 (*   | _ -> raise Exceptions.Unknown_variable_type *)
 
 
+(* *)
 
 
 
@@ -293,7 +301,14 @@ let check_sast sast = sast
   stuff for vlc ast -> ptx sast. 
  *)
 
- 
+ let make_map_ptx_fdecl hof_call = {
+    ptx_fdecl_type = Sast.Global;
+    ptx_fdecl_name = generate_map_ptx_function_name
+ }
+
+ let make_map_c_fdecl hof_call ptx_fdecl = {
+    c_fdecl_return_type = Array()
+ }
 
 let convert_to_ptx_fdecl fdecl env = (fdecl,env)
 

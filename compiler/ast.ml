@@ -28,7 +28,6 @@ type data_type =
 type variable_type = 
     | Primitive of data_type
     | Array of variable_type * int (* variable type, size *)
-(*  | Struct of variable_type list * expression list * int *)
 
 type vdecl = 
     Variable_Declaration of variable_type * identifier

@@ -78,7 +78,7 @@ type ptx_vdecl =
 *)
 type ptx_fdecl = {
 	(* Global or Device *)
-	ptx_fdecl_type 								: ptx_function_type; (* probably not needed *)
+	ptx_fdecl_type 								: ptx_function_type;
 
 	(* Name of the function *)
 	ptx_fdecl_name 								: Ast.identifier;
@@ -96,13 +96,7 @@ type ptx_fdecl = {
 }
 
 
-
-
-
-
 (* -----------------------------------------C types -----------------------------------------*)
-
-(*---------------------------------- Unnecessary?????????---------------------------------- *)
 type c_binary_operator =
     | Add | Subtract | Multiply | Divide | Modulo
 (*     | Plus_Equal | Subtract_Equal | Multiply_Equal | Divide_Equal  *)
@@ -130,23 +124,25 @@ type c_data_type =
 type c_variable_type = 
 	| Primitive of c_data_type
 	| Array of c_variable_type * int
-(* 	| Struct of variable_type list * expression list * int *)
 
 type c_vdecl = 
     Variable_Declaration of c_variable_type * Ast.identifier
 
-(* ----------------------------------Necessary---------------------------------- *)
-
+(* Our type for storing information about variables that will be copied from host and GPU *)
 type c_kernel_variable_info = {
 	variable_type 			: c_variable_type;
 	host_name 				: Ast.identifier;
+	arg_name				: Ast.identifier;
 	kernel_name 			: Ast.identifier;
 }
 
-type c_higher_order_function_call = {
+(* C function that is generate to do memory copying and to call the global void map function*)
+type c_higher_order_fdecl = {
 	(* Map or reduce *)
 	higher_order_function_type 				: Ast.identifier; 
-	(* Name of kernel function that is called from host (would be kernel function corresponding to map/reduce) *)
+	(* Name of this function  - ex. map123, map1, map2 *)
+	higher_order_function_name 				: Ast.identifier;
+	(* Name of kernel function that is called from host (would be global void kernel function corresponding to map/reduce) *)
     applied_kernel_function    				: Ast.identifier;
 	(* List of constants passed into map and reduce *)
 	constants 								: c_kernel_variable_info list;
@@ -157,17 +153,6 @@ type c_higher_order_function_call = {
 	input_arrays_info						: c_kernel_variable_info list; (* type, host name, kernel name *)
     (* Return array information *)	
     return_array_info              			: c_kernel_variable_info; (* type, host name, kernel name*)    
-}
-
-(* Type for calling defg functions directly from host *)
-type c_kernel_function_call = {
-	(* Name of the function that is called from the host *)
-	kernel_function 						: Ast.identifier; 
-	(* Input array information 
-		--If an array has no name (just simply passed in as something like {1,2,3}) then it is given a temporary generated name *)
-	input_args_info							: c_kernel_variable_info list; (* type, host name, kernel name *)
-    (* Return array information *)
-    return_arg_info              			: c_kernel_variable_info; (* type, host name, kernel name*)
 }
 
 type c_expression =

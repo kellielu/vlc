@@ -71,10 +71,14 @@ let rec generate_variable_type variable_type  =
 
 (* Generate id *)
 let generate_id id  = 
-  let id_string = Utils.idtos(id) in sprintf "%s" id_string
-(*   match id_string with
+  let id_string = Utils.idtos(id) in 
+  sprintf "%s" id_string
+
+let generate_function_id id = 
+let id_string = Utils.idtos(id)
+  match id_string with
     | "print" -> sprintf "printf"
-    | _ as identifier -> sprintf identifier *)
+    | _ as identifier -> sprintf identifier
 
  (* Generates CUDA device pointer *)
  let generate_device_ptr ptr_name = 
@@ -92,7 +96,13 @@ let generate_id id  =
     sprintf "%s" mem_alloc_string
 
 (* Generates CUDA copying from host to device*)
- let generate_mem_cpy_statement_host_to_device arr_info arr_length = 
+ let generate_mem_cpy_statement_host_to_device ktype = 
+    let vtype = ( match ktype.variable_type with 
+                    | Array(t,n) -> 
+
+                    | Primitive(t) -> 
+                ) 
+    in 
     let mem_cpy_string  = 
       "checkCudaErrors(cuMemcpyHtoD("^ Utils.idtos(arr_info.kernel_name) ^", " ^ Utils.idtos(arr_info.host_name) ^ ", sizeof(" ^ (generate_variable_type arr_info.variable_type) ^ ")*" ^ string_of_int arr_length ^ "));\n" in
     sprintf "%s" mem_cpy_string
@@ -122,18 +132,9 @@ let generate_vdecl d  =
    match d with 
   | Variable_Declaration(vtype,id) ->
       match vtype with
-        | Array(t,n) -> sprintf "vlcarray fill"
-            (* Fill in with VLC_Array*)
-            (* let array_dimensions= (get_array_dimensions t [n]) in
-            Environment.combine  [
-                Generator(generate_variable_type t);
-                Verbatim(" ");
-                Generator(generate_id d.name);
-                (* Get the array dimensions *)
-                Verbatim("[");
-                Verbatim(String.concat "][" (List.map string_of_int array_dimensions));
-                Verbatim("]")
-            ] *)
+        | Array(t,n) ->
+          let param_string = "VLC_Array<" ^ (generate_data_type t) ^"," ^ n ^ ">" ^ (generate_id id)  in 
+          sprintf "%s" param_string
         | Primitive(p) ->
             let param_string = (generate_data_type p) ^ " " ^ (generate_id id) in 
             sprintf "%s" param_string
@@ -144,21 +145,12 @@ let generate_param d =
   match d with 
     | Variable_Declaration(vtype,id) ->
       match vtype with
-        | Array(t,n) -> sprintf "vlcarray fill"
-            (* Fill in with VLC_Array*)
-            (* let array_dimensions= (get_array_dimensions t [n]) in
-            Environment.combine  [
-                Generator(generate_variable_type t);
-                Verbatim(" ");
-                Generator(generate_id d.name);
-                (* Get the array dimensions *)
-                Verbatim("[");
-                Verbatim(String.concat "][" (List.map string_of_int array_dimensions));
-                Verbatim("]")
-            ] *)
+        | Array(t,n) ->
+          let param_string = "VLC_Array<" ^ (generate_data_type t) ^"," ^ n ^ ">" ^ (generate_id id) input_arrays_info in 
+          sprintf "%s" param_string
         | Primitive(p) ->
-            let param_string = (generate_data_type p) ^ " " ^ (generate_id id) in 
-            sprintf "%s" param_string
+          let param_string = (generate_data_type p) ^ " " ^ (generate_id id) in 
+          sprintf "%s" param_string
 (*         | _ -> raise Exceptions.Unknown_variable_type
     | _ -> raise Exceptions.Unknown_type_of_param *)
 
@@ -166,9 +158,8 @@ let generate_param d =
 let rec generate_expression expression  =
   let expr = match expression with
     | Function_Call(id, expr_list) ->
-        (generate_id id) ^ "(" ^ generate_list generate_expression "," expr_list ^ ")"
+        (generate_function_id id) ^ "(" ^ generate_list generate_expression "," expr_list ^ ")"
     | Higher_Order_Function_Call(fcall) -> generate_higher_order_function_call fcall
-    | Kernel_Function_Call(kfcall) -> generate_kernel_function_call kfcall
     | String_Literal(s) -> 
         "\"" ^ s ^ "\""
     | Integer_Literal(i) -> 
@@ -177,10 +168,7 @@ let rec generate_expression expression  =
         string_of_bool b
     | Floating_Point_Literal(f) ->
         string_of_float f
-    | Array_Literal(s) -> 
-        "vlcarray fill"
-        (* Fill in with VLC_Array*)
-        (* sprintf "{" ^ (generate_expression_list s) ^ "}" *)
+    | Array_Literal(e_list) -> "VLC_Array(" ^ (generate_list generate_expression "," e_list) ^ ")" 
     | Identifier_Literal(id) -> 
         (generate_id id)
     | Cast(vtype,e) ->
@@ -195,7 +183,7 @@ let rec generate_expression expression  =
     | Ternary(e1,e2,e3) -> "(" ^ (generate_expression e2) ^ ") ? " ^ (generate_expression e1) ^ ":" ^ (generate_expression e3)
   in sprintf "%s" expr
 (* Generates CUDA statements that copy constants from host to gpu *)
-and generate_constant_on_gpu const  = 
+(* and generate_constant_on_gpu const  = 
   let mem_alloc_constant_string = match const.variable_type with 
     | Primitive(vtype) ->
           generate_device_ptr (Utils.idtos(const.kernel_name)) ^ 
@@ -205,14 +193,52 @@ and generate_constant_on_gpu const  =
         "vlcarray fill"
 (*     | _ -> raise Exceptions.Unknown_variable_type *)
   in 
-  sprintf "%s" mem_alloc_constant_string
-and generate_kernel_function_call kfcall = sprintf "hi" (* Why do we need semicolon??????*)
-    (* Fill in with VLC_Array *)
-(* Generates statements for higher order map or reduce calls *)
-and generate_higher_order_function_call fcall = 
+  sprintf "%s" mem_alloc_constant_string *)
+
+(* Generates host arguments from a c_kernel_variable_info *)
+let generate_args ktype = 
+  (generate_variable_type ktype.variable_type) ^ " " ^ (generate_id ktype.arg_name)
+
+(* Generates if statement for every constant. Necessary because constants maybe different types *)
+let generate_if_statements_for_constants ktype_list length = 
+    let constant_index = List.length ktype_list in
+    match constant_index with 
+      | length ->
+        let ktype = List.nth ktype_list (length - constant_index) in
+        "if(i=" ^ string_of_int index ^ "){" ^ 
+            (generate_variable_type ktype.variable_type) ^(generate_id ktype.host_name) ^  "=" ^ "va_args(constants," ^ (generate_variable_type ktype.variable_type) ^ ");" ^ 
+            generate_mem_alloc_statement_host_to_device ktype ^ (* Cuda mem alloc *)
+            generate_mem_cpy_statement_host_to_device ktype ^ (* Cuda mem copy *)
+
+            
+        "}"
+      | 1 -> 
+        let ktype = List.nth ktype_list (length - constant_index) in
+        "else{" ^ 
+
+        "}"
+      | _ ->
+        let ktype = List.nth ktype_list (length - constant_index) in
+
+
+(* Generates c function declaration for map  *)
+let generate_higher_order_function_decl hofcall = 
     let higher_order_function_call_string = 
       match Utils.idtos(fcall.higher_order_function_type) with
-      | "map" -> 
+      | "map" -> "VLC_Array <" ^ (generate_variable_type hofcall.return_array_info.variable_type) ^ ">" ^ 
+                hofcall.higher_order_function_name ^ "(" ^ (generate_list generate_args "," hofcall.constants) ^"," ^ (generate_list generate_args "," hofcall.input_arrays_info) ^ ")" ^ "{\n" ^ 
+                      "int num_constants = " ^ (List.length hofcall.constants) ^ ";" ^
+                      "int num_input_arrays = " ^ (hofcall.array_length) ^ ";" ^ 
+                      generate_device_ptr hofcall.constants ^ 
+                      generate_device_ptr hofcall.input_arrays ^ 
+                      " va_list constants;" ^ 
+                      " va_start(constants,num_constants)" ^
+                      "for(int i = 0; i < num_constants; i++){\n" ^ 
+                         
+                      "}" ^ 
+                      " va_end(constants)" ^
+                      
+                  "}"
     (* Fill in with VLC_Array *)
       "{0};\n" ^ 
     (* Initializes CUDA driver and loads needed function *)
@@ -373,6 +399,7 @@ let generate_cuda_file filename program =
   #include \"cuda.h\"\n\
   #include <iostream>\n\
   #include <vlc.hpp>\n\
+  #include <stdargs.h>
   CUdevice    device;\n\
   CUmodule    cudaModule;\n\
   CUcontext   context;\n\
