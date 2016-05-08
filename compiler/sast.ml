@@ -11,7 +11,7 @@ type ptx_binary_operator =
 (*     | Plus_Equal | Subtract_Equal | Multiply_Equal | Divide_Equal  *)
 (*     | Exp | Dot | Matrix_Multiplication *)
     | Ptx_And | Ptx_Or | Ptx_Xor
-(* | Ptx_Bitshift_Right | Ptx_Bitshift_Left *)
+ | Ptx_Bitshift_Right | Ptx_Bitshift_Left 
     | Ptx_Equal | Ptx_Not_Equal | Ptx_Greater_Than | Ptx_Less_Than | Ptx_Greater_Than_Equal 
     | Ptx_Less_Than_Equal
 (*     Ptx_Greater_Than_Unsigned | Ptx_Less_Than_unsigned | Ptx_Greater_Than_Equal_Unsigned 
@@ -19,6 +19,7 @@ type ptx_binary_operator =
 
 type ptx_unary_operator = 
     | Ptx_Not  | Ptx_Negate
+    | Ptx_Plus_Plus | Ptx_Minus_Minus
 
 type ptx_data_type =
 	S32 | F32 | Pred
@@ -92,13 +93,6 @@ type ptx_variable_type =
 	| Ptx_Primitive of ptx_data_type
 	| Ptx_Array of ptx_variable_type * int 					(* 'int' refers to the length of the array *)
 	| Ptx_Pointer of ptx_variable_type * int 				(* 'int' refers to size of memory pointed by the pointer *)
-
-type ptx_constant = 
-{
-	ptx_constant_name 							: Ast.identifier;
-	ptx_constant_variable_type					: ptx_variable_type;
-}
-
 (* ptx fdecl is the entire file
 	it seems it really only needs to be composed of a few parts - a name, a variable declaration list
 	and a statement list
@@ -115,9 +109,6 @@ type ptx_fdecl = {
 	(* Expected parameters of the function *)
 	ptx_fdecl_params 							: ptx_pdecl list;
 
-	(* List of constants that function needs to know - aka variables that aren't in scope of function when it goes through semantic analyzer 
-		If this constant list doesn't match the constant list of the higher order function, throw error in semant.ml *)
-	ptx_consts 									: ptx_constant list; 
 	(* Declares the virtual registers that are needed for the function *)
 	register_decls 								: ptx_vdecl list;
 	(* Statements within the function *)
@@ -181,13 +172,13 @@ type c_higher_order_fdecl = {
 		--If an array has no name (just simply passed in as something like {1,2,3}) then it is given a temporary generated name *)
 	input_arrays_info						: c_kernel_variable_info list; (* type, host name, kernel name *)
     (* Return array information *)	
-    return_array_info              			: c_kernel_variable_info; (* type, host name, kernel name*)    
+    return_array_info              			: c_kernel_variable_info; (* type, host name, kernel name*) 
+    (* Dependent functions*)
+    dependent_functions 					: Ast.identifier list;   
 }
 
 type c_expression =
     | Function_Call of Ast.identifier * c_expression list
-    | Higher_Order_Function_Call of c_higher_order_function_call
-    | Kernel_Function_Call of c_kernel_function_call
     | String_Literal of string
     | Integer_Literal of int
     | Boolean_Literal of bool

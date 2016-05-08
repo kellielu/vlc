@@ -202,7 +202,7 @@ let generate_args ktype =
 let generate_host_ptr ktype = 
   (generate_variable_type ktype.variable_type) ^ " " ^ ktype.host_name ^ ";"
 
-(* Generates if statement for every constant. Necessary because constants maybe different types *)
+(* (* Generates if statement for every constant. Necessary because constants maybe different types *)
 let generate_if_statements_for_constants ktype_list length = 
     let constant_index = List.length ktype_list in
     match constant_index with 
@@ -226,7 +226,7 @@ let generate_if_statements_for_constants ktype_list length =
             (generate_id ktype.host_name) ^  "=" ^ "va_args(constants," ^ (generate_variable_type ktype.variable_type) ^ ");" ^ 
             generate_mem_alloc_statement_host_to_device ktype ^ (* Cuda mem alloc *)
             generate_mem_cpy_statement_host_to_device ktype ^ (* Cuda mem copy *)
-        "}"
+        "}" *)
 
 
 (* Generates c function declaration for map  *)
@@ -234,7 +234,7 @@ let generate_higher_order_function_decl hofcall =
     let higher_order_function_decl_string = 
       match Utils.idtos(fcall.higher_order_function_type) with
       | "map" -> "VLC_Array <" ^ (generate_variable_type hofcall.return_array_info.variable_type) ^ ">" ^ 
-                hofcall.higher_order_function_name ^ "(" ^ (generate_list generate_args "," hofcall.constants) ^"," ^ (generate_list generate_args "," hofcall.input_arrays_info) ^ ")" ^ "{\n" ^ 
+                hofcall.higher_order_function_name ^ "(...)" ^ "{\n" ^ 
                       "checkCudaErrors(cuCtxCreate(&context, 0, device));\n" ^ 
                       "std::ifstream t(\"" ^ Utils.idtos hofcall.applied_kernel_function ^ ".ptx\");\n" ^ 
                       "if (!t.is_open()) {\n" ^
@@ -251,7 +251,9 @@ let generate_higher_order_function_decl hofcall =
                       generate_list generate_device_ptr "\n" hofcall.constants ^ "\n" ^  
                       generate_list generate_device_ptr "\n" hofcall.input_arrays_info ^ "\n" ^ 
                       generate_device_ptr hofcall.return_array_info ^ 
-                      " va_list constants;\n" ^ 
+                      generate_list generate_mem_alloc_statement_host_to_device hof.constants ^
+                      generate_list generate_mem_cpy_statement_host_to_device hof.constants ^
+                      (* " va_list constants;\n" ^ 
                       " va_start(constants,num_constants)\n" ^
                       "for(int i = 0; i < num_constants; i++){\n" ^ 
                           (generate_if_statements_for_constants hofcall.constants (List.length hofcall.constants)) ^
@@ -260,7 +262,7 @@ let generate_higher_order_function_decl hofcall =
                       "for(int j = 0; j < num_input_arrays; j++){\n" ^
                           generate_list generate_mem_alloc_host_to_device hofcall ^ 
                           generate_list generate_mem_cpy_host_to_device hofcall ^
-                      "}\n" ^ 
+                      "}\n" ^  *)
                       (* Sets Kernel params and other information needed to call cuLaunchKernel *)
                       generate_kernel_params hofcall.input_arrays_info ^ "\n" ^
                       "unsigned int blockSizeX = 16;\n" ^ 

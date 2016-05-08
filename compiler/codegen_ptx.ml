@@ -1,5 +1,5 @@
 open Sast
-(* open Exceptions *)
+open Exceptions 
 (* For sprintf *)
 open Printf
 (*------------------------------------------------------------ KERNEL CODE GENERATION ------------------------------------------------------------*)
@@ -70,6 +70,8 @@ let generate_ptx_binary_operator operator =
     | Ptx_And -> "and"
     | Ptx_Or -> "or"
     | Ptx_Xor -> "xor"
+    | Ptx_Bitshift_Right -> "shr"
+    | Ptx_Bitshift_Left -> "shl"
   in
   sprintf "%s" op
 
@@ -77,6 +79,8 @@ let generate_ptx_unary_operator operator =
   let op = match operator with
     | Ptx_Not -> "not"
     | Ptx_Negate -> "neg"
+    | Ptx_Plus_Plus -> Exceptions.PTXCREMENT_GENERATED_ERROR
+    | Ptx_Minus_Minus -> -> Exceptions.PTXCREMENT_GENERATED_ERROR
   in
   sprintf "%s" op
 
@@ -136,9 +140,21 @@ let rec generate_ptx_expression expression =
     | Ptx_Binop(o, t, v1, v2, v3) -> generate_ptx_binary_operator(o) ^ generate_ptx_data_type(t) 
         ^ "     " ^ generate_ptx_variable(v1) ^ ", " ^ generate_ptx_variable(v2) ^ ", " 
         ^ generate_ptx_variable(v3) ^ ";"
-    | Ptx_Unop(o, t, v1, v2) -> generate_ptx_unary_operator(o) ^ 
-      generate_ptx_data_type(t) ^ "     " ^ generate_ptx_variable(v1) ^ ", "
-      ^ generate_ptx_variable(v2) ^ ";"
+    | Ptx_Unop(o, t, v1, v2) -> 
+        let unop = match o with 
+            | Ptx_Not -> generate_ptx_unary_operator(o) ^ 
+                generate_ptx_data_type(t) ^ "     " ^ generate_ptx_variable(v1) 
+                ^ ", " ^ generate_ptx_variable(v2) ^ ";"
+            | Ptx_Negate -> generate_ptx_unary_operator(o) ^ 
+                generate_ptx_data_type(t) ^ "     " ^ generate_ptx_variable(v1) 
+                ^ ", " ^ generate_ptx_variable(v2) ^ ";"
+            | Ptx_Plus_Plus -> "add" ^ generate_ptx_data_type(t) ^ "     " ^
+                generate_ptx_variable(v1) ^ ", " ^ generate_ptx_variable(v2) ^
+                ", 1;"
+            | Ptx_Minus_Minus -> "sub" ^ generate_ptx_data_type(t) ^ "     " ^
+                generate_ptx_variable(v1) ^ ", " ^ generate_ptx_variable(v2) ^
+                ", 1;"
+        in unop
     | Ptx_vdecl(v) -> generate_ptx_vdecl(v)
     | Ptx_Move(d, v1, v2) -> "mov" ^ generate_ptx_data_type(d) ^ "     " ^
       generate_ptx_variable(v1) ^ generate_ptx_variable(v2) ^ ";"

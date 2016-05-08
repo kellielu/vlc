@@ -26,6 +26,10 @@ exception Type_mismatch of string
 exception Empty_array_expression_list
 exception Variable_not_declared
 exception Cannot_assign_expression
+exception NO_STRINGS_ALLOWED_IN_GDECL
+exception Void_type_in_gdecl
+exception String_not_accepted_in_binop
+exception Invalid_input_argument_to_map
 (*-------------------------------------Codegen C-------------------------------------*)
 exception Unknown_variable_type
 exception Unknown_operator
@@ -37,3 +41,4 @@ exception Unknown_type_of_expression
 exception Unknown_variable_statement
 exception Unknown_type_of_statement
 (*-------------------------------------Codegen PTX-------------------------------------*)
+exception PTXCREMENT_GENERATED_ERROR
