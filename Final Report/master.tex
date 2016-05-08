@@ -1,0 +1,54 @@
+% file: master.tex
+\documentclass[12pt]{report}
+
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\definecolor{titlepagecolor}{cmyk}{1,.60,0,.40}
+\definecolor{namecolor}{cmyk}{1,.50,0,.10} 
+\definecolor{light-gray}{gray}{0.95}
+\input{packages}
+
+
+\begin{document}
+\begin{titlepage}
+    \newgeometry{left=7.5cm}
+    \pagecolor{titlepagecolor}
+    \noindent
+%    \includegraphics[width=2cm][logo.jpg}\\[-1em]
+    \color{white}
+    \makebox[0pt][l]{\rule{1.3\textwidth}{1pt}}
+    \par
+    \noindent
+    {\huge \textsf{VLC:}} \textcolor{namecolor}{\huge \textsf{C'est La Vie}}
+    \vfill
+    \noindent
+    \textbf{\textsf{Project Report}}
+    \vskip\baselineskip
+    \noindent
+    \textsf{Kellie Ren Lu, krl2130}\\
+    \textsf{David Chen, dhc2129}\\
+    \textsf{Diana Valverde-Paniagua, drv2110}\\
+    
+
+\end{titlepage}
+\restoregeometry % restores the geometry
+\nopagecolor% Use this to restore the color pages to white
+\pagebreak
+\tableofcontents
+
+\pagebreak
+
+\input{header}
+\input{functions}
+\input{Includes/Proposal.tex}
+\input{Includes/Tutorial.tex}
+\input{Includes/LRM.tex}
+\input{Includes/ProjectPlan.tex}
+\input{Includes/Architecture.tex}
+\input{Includes/Testing.tex}
+\input{Includes/LessonsLearned.tex}
+\input{Includes/Code.tex}
+\input{Includes/References.tex}
+
+\end{document}

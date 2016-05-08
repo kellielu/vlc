@@ -1,0 +1,7 @@
+#Constant inputs to defg not constant
+int defg add(int x, int y):
+    scale = 5
+    return scale * (x + y)
+
+int def vlc():
+    return 0

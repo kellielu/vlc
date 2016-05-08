@@ -18,10 +18,12 @@ let map_c_name_counter = ref 0
 let reduce_name_counter = ref 0
 
 (* For generating register counters for datatypes *)
-let 
+let signed_int_counter = ref 0
+let signed_float_counter = ref 0
+let predicate_counter = ref 0
 (*-----------------------------------Generates Symbols Based on Counters-----------------------------------*)
 let generate_device_pointer_name () = 
-    let name = (string_of_int dev_name_counter) in 
+    let name = (string_of_int !dev_name_counter) in 
     incr dev_name_counter; 
     name
 
@@ -36,8 +38,8 @@ let generate_map_ptx_function_name () =
     name
 
 let generate_reduce_function_name () = 
-    let name = (string_of_int reduce_name_counter) in 
-    incr reduce_name_counter
+    let name = (string_of_int !reduce_name_counter) in 
+    incr reduce_name_counter;
     name
 
 (*-----------------------------------Types for Semantic Analysis-----------------------------------*)
@@ -412,34 +414,37 @@ let convert_to_c_variable_statement vstmt env =
             let c_e2, env2 = convert_to_c_expression e env1 in 
             Sast.Assignment(c_e1, c_e2), env2
 
+
 (* Converts global vstmt list into c vstmt list *)
-let convert_to_c_variable_statement_list vstmt_list c_vstmt_list env =
-    match vstmt_list with 
+let convert_to_c_variable_statement_list vstmt_list c_vstmt_list env = 
+    (vstmt_list c_vstmt_list env)
+(*     match vstmt_list with 
       | [] -> (c_vstmt_list,env)
       | hd::tl -> 
           let c_vstmt, new_env = convert_to_c_variable_statement hd env in
-          convert_to_c_variable_statement_list tl List.reverse(hd::List.reverse(c_vstmt_list))
+          convert_to_c_variable_statement_list tl (List.rev(hd::List.rev(c_vstmt_list))) *)
 
 (* Converts a list of function declarations to ptx and c functions *)
 let convert_fdecl_list fdecl_list ptx_fdecl_list c_fdecl_list env = 
-    match fdecl_list with 
+    (fdecl_list ptx_fdecl_list c_fdecl_list env)
+(*     match fdecl_list with 
       | [] -> (ptx_fdecl_list,c_fdecl_list,env)
       | hd::tl -> 
         (match hd.is_kernel_function with
           | true -> 
               let ptx_fdecl, new_env = convert_to_ptx_fdecl hd env in
-              convert_fdecl_list tl List.reverse(ptx_fdecl::List.reverse(ptx_fdecl_list)) c_fdecl_list new_env
+              convert_fdecl_list tl List.rev(ptx_fdecl::List.rev(ptx_fdecl_list)) c_fdecl_list new_env
           | false ->
               let c_fdecl, new_env = convert_to_c_fdecl hd env in 
-              convert_fdecl_list tl ptx_fdecl_list List.reverse(c_fdecl::List.reverse(c_fdecl_list)) new_env
-        )
+              convert_fdecl_list tl ptx_fdecl_list List.rev(c_fdecl::List.rev(c_fdecl_list)) new_env
+        ) *)
 
 (* Main function for converting ast to sast *)
-let convert ast env = 
-  let vstmt_list,env1                     = convert_to_c_variable_statement_list (fst(checked_ast)) [] env in
+let convert ast env = (ast env)
+(*   let vstmt_list,env1                     = convert_to_c_variable_statement_list (fst(checked_ast)) [] env in
   let ptx_fdecl_list,c_fdecl_list, env2   = convert_fdecl_list (snd(checked_ast)) [] [] env1 in
   let sast                                = (vstmt_list,ptx_fdecl_list,c_fdecl_list) in 
-  sast
+  sast *)
 
 (* Main function for Sast *)
 let analyze ast =  

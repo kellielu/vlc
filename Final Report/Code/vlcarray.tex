@@ -1,0 +1,114 @@
+\section{vlc_array.hpp}
+\begin{minted}[breaklines,linenos]{cpp}
+
+#ifndef VLC_ARRAY_H
+#define VLC_ARRAY_H
+
+// Defines the default block and grid size
+#ifndef BLOCK_SIZE
+#define BLOCK_SIZE 1024
+
+#ifndef GRID_SIZE
+#define GRID_SIZE 32
+
+// Include statements
+#include <stdlib.h>
+#include <stdarg.h>
+#include <iostream>
+#include <stdarg.h>
+using namespace std;
+
+// Useful Macros for CUDA
+// #define min(a, b) (((a) < (b)) ? (a) : (b))
+// #define max(a, b) (((a) > (b)) ? (a) : (b))
+
+// CUDA Error checking function
+// void checkCudaErrors(CUresult err) {
+// 	assert(err == CUDA_SUCCESS);
+// }
+
+/* Why this class exists:
+	- For codegenning array operations such as a1 + a2
+	- For ensuring that we don't have any arrays allocated on the stack and all are allocated on the heap
+	( can get messy with memory otherwise ) 
+	- Allows easy copy to and from CPU and GPU
+	- To bypass C/C++ not being able to do things like the following assignment
+			int a[5];
+			int b[5] = {1,2,3,4,5};
+			a=b;
+			!!int[5] not assignable error!!
+*/
+
+// VLC Array class
+template <class T>
+class VLC_Array {
+	private:
+		int length; // Size of current array
+		T*  values; // Pointer to values in array
+	public:
+		// Constructors and Destructors
+		VLC_Array(); // Not sure what we use this for
+		VLC_Array(int length); // For declarations like int a[5]
+		VLC_Array(int length, ...); // For initializations like int a[5] = {1,2,3,4,5}
+		VLC_Array(const VLC_Array<T> &vlcarray); // For assignments like int a[1] = {5}, int b[1]={7},  a=b
+		~VLC_Array();
+		
+		T operator[](int i); // Accesses ith element of the array
+		void assign(int i,T); // Assigns ith element of the array with value T
+		T* get_array_pointer(); // Returns the pointer to VLC's internal array
+
+		// // Assignment
+		// VLC_Array& operator=(const VLC_Array& vlcarray);
+		// // Arithmetic Operators
+		// VLC_Array& operator+(const VLC_Array& vlcarray);
+		// VLC_Array& operator-(const VLC_Array& vlcarray);
+		// VLC_Array& operator*(const VLC_Array& vlcarray);
+		// VLC_Array& operator/(const VLC_Array& vlcarray);
+		// // Matrix multiplication
+		// VLC_Array& operator**(const VLC_Array& vlcarray);
+		// // Bitshift
+		// VLC_Array& operator<<(int shift_level);
+		// VLC_Array& operator>>(int shift_level);
+		// // Copy from host to kernel
+		// void copyToKernel();
+		// // Copy from kernel to host
+		// void copyToHost();
+};
+
+// Regular constructors
+template <class T>
+VLC_Array<T>::VLC_Array(){ this.length = 0; this.values = NULL; }
+
+// Declarations
+template <class T>
+VLC_Array<T>::VLC_Array(int length ){ this.length = length; this.values = NULL }
+
+// Assignments direct
+template <class T>
+VLC_Array<T>::VLC_Array(int length,...){
+	va_list array_elements;
+	va_start(array_elements,number_of_elements);
+
+	// Set values to the what is given
+	T* values = malloc(sizeof(T)* number_of_elements);
+	for(int i =0; i < number_of_elements; i++){
+		values[i] = va_arg(array_elements,)
+	}
+
+	this.length = length;
+	this.values = values;
+}
+// Assignments to other arrays
+template <class T>
+VLC_Array<T>::VLC_Array(const VLC_Array<T> &vlcarray){
+	this.length = vlcarray.length;
+	this.values = vlcarray.values;
+}
+
+// Destructor
+template <class T>
+VLC_Array<T>::~VLC_Array(){
+	free(this.values);
+}
+
+\end{minted}	

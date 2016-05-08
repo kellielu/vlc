@@ -1,0 +1,22 @@
+\begin{homeworkProblem}
+	\chapter{Introduction}
+    VLC is a Python-like high level language for GPU(Graphical Processing Unit) programming on Nvidia GPUs.\\
+
+    VLC is primarily intended for numerical computation, which can be performed orders of magnitude faster on parallelizable GPU architecture than on traditional x86 architecture. VLC is intended to provide convenient and safe access to the GPU’s computational power by abstracting common lower level operations - for example, data transfer between the CPU and the GPU - from the user.\\
+
+    Other functionality provided by VLC include built-in higher order map and reduce functions that utilize the parallel capabilities of a GPU.
+	
+	\section{Background}
+	GPUs are specialized processors that accomplish high performance through expressing problems as data-parallel computations.  They operate as a coprocessor to the main CPU, which can off-load its computationally expensive and data-parallel applications to the GPU.  On a GPU, the same program is executed on many data elements in parallel. For NVIDIA GPUs, high level language compilers such as CUDA generate PTX (Parallel Thread Execution) instructions.  These instructions are then optimized and translated to the native target hardware instruction set. PTX is intended to provide a stable ISA that spans multiple GPU generations while achieving performance in applications comparable to natively compiled GPU programs.  By compiling directly to PTX,  
+	
+	\section{Related Work}
+    VLC is modeled after the NVIDIA CUDA framework, which allows programmers to utilize both the CPU and GPU to execute programs.
+    
+	\section{Goals}
+	\subsection{Ease of use}
+	VLC is meant the programmer who has been exposed only to sequential programming to be able to produce efficient solutions to many existing data-parallel applications in physics simulations, signal processing, neural networks and other fields.  Through its two primary language features--high level functions /map and/reduce--programmers writing in VLC will be able to think parallel begin thinking  who are used to thinking sequentially to be able to produce efficient solutions to problems which can be easily parallelized.  
+    GPU programming can be CUDA programming currently requires users to be familiar with the complex memory hierarchy of a GPU because most of the low-level aspects of moving data from the CPU to the GPU must be handled by the programmer.  Thus, inexperienced programmers or programmers who do not have the time to learn specifics about GPU hardware tend to shy away from.       CUDA syntax can be difficult to wrap 
+	Map/reduce at the core of parallel programming\\
+	\subsection{Familiarity}
+	Incorporate familiar primitive data types most commonly found in languages such as C, C++, and Java such as int, char, float, and bool. 
+\end{homeworkProblem}
