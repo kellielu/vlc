@@ -1,7 +1,7 @@
 open Ast 
 open Sast
-(* open Utils 
-open Exceptions *)
+open Utils 
+open Exceptions
 
 (* Maps variable name to variable type and value *)
 module Variable_Map = Map.Make(String);;
@@ -15,7 +15,12 @@ let map_ptx_name_counter = ref 0
 (* For generating names for each c map function *)
 let map_c_name_counter = ref 0
 (* For generating names for each reduce function *)
-let reduce_name_counter = ref 0
+let reduce_c_name_counter = ref 0
+(* For generating names for ptx reduce function *)
+let reduce_ptx_name_counter = ref 0
+(* For generating arg names*)
+let arg_counter = ref 0
+
 
 (* For generating register counters for datatypes *)
 let signed_int_counter = ref 0
@@ -23,23 +28,28 @@ let signed_float_counter = ref 0
 let predicate_counter = ref 0
 (*-----------------------------------Generates Symbols Based on Counters-----------------------------------*)
 let generate_device_pointer_name () = 
-    let name = (string_of_int !dev_name_counter) in 
+    let name = "dev_ptr" ^ (string_of_int !dev_name_counter) in 
     incr dev_name_counter; 
     name
 
 let generate_map_c_function_name () = 
-    let name = (string_of_int map_c_name_counter) in 
+    let name = "map_c" ^ (string_of_int !map_c_name_counter) in 
     incr map_c_name_counter; 
     name
 
 let generate_map_ptx_function_name () = 
-    let name = (string_of_int map_ptx_name_counter) in 
+    let name = "map_ptx" ^(string_of_int !map_ptx_name_counter) in 
     incr map_ptx_name_counter; 
     name
 
 let generate_reduce_function_name () = 
-    let name = (string_of_int !reduce_name_counter) in 
+    let name = "red_c" ^ (string_of_int !reduce_name_counter) in 
     incr reduce_name_counter;
+    name
+
+let generate_arg_name () = 
+    let name = "arg" ^ (string_of_int !arg_counter) in 
+    incr arg_counter;
     name
 
 (*-----------------------------------Types for Semantic Analysis-----------------------------------*)
@@ -78,8 +88,7 @@ type environment = {
   (* Bool specifying whether environment is being evaluated on the gpu *)
   is_gpu_env                                        : bool;
   (*Global Void functions for map and reduce*)
-  hof_ptx_global                                    : function_info list;
-  hof_c                                             : function_info list;
+  hof_function_list                                 : function_info list;
 }
 
 (*-----------------------------------Helper functions to check variables and functions in the environment -----------------------------------*)
@@ -124,28 +133,31 @@ let init_env = {
   kernel_function_map         = Function_Map.empty;
   host_function_map           = init_host_function_map;
   is_gpu_env                  = false;
+  (* Two lists that stores the new higher order functions we need to add*)
+  hof_function_list                = []
 }
 
 
 (* Updates the environment *)
-let update_env vscope_stack kfmap hfmap is_gpu = {
+let update_env vscope_stack kfmap hfmap is_gpu hof_list = {
   variable_scope_stack        = vscope_stack;
   kernel_function_map         = kfmap;
   host_function_map           = hfmap;
   is_gpu_env                  = is_gpu;
+  hof_function_list           = hof_list
 }
 
 
 (* Pushes a new scope on top of the  variable_scope_stack *)
 let push_scope env = 
-    update_env (VariableMap.empty :: env.variable_scope_stack) env.host_function_map env.is_gpu_env
+    update_env (VariableMap.empty :: env.variable_scope_stack) env.host_function_map env.is_gpu_env env.hof_function_list
 
 
 (* Pops a scope from the top of the variable_scope_stack *)
 let pop_scope env = 
     match env.variable_scope_stack with
       | local_scope :: tail ->
-          update_env tail env.host_function_map env.is_gpu_env
+          update_env tail env.host_function_map env.is_gpu_env env.hof_function_list
 
 
 (* Checks if variable has been declared - is valid - in the scope *)
@@ -179,8 +191,8 @@ let same_types t1 t2 = (t1 = t2)
 
 (* Checks if function is valid in the environment *)
 let is_function_in_scope id env = 
-  (Function_Map.mem id env.host_function_map) || (Function_Map.mem id env.kernel_function_map)
-
+  if env.is_gpu_env = true then (Function_Map.mem id env.kernel_function_map)
+  else (Function_Map.mem id env.host_function_map) || (Function_Map.mem id env.kernel_function_map)
 
 
 (* Searches for function called in function call and returns information about the function *)
@@ -205,10 +217,6 @@ let rec get_array_dimensions vtype dimensions =
       get_array_dimensions t (List.rev(n::dimensions))
   | Ast.Primitive(p) -> dimensions
 (*   | _ -> raise Exceptions.Unknown_variable_type *)
-
-
-(* *)
-
 
 
 (* Helper function that performs type inference for expressions *)
@@ -253,8 +261,6 @@ let rec infer_type expression =
     | _ -> raise (Exceptions.Cannot_infer_expression_type)
 
 
-
-
 (* Checks a variable declaration and initialization to ensure variable hasn't already been declared *)
 let check_already_declared id env = 
   if (is_variable_in_scope id env)= true then false
@@ -277,43 +283,8 @@ let is_one_layer_array expression =
 
 
 
-
-(* Checks binary operators *)
-let check_binop binop e1 e2 env = 
-  match binop with 
-    | Ast.Add
-    | Ast.Subtract 
-    | Ast.Multiply 
-    | Ast.Divide 
-    | Ast.Modulo
-
 (* ----------------------------------- Functions for converting ast to sast (Also performs advanced checking) -----------------------------------*)
 
-(*-----------------------------------Main functions for semantic analysis-----------------------------------*)
-
-(* Main function for walking through ast and doing semantic checking *)
-(* let check_ast ast env = 
-  analyze_variable_statement(fst(ast));
-  analyze_fdecl(snd(ast));
-  ast *)
-
-
-(* (* Main function for checking the sast after c_expression (really just have to check for the map/reduce constant types) *)
-let check_sast sast = sast
-
- Main function for converting ast to sast 
-  Vlc -> c is simple, just convert it normally. We have to do some more sophisticated
-  stuff for vlc ast -> ptx sast. 
- *)
-
- let make_map_ptx_fdecl hof_call = {
-    ptx_fdecl_type = Sast.Global;
-    ptx_fdecl_name = generate_map_ptx_function_name
- }
-
- let make_map_c_fdecl hof_call ptx_fdecl = {
-    c_fdecl_return_type = Array()
- }
 
 (* Converts a function declaration to a PTX function declaration. This is done in five parts:
     1. Checking to see if the function exists
@@ -369,7 +340,7 @@ let rec convert_list func ast_list sast_list=
     | [] -> sast_list
     | hd:tl -> 
       let sast_type = func hd in 
-        convert_list func tl (List.reverse(hd::List.reverse(sast_list)))
+        convert_list func tl (List.rev (hd::List.rev(sast_list)))
     
 let convert_to_c_binop binop env = 
     | Ast.Add -> Sast.Add
@@ -455,6 +426,103 @@ let same_types_list type_list =
   let main_type = (List.hd type_list) in 
   List.map same_types main_type type_list
 
+(* Creates list of sast structs storing information about constants for higher order function *)
+ let get_constants_info constant_list c_constant_list env = 
+  match c_list with 
+  | [] -> c_constant_list
+  | hd::tl ->
+      (match hd with 
+        | Constant(id,e) -> 
+            let vtype = infer_type e in 
+            (* Name of constant in defg gpu function*)
+            let k_name = generate_device_pointer_name in 
+            (* Name of constant when input as an argument *)
+            let a_name = generate_arg_name 
+            (* Sast.type*)
+            let constant_info = {
+                variable_type = (convert_to_c_variable_type vtype env);
+                host_name = id;
+                kernel_name = k_name;
+                arg_name = k_name;
+            }
+            in convert_to_c_constants tl (List.rev(constant_info::List.rev(c_constant_list)))
+        | _ -> raise Exceptions.Not_a_valid_constant)
+    
+  (* Creates list of sast structs storing information about info arrays from higher order function *)
+  let get_input_arrays_info input_arrays var_info_list env = 
+    match input_arrays with 
+      | [] -> c_kernel_var_info_list
+      | hd::tl ->
+        (
+          match infer_type hd with 
+            | Ast.Array(t,n) ->
+                let h_name = generate_host_pointer_name in
+                let k_name = generate_device_pointer_name in
+                let a_name = generate_arg_name in
+                let vtype = infer_type hd in
+                let var_info = {
+                    variable_type = vtype;
+                    host_name = h_name;
+                    kernel_name = k_name;
+                    arg_name = a_name;
+                }
+              in convert_input_array_list_to_c_kernel_variable_info_list tl (List.rev(var_info::List.rev(var_info_list)))
+            | _ -> raise Exceptions.Nonarray_argument_passed_into_higher_order_function
+        )
+
+
+    (* Creates sast struct storing information about return array from higher order function *)
+    let get_return_array_info kfunc_id env = 
+      let f_info        = get_function_info kfunc_id env in
+      let return_vtype  = f_info.function_return_type in
+      let h_name        = generate_host_pointer_name in
+      let k_name        = generate_device_pointer_name in 
+      let var_info      = {
+          variable_type = return_vtype;
+          host_name     = h_name;
+          kernel_name   = k_name;
+          arg_name      = a_name;
+      }
+
+  let convert_to_ptx_pdecl e = 
+    match e with 
+      | 
+
+  (* Main function for creating the C map function (when we see a map function call) *)
+ let make_map_c_fdecl hof_call ptx_fdecl  =  {
+    higher_order_function_type            =  "map";
+    higher_order_function_name            =  generate_map_c_function_name;
+    applied_kernel_function               =  generate_map_ptx_function_name;
+    constants                             =  get_constants_info hof_call.constants
+    array_length                          =  List.length (hof_call.input_arrays)
+    input_arrays_info                     =  get_input_arrays_info hof_call.input_arrays
+    return_type_array_info                =  get_return_array_info hof_call.kernel_function_name  
+ }    
+
+(* In CUDA, is just 
+        int tid = blockDim.x * blockIdx.x + threadIdx.x;
+        if (tid < n_el) 
+          C[tid] = function(A[tid], B[tid] ...)
+      *)
+      (*  Second to last param is result array
+          Last param is array length*)
+(*  let make_map_ptx_fdecl c_map_fdecl = 
+    let input_params = List.map convert_to_ptx_pdecl c_map_fdecl.input_arrays_info in
+    let result_param = convert_to_ptx_pdecl c_map_fdecl return_type_array_info in
+    let length = Sast.Constant_Int(c_map_fdecl.array_length) in
+    let params = input_params@[result_param;length] in 
+      let make_global_map_body params = 
+          
+      in
+    let body = make_global_map_body params 
+    in
+    {
+      ptx_fdecl_type    = Sast.Global;
+      ptx_fdecl_name    = generate_map_ptx_function_name;
+      ptx_fdecl_params  = params;
+      ptx_fdecl_body    = body;
+    } *)
+
 let rec convert_to_c_expression e env = 
     match e with 
       | Ast.Function_Call(id,e_list) ->
@@ -487,18 +555,23 @@ let rec convert_to_c_expression e env =
           else Sast.Identifier_Literal(id),env
       | Cast(vtype, e) -> Sast.Cast((convert_to_c_variable_type vtype),(convert_to_c_expression e)),env
       | Binop(e1,op,e2) -> 
+          (* Check that expressions match *)
           if(same_types (infer_type e1) (infer_type e2)) = false then raise Exceptions.Type_mismatch("Binop types don't match") 
           else
             (match op with 
               | And | Or | Not | Xor | -> 
+                (* Check that type is boolean if using boolean operator *)
                 if(same_types (infer_type e1) Boolean) = false then raise Exceptions.Type_mismatch("Boolean operator not having a boolean type")
               | _ -> 
+                (* Check if type is string*)
                 if(same_types (infer_type e1) String ) = true then raise Exceptions.String_not_accepted_in_binop
                 else Sast.Binop(convert_to_c_expression e1,convert_to_c_binop op, convert_to_c_expression e2),env
             )
       | Ast.Higher_Order_Function_Call(hof) -> 
        (* Check that function exists in environment *)
         let check_exists = (is_function_in_scope hof.kernel_function_name) in
+        (* Check that arrays are valid arrays *)
+        List.map same_types_list hof.input_arrays in
         (* Check that function arguments match that of function declaration *)
         let f_info = (get_function_info hof.kernel_function_name env) in
         let expected_arg_types = f_info.function_args in 
@@ -513,12 +586,17 @@ let rec convert_to_c_expression e env =
         let hof_call_constants_names = List.map (fun x -> fst(x)) hof.constants in
         let hof_constants_names = List.map (fun x -> fst(x)) f_info.constants in 
         List.map2 (fun x,y -> x = y) hof_call_constants_names hof_constants_names in
-        (*Add the c map function to the environment*)
-        let c_map_name = "map" ^ string_of_int generate_map_c_function_name() in
-        
-        (*Add the global void map function to the environment*)
-        (*Transform into Sast function call*) 
-        in Sast.FunctionCall(c_map_name
+        match hof.higher_order_function_type with 
+            | "map" ->
+                
+                (*Add the c map function to the environment*)
+                let map_fdecl = make_map_c_fdecl in
+                let env1 = update_env env.variable_scope_stack env.kernel_function_map env.host_function_map env.is_gpu_env (List.rev(map_fdecl::List.rev(env.hof_function_list))
+                (*Transform into Sast function call*) 
+                in (Sast.FunctionCall(c_map_fdecl.higher_order_function_name,(List.map (fun x -> x.host_name) c_map_fdecl.input_arrys_info))),env1
+            (* | "reduce" ->
+                in Sast.FunctionCall(c_ma) *)
+            | _ -> raise Exceptions.Unknown_higher_order_function_call
 
 let rec convert_to_ptx_expression e = 
   match e with 
@@ -531,7 +609,7 @@ let rec convert_to_ptx_expression e =
 
 let convert_to_c_variable_statement vstmt env = 
     match vstmt with 
-      | Ast.Declaration(vdecl) -> (* Check that it isn't already declared *) 
+      | Ast.Declaration(vdecl) -> (* Check that it isn't already declared in convert_to_c_vdecl *) 
             let c_vdecl, new_env = convert_to_c_vdecl vdecl env in
             Sast.Declaration(c_vdecl),new_env
       | Ast.Initialization(vdecl,e) ->
@@ -589,7 +667,7 @@ let convert_fdecl_list fdecl_list ptx_fdecl_list c_fdecl_list env =
 let convert ast env = (ast env)
     let vstmt_list,env1                     = convert_to_c_variable_statement_list (fst(checked_ast)) [] env in
     let ptx_fdecl_list,c_fdecl_list, env2   = convert_fdecl_list (snd(checked_ast)) [] [] env1 in
-    let sast                                = (vstmt_list,ptx_fdecl_list,c_fdecl_list) in 
+    let sast                                = (vstmt_list,ptx_fdecl_list,(env2.hof_function_list),c_fdecl_list) in 
     sast
 
 (* Main function for Sast *)

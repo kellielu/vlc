@@ -11,7 +11,7 @@ type ptx_binary_operator =
 (*     | Plus_Equal | Subtract_Equal | Multiply_Equal | Divide_Equal  *)
 (*     | Exp | Dot | Matrix_Multiplication *)
     | Ptx_And | Ptx_Or | Ptx_Xor
- | Ptx_Bitshift_Right | Ptx_Bitshift_Left 
+ 	| Ptx_Bitshift_Right | Ptx_Bitshift_Left 
     | Ptx_Equal | Ptx_Not_Equal | Ptx_Greater_Than | Ptx_Less_Than | Ptx_Greater_Than_Equal 
     | Ptx_Less_Than_Equal
 (*     Ptx_Greater_Than_Unsigned | Ptx_Less_Than_unsigned | Ptx_Greater_Than_Equal_Unsigned 
@@ -61,8 +61,6 @@ type ptx_vdecl =
 (* * ptx_variable_option  *)
     | Ptx_Vdecl of ptx_state_space *  ptx_data_type *  ptx_variable
 
-
-
 type ptx_expression =
 (*convert may require some options prior to first data type*)
 	| Ptx_Binop of ptx_binary_operator * ptx_data_type * ptx_variable * ptx_variable * ptx_variable
@@ -110,7 +108,7 @@ type ptx_fdecl = {
 	ptx_fdecl_params 							: ptx_pdecl list;
 
 	(* Declares the virtual registers that are needed for the function *)
-	register_decls 								: ptx_vdecl list;
+	(* register_decls 								: ptx_vdecl list; *)
 	(* Statements within the function *)
 	ptx_fdecl_body 								: ptx_statement list;
 }
@@ -216,4 +214,4 @@ type c_fdecl = {
 }
 
 (* Overall Program *)
-type program = c_variable_statement list * ptx_fdecl list * c_fdecl list
+type program = c_variable_statement list * ptx_fdecl list * c_higher_order_fdecl list* c_fdecl list

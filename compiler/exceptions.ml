@@ -30,6 +30,8 @@ exception NO_STRINGS_ALLOWED_IN_GDECL
 exception Void_type_in_gdecl
 exception String_not_accepted_in_binop
 exception Invalid_input_argument_to_map
+exception Not_a_valid_constant
+exception Nonarray_argument_passed_into_higher_order_function
 (*-------------------------------------Codegen C-------------------------------------*)
 exception Unknown_variable_type
 exception Unknown_operator

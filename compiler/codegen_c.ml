@@ -159,7 +159,7 @@ let rec generate_expression expression  =
   let expr = match expression with
     | Function_Call(id, expr_list) ->
         (generate_function_id id) ^ "(" ^ generate_list generate_expression "," expr_list ^ ")"
-    | Higher_Order_Function_Call(fcall) -> generate_higher_order_function_call fcall
+(*     | Higher_Order_Function_Call(fcall) -> generate_higher_order_function_call fcall *)
     | String_Literal(s) -> 
         "\"" ^ s ^ "\""
     | Integer_Literal(i) -> 
@@ -326,7 +326,6 @@ let rec generate_statement statement  =
 (*     | _ -> raise Exceptions.Unknown_type_of_statement *)
   in sprintf "%s" statement_string
 
-
 (* Generates function declarations *)
 let generate_fdecl f  =
   let fdecl_string = 
@@ -345,8 +344,9 @@ let write_cuda filename cuda_program_string =
 (* Generates the full CUDA file *)
 let generate_cuda_file filename program = 
   let cuda_program_body = 
-    (generate_list generate_variable_statement "" (Utils.triple_fst(program))) ^ 
-    (generate_list generate_fdecl "" (Utils.triple_trd(program))) 
+    (generate_list generate_variable_statement "" (Utils.quad_fst(program))) ^ 
+    (generate_list generate_higher_order_function_decl "" (Utils.quad_trd(program))) ^
+    (generate_list generate_fdecl "" (Utils.quad_four(program))) 
   in 
   let cuda_program_string = sprintf "\n\
   #include <stdio.h>\n\
