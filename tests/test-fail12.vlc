@@ -1,0 +1,11 @@
+#Constant input re-initialized in defg
+int defg add(int x, int y):
+    int scale = 5
+    return scale * (x + y)
+
+int def vlc():
+    int[5] a = {1,2,3,4,5}
+    int[5] b = {1,2,3,4,5}
+    int[5] c = ~map(add, consts(scale = 4), a, b)
+
+    return 0

@@ -1,0 +1,5 @@
+#Number of elements in array does not match specified size
+int[5] a = {1}
+
+int def vlc():
+    return 0

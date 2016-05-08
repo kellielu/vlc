@@ -1,0 +1,6 @@
+#Multiple declarations of the same variable
+int a = 5
+int a =6
+
+int def vlc():
+    return 0

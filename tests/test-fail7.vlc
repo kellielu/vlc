@@ -1,0 +1,7 @@
+#Unsupported PTX type
+int defg add(int x, int y):
+    string hello = "Hello world"
+    return 1
+
+int def vlc():
+    return 0

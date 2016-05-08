@@ -1,0 +1,7 @@
+#No pre-defined functions in defg
+int defg vector_add(int a, int b):
+    print(a)
+    return a
+
+int def vlc():
+    return 0
