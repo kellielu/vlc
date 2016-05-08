@@ -61,11 +61,16 @@ type function_info = {
   (* Functions that are called within this function - needs to be specifically noted for gpu and ptx functions *)
   dependent_functions             : Ast.identifier list;
 }
+
+type variable_info = {
+  variable_type = Ast.variable_type;
+  register_number = int;
+}
  
 (* Stores information about the environment *)
 type environment = {
   (* Variables that have been declared in the environment - stores variable name, variable type *)
-  variable_scope_stack                              : Ast.variable_type Variable_Map.t list;
+  variable_scope_stack                              : variable_info Variable_Map.t list;
   (* List of kernel functions that have been declared in the environment  - info from function_info record *)
   kernel_function_map                               : function_info Function_Map.t;
   (* List of host functions that have been declared in the environment - info from function_info record *)
@@ -164,7 +169,7 @@ let get_variable_type id env =
       | [] -> raise Exceptions.Variable_not_found_in_scope
       | scope::larger_scopes -> 
           if Variable_Map.mem id scope then 
-            Variable_Map.find id scope
+            (Variable_Map.find id scope).variable_type
           else
             check_scopes larger_scopes
   in check_scopes env.variable_scope_stack
@@ -311,12 +316,11 @@ let check_sast sast = sast
  }
 
 (* Converts a function declaration to a PTX function declaration. This is done in five parts:
-    1. Check to see if it's already been declared
-    2. Adding a new global (map/reduce) function to the kernel function map
-    3. Adding a new device function (defg) to the kernel function map
-    4. Adding a new function to the host function map
-    5. Converting from 
-*)
+    1. Checking to see if the function exists
+    1. Adding a new global (map/reduce) function to the kernel function map in environemnt
+    2. Adding a new device function (defg) to the kernel function map in environment
+    3. Adding a new function to the host function map in environment
+    5. Converting fdecl into ptx_fedcl *)
 let convert_to_ptx_fdecl fdecl env = (fdecl,env)
     let global_func_info = {
         function_type = Kernel_Global;
@@ -339,11 +343,14 @@ let convert_to_ptx_fdecl fdecl env = (fdecl,env)
         function_args = fdecl.params;
     } :: env.host_function_map in
     
-    (fdecl, update_env env.variable_scope_stack, kernel_func_info, host_func_info env.is_gpu_env)
+    (fdecl, update_env env.variable_scope_stack, kernel_func_info, host_func_info env.is_gpu_env);
+    
 
 
 (* Converts a function declaration to a C function declaration
-    Updates environment to contain the fdecl *)
+    1. Check to see if the function is already declared
+    2. Update environment to contain the fdecl
+    3. Convert fdecl into c_fdecl *)
 let convert_to_c_fdecl fdecl env = (fdecl,env)
     let host_func_info = {
         function_type = Host;
@@ -352,7 +359,8 @@ let convert_to_c_fdecl fdecl env = (fdecl,env)
         function_args = fdecl.params;
     } :: env.host_function_map in
     
-    (fdecl, update_env env.variable_scope_stack, env.kernel_function_map, host_func_info env.is_gpu_env)
+    (fdecl, update_env env.variable_scope_stack, env.kernel_function_map, host_func_info env.is_gpu_env);
+    
 
 
 (* Converts a list of something to another list *)
@@ -438,8 +446,8 @@ let convert_to_c_vdecl vdecl env  =
       | Ast.Variable_Declaration(vtype,id) ->
           if(check_already_declared id) = true then raise Exceptions.Variable_already_declared
           else
-            let new_vmap = Variable_Map.add in
-            let new_env = update_env in
+            let new_vscope_stack = Variable_Map.add id env.
+            let new_env = update_env new_vscope_stack env.kernel_function_map env.host_function_map env.is_gpu env in
             let c_vtype, new_env = convert_to_c_variable_type vtype new_env in
             Sast.Variable_Declaration(c_vtype,id),new_env
 
@@ -510,7 +518,7 @@ let rec convert_to_c_expression e env =
         
         (*Add the global void map function to the environment*)
         (*Transform into Sast function call*) 
-        in Sast.FunctionCall(
+        in Sast.FunctionCall(c_map_name
 
 let rec convert_to_ptx_expression e = 
   match e with 
@@ -548,7 +556,11 @@ let convert_to_c_variable_statement vstmt env =
             let c_e2, env2 = convert_to_c_expression e env1 in 
             Sast.Assignment(c_e1, c_e2), env2
 
-
+let convert_to_ptx_variable_statement vstmt env =
+    match vstmt with
+        | Ast.Declaration(vdecl) ->
+            
+        
 (* Converts global vstmt list into c vstmt list *)
 let convert_to_c_variable_statement_list vstmt_list c_vstmt_list env = 
     (vstmt_list c_vstmt_list env)
