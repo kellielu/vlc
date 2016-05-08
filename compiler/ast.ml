@@ -14,21 +14,14 @@ type identifier =
 
 type data_type = 
     | String
-    | Byte
-    | Unsigned_Byte
     | Integer
-    | Unsigned_Integer
-    | Long
-    | Unsigned_Long
     | Float
-    | Double
     | Boolean
     | Void
 
 type variable_type = 
     | Primitive of data_type
     | Array of variable_type * int (* variable type, size *)
-(*  | Struct of variable_type list * expression list * int *)
 
 type vdecl = 
     Variable_Declaration of variable_type * identifier

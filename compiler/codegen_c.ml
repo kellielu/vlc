@@ -71,19 +71,23 @@ let rec generate_variable_type variable_type  =
 
 (* Generate id *)
 let generate_id id  = 
-  let id_string = Utils.idtos(id) in sprintf "%s" id_string
-(*   match id_string with
+  let id_string = Utils.idtos(id) in 
+  sprintf "%s" id_string
+
+let generate_function_id id = 
+let id_string = Utils.idtos(id)
+  match id_string with
     | "print" -> sprintf "printf"
-    | _ as identifier -> sprintf identifier *)
+    | _ as identifier -> sprintf identifier
 
  (* Generates CUDA device pointer *)
- let generate_device_ptr ptr_name = 
-    sprintf "CUdeviceptr " ^ ptr_name ^ ";"
+ let generate_device_ptr ktype = 
+    sprintf "CUdeviceptr " ^ ktype.kernel_name ^ ";"
 
  (* Generates CUDA memory allocation from host to device *)
  (* Fill in with VLC_Array*) 
- let generate_mem_alloc_statement_host_to_device arr_info arr_length= 
-    sprintf "checkCudaErrors(cuMemAlloc(&" ^ Utils.idtos(arr_info.kernel_name) ^ ", sizeof(" ^ (generate_variable_type arr_info.variable_type) ^ ")*" ^ string_of_int arr_length ^ "));"
+ let generate_mem_alloc_statement_host_to_device ktype arr_length= 
+    sprintf "checkCudaErrors(cuMemAlloc(&" ^ Utils.idtos(ktype.kernel_name) ^ ", sizeof(" ^ (generate_variable_type ktype.variable_type) ^ ")*" ^ string_of_int arr_length ^ "));"
 
  let generate_mem_alloc_host_to_device fcall = 
     let rec create_list mylist length element = if length > 0 then create_list (element::mylist) (length-1) element else mylist in
@@ -92,7 +96,13 @@ let generate_id id  =
     sprintf "%s" mem_alloc_string
 
 (* Generates CUDA copying from host to device*)
- let generate_mem_cpy_statement_host_to_device arr_info arr_length = 
+ let generate_mem_cpy_statement_host_to_device ktype = 
+    let vtype = ( match ktype.variable_type with 
+                    | Array(t,n) -> 
+
+                    | Primitive(t) -> 
+                ) 
+    in 
     let mem_cpy_string  = 
       "checkCudaErrors(cuMemcpyHtoD("^ Utils.idtos(arr_info.kernel_name) ^", " ^ Utils.idtos(arr_info.host_name) ^ ", sizeof(" ^ (generate_variable_type arr_info.variable_type) ^ ")*" ^ string_of_int arr_length ^ "));\n" in
     sprintf "%s" mem_cpy_string
@@ -122,18 +132,9 @@ let generate_vdecl d  =
    match d with 
   | Variable_Declaration(vtype,id) ->
       match vtype with
-        | Array(t,n) -> sprintf "vlcarray fill"
-            (* Fill in with VLC_Array*)
-            (* let array_dimensions= (get_array_dimensions t [n]) in
-            Environment.combine  [
-                Generator(generate_variable_type t);
-                Verbatim(" ");
-                Generator(generate_id d.name);
-                (* Get the array dimensions *)
-                Verbatim("[");
-                Verbatim(String.concat "][" (List.map string_of_int array_dimensions));
-                Verbatim("]")
-            ] *)
+        | Array(t,n) ->
+          let param_string = "VLC_Array<" ^ (generate_data_type t) ^"," ^ n ^ ">" ^ (generate_id id)  in 
+          sprintf "%s" param_string
         | Primitive(p) ->
             let param_string = (generate_data_type p) ^ " " ^ (generate_id id) in 
             sprintf "%s" param_string
@@ -144,21 +145,12 @@ let generate_param d =
   match d with 
     | Variable_Declaration(vtype,id) ->
       match vtype with
-        | Array(t,n) -> sprintf "vlcarray fill"
-            (* Fill in with VLC_Array*)
-            (* let array_dimensions= (get_array_dimensions t [n]) in
-            Environment.combine  [
-                Generator(generate_variable_type t);
-                Verbatim(" ");
-                Generator(generate_id d.name);
-                (* Get the array dimensions *)
-                Verbatim("[");
-                Verbatim(String.concat "][" (List.map string_of_int array_dimensions));
-                Verbatim("]")
-            ] *)
+        | Array(t,n) ->
+          let param_string = "VLC_Array<" ^ (generate_data_type t) ^"," ^ n ^ ">" ^ (generate_id id) input_arrays_info in 
+          sprintf "%s" param_string
         | Primitive(p) ->
-            let param_string = (generate_data_type p) ^ " " ^ (generate_id id) in 
-            sprintf "%s" param_string
+          let param_string = (generate_data_type p) ^ " " ^ (generate_id id) in 
+          sprintf "%s" param_string
 (*         | _ -> raise Exceptions.Unknown_variable_type
     | _ -> raise Exceptions.Unknown_type_of_param *)
 
@@ -166,9 +158,8 @@ let generate_param d =
 let rec generate_expression expression  =
   let expr = match expression with
     | Function_Call(id, expr_list) ->
-        (generate_id id) ^ "(" ^ generate_list generate_expression "," expr_list ^ ")"
+        (generate_function_id id) ^ "(" ^ generate_list generate_expression "," expr_list ^ ")"
     | Higher_Order_Function_Call(fcall) -> generate_higher_order_function_call fcall
-    | Kernel_Function_Call(kfcall) -> generate_kernel_function_call kfcall
     | String_Literal(s) -> 
         "\"" ^ s ^ "\""
     | Integer_Literal(i) -> 
@@ -177,10 +168,7 @@ let rec generate_expression expression  =
         string_of_bool b
     | Floating_Point_Literal(f) ->
         string_of_float f
-    | Array_Literal(s) -> 
-        "vlcarray fill"
-        (* Fill in with VLC_Array*)
-        (* sprintf "{" ^ (generate_expression_list s) ^ "}" *)
+    | Array_Literal(e_list,int_list) -> "VLC_Array(int" ^ string_of_int (List.length int_list) ^ "," ^ (generate_list string_of_int "," int_list) ^ "," ^ (generate_list generate_expression "," e_list) ^ ")" 
     | Identifier_Literal(id) -> 
         (generate_id id)
     | Cast(vtype,e) ->
@@ -195,7 +183,7 @@ let rec generate_expression expression  =
     | Ternary(e1,e2,e3) -> "(" ^ (generate_expression e2) ^ ") ? " ^ (generate_expression e1) ^ ":" ^ (generate_expression e3)
   in sprintf "%s" expr
 (* Generates CUDA statements that copy constants from host to gpu *)
-and generate_constant_on_gpu const  = 
+(* and generate_constant_on_gpu const  = 
   let mem_alloc_constant_string = match const.variable_type with 
     | Primitive(vtype) ->
           generate_device_ptr (Utils.idtos(const.kernel_name)) ^ 
@@ -205,106 +193,97 @@ and generate_constant_on_gpu const  =
         "vlcarray fill"
 (*     | _ -> raise Exceptions.Unknown_variable_type *)
   in 
-  sprintf "%s" mem_alloc_constant_string
-and generate_kernel_function_call kfcall = sprintf "hi" (* Why do we need semicolon??????*)
-    (* Fill in with VLC_Array *)
-(* Generates statements for higher order map or reduce calls *)
-and generate_higher_order_function_call fcall = 
-    let higher_order_function_call_string = 
+  sprintf "%s" mem_alloc_constant_string *)
+
+(* Generates host arguments from a c_kernel_variable_info *)
+let generate_args ktype = 
+  (generate_variable_type ktype.variable_type) ^ " " ^ (generate_id ktype.arg_name)
+
+let generate_host_ptr ktype = 
+  (generate_variable_type ktype.variable_type) ^ " " ^ ktype.host_name ^ ";"
+
+(* (* Generates if statement for every constant. Necessary because constants maybe different types *)
+let generate_if_statements_for_constants ktype_list length = 
+    let constant_index = List.length ktype_list in
+    match constant_index with 
+      | length ->
+        let ktype = List.nth ktype_list (length - constant_index) in
+        "if(i=" ^ string_of_int index ^ "){" ^ 
+            (generate_id ktype.host_name) ^  "=" ^ "va_args(constants," ^ (generate_variable_type ktype.variable_type) ^ ");" ^ 
+            generate_mem_alloc_statement_host_to_device ktype ^ (* Cuda mem alloc *)
+            generate_mem_cpy_statement_host_to_device ktype ^ (* Cuda mem copy *)
+        "}"
+      | 1 -> 
+        let ktype = List.nth ktype_list (length - constant_index) in
+        "else{" ^ 
+            (generate_id ktype.host_name) ^  "=" ^ "va_args(constants," ^ (generate_variable_type ktype.variable_type) ^ ");" ^ 
+            generate_mem_alloc_statement_host_to_device ktype ^ (* Cuda mem alloc *)
+            generate_mem_cpy_statement_host_to_device ktype ^ (* Cuda mem copy *)
+        "}"
+      | _ ->
+        let ktype = List.nth ktype_list (length - constant_index) in 
+        "else if{" ^ 
+            (generate_id ktype.host_name) ^  "=" ^ "va_args(constants," ^ (generate_variable_type ktype.variable_type) ^ ");" ^ 
+            generate_mem_alloc_statement_host_to_device ktype ^ (* Cuda mem alloc *)
+            generate_mem_cpy_statement_host_to_device ktype ^ (* Cuda mem copy *)
+        "}" *)
+
+
+(* Generates c function declaration for map  *)
+let generate_higher_order_function_decl hofcall = 
+    let higher_order_function_decl_string = 
       match Utils.idtos(fcall.higher_order_function_type) with
-      | "map" -> 
-    (* Fill in with VLC_Array *)
-      "{0};\n" ^ 
-    (* Initializes CUDA driver and loads needed function *)
-      "checkCudaErrors(cuCtxCreate(&context, 0, device));\n" ^ 
-      "std::ifstream t(\"" ^ Utils.idtos fcall.applied_kernel_function ^ ".ptx\");\n" ^ 
-      "if (!t.is_open()) {\n" ^
-          " std::cerr << \"" ^ Utils.idtos fcall.applied_kernel_function ^ ".ptx not found\n\";\n" ^
-          "return 1;\n" ^
-      "}\n" ^
-      "std::string " ^ Utils.idtos fcall.applied_kernel_function ^ "_str" ^ "((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());\n" ^ 
-      "checkCudaErrors(cuModuleLoadDataEx(&cudaModule," ^ (Utils.idtos fcall.applied_kernel_function) ^ "_str" ^ ", 0, 0, 0));\n" ^ 
-      "checkCudaErrors(cuModuleGetFunction(&function, cudaModule, \"" ^ (Utils.idtos fcall.applied_kernel_function) ^ "_str" ^ "\"));\n" ^ 
-    (* Copies over constants *)
-      generate_list generate_constant_on_gpu "\n" fcall.constants ^ "\n" ^
-    (* Allocates GPU pointers for input and result array *)
-    let rec get_kernel_names a_info_list name_list = 
-      match a_info_list with 
-        | [] -> name_list 
-        | hd::tl -> get_kernel_names tl (Utils.idtos(hd.kernel_name)::name_list) 
-    in
-    let kernel_names = (get_kernel_names fcall.input_arrays_info []) in
-      generate_list generate_device_ptr "\n" kernel_names ^ "\n" ^ 
-      generate_device_ptr (Utils.idtos((fcall.return_array_info).kernel_name))  ^ "\n" ^
-    (* Allocations memory and copies input arrays over to GPU memory *)
-      generate_mem_alloc_host_to_device fcall ^ "\n" ^
-      generate_mem_cpy_host_to_device fcall ^
-
-    (* Sets Kernel params and other information needed to call cuLaunchKernel *)
-      generate_kernel_params fcall.input_arrays_info ^ "\n" ^
-      "unsigned int blockSizeX = 16;\n" ^ 
-      "unsigned int blockSizeY = 1;\n" ^
-      "unsigned int blockSizeZ = 1;\n" ^
-      "unsigned int gridSizeX = 1;\n" ^
-      "unsigned int gridSizeY = 1;\n" ^
-      "unsigned int gridSizeZ = 1;\n" ^
-    (* Launches kernel *)
-      "checkCudaErrors(cuLaunchKernel(function, gridSizeX, gridSizeY, gridSizeZ, blockSizeX, blockSizeY, blockSizeZ,0, NULL, KernelParams, NULL));\n" ^
-    (* Copies result array back to host *)
-      "checkCudaErrors(cuMemcpyDtoH(c," ^ Utils.idtos((fcall.return_array_info).host_name) ^ ", sizeof(" ^ generate_variable_type ((fcall.return_array_info).variable_type) ^ ")*" ^ string_of_int fcall.array_length ^ "));\n" ^ 
-    (* Cleanup *)
-    generate_list generate_mem_cleanup "\n" fcall.input_arrays_info ^ "\n" ^ 
-    generate_mem_cleanup fcall.return_array_info ^ "\n" ^ 
-    generate_list generate_mem_cleanup "\n" fcall.constants ^ "\n" ^
-    "checkCudaErrors(cuModuleUnload(cudaModule));\n" ^ 
-    "checkCudaErrors(cuCtxDestroy(context));\n"
-    | "reduce" ->
-    (* Fill in with VLC_Array *)
-      "{0};\n" ^ 
-    (* Initializes CUDA driver and loads needed function *)
-      "checkCudaErrors(cuCtxCreate(&context, 0, device));\n" ^ 
-      "std::ifstream t(\"" ^ Utils.idtos fcall.applied_kernel_function ^ ".ptx\");\n" ^ 
-      "if (!t.is_open()) {\n" ^
-          " std::cerr << \"" ^ Utils.idtos fcall.applied_kernel_function ^ ".ptx not found\n\";\n" ^
-          "return 1;\n" ^
-      "}\n" ^
-      "std::string " ^ Utils.idtos fcall.applied_kernel_function ^ "_str" ^ "((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());\n" ^ 
-      "checkCudaErrors(cuModuleLoadDataEx(&cudaModule," ^ (Utils.idtos fcall.applied_kernel_function) ^ "_str" ^ ", 0, 0, 0));\n" ^ 
-      "checkCudaErrors(cuModuleGetFunction(&function, cudaModule, \"" ^ (Utils.idtos fcall.applied_kernel_function) ^ "_str" ^ "\"));\n" ^ 
-    (* Copies over constants *)
-      generate_list generate_constant_on_gpu "\n" fcall.constants ^ "\n" ^
-    (* Allocates GPU pointers for input and result array *)
-    let rec get_kernel_names a_info_list name_list = 
-      match a_info_list with 
-        | [] -> name_list 
-        | hd::tl -> get_kernel_names tl (Utils.idtos(hd.kernel_name)::name_list) 
-    in
-    let kernel_names = (get_kernel_names fcall.input_arrays_info []) in
-      generate_list generate_device_ptr "\n" kernel_names ^ "\n" ^ 
-      generate_device_ptr (Utils.idtos((fcall.return_array_info).kernel_name))  ^ "\n" ^
-    (* Allocations memory and copies input arrays over to GPU memory *)
-      generate_mem_alloc_host_to_device fcall ^ "\n" ^
-      generate_mem_cpy_host_to_device fcall ^
-
-    (* Sets Kernel params and other information needed to call cuLaunchKernel *)
-      generate_kernel_params fcall.input_arrays_info ^ "\n" ^
-      "unsigned int blockSizeX = 16;\n" ^ 
-      "unsigned int blockSizeY = 1;\n" ^
-      "unsigned int blockSizeZ = 1;\n" ^
-      "unsigned int gridSizeX = 1;\n" ^
-      "unsigned int gridSizeY = 1;\n" ^
-      "unsigned int gridSizeZ = 1;\n" ^
-    (* Launches kernel *)
-      "checkCudaErrors(cuLaunchKernel(function, gridSizeX, gridSizeY, gridSizeZ, blockSizeX, blockSizeY, blockSizeZ,0, NULL, KernelParams, NULL));\n" ^
-    (* Copies result array back to host *)
-      "checkCudaErrors(cuMemcpyDtoH(c," ^ Utils.idtos((fcall.return_array_info).host_name) ^ ", sizeof(" ^ generate_variable_type ((fcall.return_array_info).variable_type) ^ ")*" ^ string_of_int fcall.array_length ^ "));\n" ^ 
-    (* Cleanup *)
-    generate_list generate_mem_cleanup "\n" fcall.input_arrays_info ^ "\n" ^ 
-    generate_mem_cleanup fcall.return_array_info ^ "\n" ^ 
-    generate_list generate_mem_cleanup "\n" fcall.constants ^ "\n" ^
-    "checkCudaErrors(cuModuleUnload(cudaModule));\n" ^ 
-    "checkCudaErrors(cuCtxDestroy(context));\n"
-   | _ -> raise Exceptions.Unknown_higher_order_function_call
+      | "map" -> "VLC_Array <" ^ (generate_variable_type hofcall.return_array_info.variable_type) ^ ">" ^ 
+                hofcall.higher_order_function_name ^ "(...)" ^ "{\n" ^ 
+                      "checkCudaErrors(cuCtxCreate(&context, 0, device));\n" ^ 
+                      "std::ifstream t(\"" ^ Utils.idtos hofcall.applied_kernel_function ^ ".ptx\");\n" ^ 
+                      "if (!t.is_open()) {\n" ^
+                              " std::cerr << \"" ^ Utils.idtos hofcall.applied_kernel_function ^ ".ptx not found\n\";\n" ^
+                              "return 1;\n" ^
+                      "}\n" ^
+                      "std::string " ^ Utils.idtos hofcall.applied_kernel_function ^ "_str" ^ "((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());\n" ^ 
+                      "checkCudaErrors(cuModuleLoadDataEx(&cudaModule," ^ (Utils.idtos hofcall.applied_kernel_function) ^ "_str" ^ ", 0, 0, 0));\n" ^ 
+                      "checkCudaErrors(cuModuleGetFunction(&function, cudaModule, \"" ^ (Utils.idtos hofcall.applied_kernel_function) ^ "_str" ^ "\"));\n" ^ 
+                      "int num_constants = " ^ (List.length hofcall.constants) ^ ";\n" ^
+                      "int num_input_arrays = " ^ (hofcall.array_length) ^ ";\n" ^ 
+                      generate_list generate_host_ptr "\n" hofcall.constants ^ "\n" ^ 
+                      generate_list generate_host_ptr "\n" hofcall.input_arrays_info ^ "\n" ^
+                      generate_list generate_device_ptr "\n" hofcall.constants ^ "\n" ^  
+                      generate_list generate_device_ptr "\n" hofcall.input_arrays_info ^ "\n" ^ 
+                      generate_device_ptr hofcall.return_array_info ^ 
+                      generate_list generate_mem_alloc_statement_host_to_device hof.constants ^
+                      generate_list generate_mem_cpy_statement_host_to_device hof.constants ^
+                      (* " va_list constants;\n" ^ 
+                      " va_start(constants,num_constants)\n" ^
+                      "for(int i = 0; i < num_constants; i++){\n" ^ 
+                          (generate_if_statements_for_constants hofcall.constants (List.length hofcall.constants)) ^
+                      "}\n" ^ 
+                      " va_end(constants);\n" ^
+                      "for(int j = 0; j < num_input_arrays; j++){\n" ^
+                          generate_list generate_mem_alloc_host_to_device hofcall ^ 
+                          generate_list generate_mem_cpy_host_to_device hofcall ^
+                      "}\n" ^  *)
+                      (* Sets Kernel params and other information needed to call cuLaunchKernel *)
+                      generate_kernel_params hofcall.input_arrays_info ^ "\n" ^
+                      "unsigned int blockSizeX = 16;\n" ^ 
+                      "unsigned int blockSizeY = 1;\n" ^
+                      "unsigned int blockSizeZ = 1;\n" ^
+                      "unsigned int gridSizeX = 1;\n" ^
+                      "unsigned int gridSizeY = 1;\n" ^
+                      "unsigned int gridSizeZ = 1;\n" ^
+                      (* Launches kernel *)
+                      "checkCudaErrors(cuLaunchKernel(function, gridSizeX, gridSizeY, gridSizeZ, blockSizeX, blockSizeY, blockSizeZ,0, NULL, KernelParams, NULL));\n" ^
+                      (* Copies result array back to host *)
+                      "checkCudaErrors(cuMemcpyDtoH(c," ^ Utils.idtos((hofcall.return_array_info).host_name) ^ ", sizeof(" ^ generate_variable_type ((hofcall.return_array_info).variable_type) ^ ")*" ^ string_of_int hofcall.array_length ^ "));\n" ^ 
+                      (* Cleanup *)
+                      generate_list generate_mem_cleanup "\n" hofcall.input_arrays_info ^ "\n" ^ 
+                      generate_mem_cleanup fcall.return_array_info ^ "\n" ^ 
+                      generate_list generate_mem_cleanup "\n" hofcall.constants ^ "\n" ^
+                      "checkCudaErrors(cuModuleUnload(cudaModule));\n" ^ 
+                      "checkCudaErrors(cuCtxDestroy(context));\n" ^  
+                  "}\n" 
+    | "reduce" -> raise Exceptions.Unknown_higher_order_function_call
+   (* | _ -> raise Exceptions.Unknown_higher_order_function_call *)
    in sprintf "%s" higher_order_function_call_string
 
 
@@ -319,6 +298,8 @@ let generate_variable_statement vstatement =
         (generate_vdecl d) ^ "=" ^ (generate_expression e) ^ ";\n"
 (*     | _ -> raise Exceptions.Unknown_variable_statement *)
   in sprintf "%s" vstatement_string
+
+
 
 (* Generates statements *)
 let rec generate_statement statement  =
@@ -373,6 +354,7 @@ let generate_cuda_file filename program =
   #include \"cuda.h\"\n\
   #include <iostream>\n\
   #include <vlc.hpp>\n\
+  #include <stdargs.h>
   CUdevice    device;\n\
   CUmodule    cudaModule;\n\
   CUcontext   context;\n\

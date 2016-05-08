@@ -1,5 +1,5 @@
 open Sast
-(* open Exceptions *)
+open Exceptions 
 (* For sprintf *)
 open Printf
 (*------------------------------------------------------------ KERNEL CODE GENERATION ------------------------------------------------------------*)
@@ -70,6 +70,8 @@ let generate_ptx_binary_operator operator =
     | Ptx_And -> "and"
     | Ptx_Or -> "or"
     | Ptx_Xor -> "xor"
+    | Ptx_Bitshift_Right -> "shr"
+    | Ptx_Bitshift_Left -> "shl"
   in
   sprintf "%s" op
 
@@ -77,6 +79,8 @@ let generate_ptx_unary_operator operator =
   let op = match operator with
     | Ptx_Not -> "not"
     | Ptx_Negate -> "neg"
+    | Ptx_Plus_Plus -> Exceptions.PTXCREMENT_GENERATED_ERROR
+    | Ptx_Minus_Minus -> -> Exceptions.PTXCREMENT_GENERATED_ERROR
   in
   sprintf "%s" op
 
