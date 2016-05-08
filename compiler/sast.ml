@@ -10,16 +10,18 @@ type ptx_binary_operator =
     | Ptx_Add | Ptx_Subtract | Ptx_Multiply | Ptx_Divide | Ptx_Modulo
 (*     | Plus_Equal | Subtract_Equal | Multiply_Equal | Divide_Equal  *)
 (*     | Exp | Dot | Matrix_Multiplication *)
-(*     | Ptx_And | Ptx_Or | Ptx_Xor *)
+    | Ptx_And | Ptx_Or | Ptx_Xor
 (* | Ptx_Bitshift_Right | Ptx_Bitshift_Left *)
     | Ptx_Equal | Ptx_Not_Equal | Ptx_Greater_Than | Ptx_Less_Than | Ptx_Greater_Than_Equal 
     | Ptx_Less_Than_Equal
 (*     Ptx_Greater_Than_Unsigned | Ptx_Less_Than_unsigned | Ptx_Greater_Than_Equal_Unsigned 
     | Ptx_Less_Than_Equal_Unsigned  *)
 
+type ptx_unary_operator = 
+    | Ptx_Not  | Ptx_Negate
 
 type ptx_data_type =
-	S32 | F32
+	S32 | F32 | Pred
 (* 	U8 | U16 | U32 | U64 | S8 | S16 | S32 | S64 | F32 *)
 
 type ptx_state_space = 
@@ -58,17 +60,20 @@ type ptx_vdecl =
 (* * ptx_variable_option  *)
     | Ptx_Vdecl of ptx_state_space *  ptx_data_type *  ptx_variable
 
+
+
 type ptx_expression =
+(*convert may require some options prior to first data type*)
 	| Ptx_Binop of ptx_binary_operator * ptx_data_type * ptx_variable * ptx_variable * ptx_variable
+	| Ptx_Unop of ptx_unary_operator * ptx_data_type * ptx_variable * ptx_variable
 	| Ptx_Load of ptx_state_space * ptx_data_type * ptx_variable * ptx_variable 
 	| Ptx_Store of ptx_state_space * ptx_data_type * ptx_variable * ptx_variable 
 	| Ptx_vdecl of ptx_vdecl
 	| Ptx_Move of ptx_data_type * ptx_variable * ptx_variable
+	| Ptx_Branch of Ast.identifier
+	| Predicated_statement of ptx_variable * ptx_expression
+	| Ptx_Convert of ptx_data_type * ptx_data_type * ptx_variable * ptx_variable
 	| Ptx_Return
-(*     | Ptx_Array_Literal of ptx_expression list 
-	| Ptx_Function_Call of Ast.identifier * ptx_expression list
-	| Ptx_Identifier_Expression of Ast.identifier
- *)
 
 type ptx_subroutine = {
 	routine_name								: Ast.identifier;
