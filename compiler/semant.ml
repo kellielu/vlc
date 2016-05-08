@@ -16,7 +16,9 @@ let map_name_counter = ref 0
 let reduce_name_counter = ref 0
 
 (* For generating register counters for datatypes *)
-let register_counter = ref 0
+let signed_int_counter = ref 0
+let signed_float_counter = ref 0
+let predicate_counter = ref 0
 (*-----------------------------------Generates Symbols Based on Counters-----------------------------------*)
 let generate_device_pointer_name () = 
     let name = (string_of_int !dev_name_counter) in 
