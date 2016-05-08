@@ -19,6 +19,7 @@ type ptx_binary_operator =
 
 type ptx_unary_operator = 
     | Ptx_Not  | Ptx_Negate
+    | Ptx_Plus_Plus | Ptx_Minus_Minus
 
 type ptx_data_type =
 	S32 | F32 | Pred
