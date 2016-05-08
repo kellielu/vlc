@@ -1,0 +1,32 @@
+\begin{homeworkProblem}
+	\section{Types}
+    The VLC language has two data types: primitives and non-primitives.
+
+	\subsection{Primitive Types and Values}
+   \textless primitive{\_}type\textgreater myVar = \textless value\textgreater} declares a primitive type \textit{primitive{\_}type}
+    \subsubsection{byte}
+    A $byte$ is an 8-bit signed two's-complement integer.  A $byte$ literal can be declared as a sequence of numeric characters ranging from -128 to 127.
+    
+	\subsubsection{int}
+	An $int$ is a 32-bit signed two's-complement integer. An $int$ literal can be declared as a sequence of numeric characters ranging from -2,147,483,648 to 2,147,483,647, inclusive.
+	
+	\subsubsection{float}
+	
+	The float type stores the given value in 64 bits. The $float$ type can hold values ranging from 1e-37 to 1e37. Since all values are represented in binary, certain floating point values must be approximated.
+	
+	\subsubsection{char}
+	
+	The $char$ data type is a 8-bit ASCII character. A $char$ value maps to an integral ASCII code. The decimal values 0 through 31, and 127, represent non-printable control characters. All other characters can be printed by the computer, i.e. displayed on the screen or printed on printers, and are called printable characters.
+	
+	The character 'A' has the code value of 65, 'B' has the value 66, and so on. The ASCII values of letters 'A' through 'Z' are in a contiguous increasing numeric sequence. The values of the lower case letters 'a' through 'z' are also in a contiguous increasing sequence starting at the code value 97. Similarly, the digit symbol characters '0' through '9' are also in an increasing contiguous sequence starting at the code value 48.
+	
+	\subsubsection{bool}
+	
+	A variable of type $bool$ can take one of two values, $true$ or $false$. A bool could also be $null$.\\
+	
+	\subsection{Non-Primitive Types}
+	Non-primitive types include arrays and classes.
+	\subsubsection{Arrays}
+	An array stores one or more values of the same type contiguously in memory. The type of an array can be any primitive or an array type. This allows the creation of an n-dimensional array, the members of which can be accessed by first indexing to the desired element of the outermost array, which is of type $array$, and then accessing into the desired element of the immediately nested array, and continuing n-1 times.
+
+\end{homeworkProblem}
