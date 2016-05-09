@@ -1,5 +1,5 @@
 (* Collection of exceptions for different parts of the compiler *)
-
+exception C'est_La_Vie
 (*-------------------------------------Scanner-------------------------------------*)
 exception Bad_dedent
 (*-------------------------------------Parser-------------------------------------*)
