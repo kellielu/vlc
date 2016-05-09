@@ -888,6 +888,7 @@ let rec convert_to_c_statement stmt env =
 let convert_to_c_param vdecl env  = 
     match vdecl with 
       | Ast.Variable_Declaration(vtype,id) ->
+          print_endline (Utils.idtos id);
           if(check_already_declared (Utils.idtos id) env) = true then raise Exceptions.Variable_already_declared
           else
             let v_info = {

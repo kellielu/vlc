@@ -52,7 +52,7 @@
 
 program:
     |  /* nothing */                                                    { [], [] } /* variable statements, function declarations */ 
-    | program variable_statement TERMINATOR                             { List.rev ($2 :: List.rev (fst $1)), snd $1 }
+    | program variable_statement                                        { List.rev ($2 :: List.rev (fst $1)), snd $1 }
     | program fdecl                                                     { fst $1, List.rev($2 :: List.rev(snd $1))  }
 
 identifier:
