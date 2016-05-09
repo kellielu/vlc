@@ -16,8 +16,8 @@ let _ =
                                            ("-c", Compile);
                                            ("-r", Run)] and
 filename = Sys.argv.(2) in
-let base_filename = List.hd (Str.split (Str.regexp ".vlc") (List.hd (List.rev (Str.split (Str.regexp "/") filename)))) in
-let file_in = open_in filename in
+(* let base_filename = List.hd (Str.split (Str.regexp ".vlc") (List.hd (List.rev (Str.split (Str.regexp "/") filename)))) in
+ *)let file_in = open_in filename in
       let lexbuf = Lexing.from_channel file_in in
       let token_list = Processor.get_token_list lexbuf in
       let program = Processor.parser token_list in
@@ -30,5 +30,5 @@ let file_in = open_in filename in
         | Sast -> 
             print_string (Utils.sast_to_string sast)
         | Compile ->
-            ignore(Codegen_c.generate_program base_filename sast)
+            ignore(Codegen_c.generate_program filename sast)
 (*         | Run -> Acts as an interpreter *)
