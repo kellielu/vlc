@@ -43,7 +43,7 @@ type expression =
 and constant = 
     | Constant of identifier * expression
 and higher_order_function_call = {
-    higher_order_function_type                      : identifier; (* Map or reduce *)
+    hof_type                                        : identifier; (* Map or reduce *)
     kernel_function_name                            : identifier;
     constants                                       : constant list;
     input_arrays                                    : expression list; (* Check in semantic analyzer that type is array*)

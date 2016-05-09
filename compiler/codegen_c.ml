@@ -159,7 +159,7 @@ let rec generate_expression expression  =
   let expr = match expression with
     | Function_Call(id, expr_list) ->
         (generate_function_id id) ^ "(" ^ generate_list generate_expression "," expr_list ^ ")"
-    | Higher_Order_Function_Call(fcall) -> generate_higher_order_function_call fcall
+(*     | Higher_Order_Function_Call(fcall) -> generate_higher_order_function_call fcall *)
     | String_Literal(s) -> 
         "\"" ^ s ^ "\""
     | Integer_Literal(i) -> 
@@ -230,29 +230,29 @@ let generate_if_statements_for_constants ktype_list length =
 
 
 (* Generates c function declaration for map  *)
-let generate_higher_order_function_decl hofcall = 
+let generate_higher_order_function_decl hof = 
     let higher_order_function_decl_string = 
       match Utils.idtos(fcall.higher_order_function_type) with
-      | "map" -> "VLC_Array <" ^ (generate_variable_type hofcall.return_array_info.variable_type) ^ ">" ^ 
-                hofcall.higher_order_function_name ^ "(...)" ^ "{\n" ^ 
+      | "map" -> "VLC_Array <" ^ (generate_variable_type hof.return_array_info.variable_type) ^ ">" ^ 
+                hof.higher_order_function_name ^ "(...)" ^ "{\n" ^ 
                       "checkCudaErrors(cuCtxCreate(&context, 0, device));\n" ^ 
-                      "std::ifstream t(\"" ^ Utils.idtos hofcall.applied_kernel_function ^ ".ptx\");\n" ^ 
+                      "std::ifstream t(\"" ^ Utils.idtos hof.applied_kernel_function ^ ".ptx\");\n" ^ 
                       "if (!t.is_open()) {\n" ^
-                              " std::cerr << \"" ^ Utils.idtos hofcall.applied_kernel_function ^ ".ptx not found\n\";\n" ^
+                              " std::cerr << \"" ^ Utils.idtos hof.applied_kernel_function ^ ".ptx not found\n\";\n" ^
                               "return 1;\n" ^
                       "}\n" ^
-                      "std::string " ^ Utils.idtos hofcall.applied_kernel_function ^ "_str" ^ "((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());\n" ^ 
-                      "checkCudaErrors(cuModuleLoadDataEx(&cudaModule," ^ (Utils.idtos hofcall.applied_kernel_function) ^ "_str" ^ ", 0, 0, 0));\n" ^ 
-                      "checkCudaErrors(cuModuleGetFunction(&function, cudaModule, \"" ^ (Utils.idtos hofcall.applied_kernel_function) ^ "_str" ^ "\"));\n" ^ 
-                      "int num_constants = " ^ (List.length hofcall.constants) ^ ";\n" ^
-                      "int num_input_arrays = " ^ (hofcall.array_length) ^ ";\n" ^ 
-                      generate_list generate_host_ptr "\n" hofcall.constants ^ "\n" ^ 
-                      generate_list generate_host_ptr "\n" hofcall.input_arrays_info ^ "\n" ^
-                      generate_list generate_device_ptr "\n" hofcall.constants ^ "\n" ^  
-                      generate_list generate_device_ptr "\n" hofcall.input_arrays_info ^ "\n" ^ 
-                      generate_device_ptr hofcall.return_array_info ^ 
-                      generate_list generate_mem_alloc_statement_host_to_device hof.constants ^
-                      generate_list generate_mem_cpy_statement_host_to_device hof.constants ^
+                      "std::string " ^ Utils.idtos hof.applied_kernel_function ^ "_str" ^ "((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());\n" ^ 
+                      "checkCudaErrors(cuModuleLoadDataEx(&cudaModule," ^ (Utils.idtos hof.applied_kernel_function) ^ "_str" ^ ", 0, 0, 0));\n" ^ 
+                      "checkCudaErrors(cuModuleGetFunction(&function, cudaModule, \"" ^ (Utils.idtos hof.applied_kernel_function) ^ "_str" ^ "\"));\n" ^ 
+                      "int num_constants = " ^ (List.length hof.higher_order_function_constants) ^ ";\n" ^
+                      "int num_input_arrays = " ^ (hof.array_length) ^ ";\n" ^ 
+                      generate_list generate_host_ptr "\n" hof.higher_order_function_constants ^ "\n" ^ 
+                      generate_list generate_host_ptr "\n" hof.input_arrays_info ^ "\n" ^
+                      generate_list generate_device_ptr "\n" hof.higher_order_function_constants ^ "\n" ^  
+                      generate_list generate_device_ptr "\n" hof.input_arrays_info ^ "\n" ^ 
+                      generate_device_ptr hof.return_array_info ^ 
+                      generate_list generate_mem_alloc_statement_host_to_device hof.higher_order_function_constants ^
+                      generate_list generate_mem_cpy_statement_host_to_device hof.higher_order_function_constants ^
                       (* " va_list constants;\n" ^ 
                       " va_start(constants,num_constants)\n" ^
                       "for(int i = 0; i < num_constants; i++){\n" ^ 
@@ -264,7 +264,7 @@ let generate_higher_order_function_decl hofcall =
                           generate_list generate_mem_cpy_host_to_device hofcall ^
                       "}\n" ^  *)
                       (* Sets Kernel params and other information needed to call cuLaunchKernel *)
-                      generate_kernel_params hofcall.input_arrays_info ^ "\n" ^
+                      generate_kernel_params hof.input_arrays_info ^ "\n" ^
                       "unsigned int blockSizeX = 16;\n" ^ 
                       "unsigned int blockSizeY = 1;\n" ^
                       "unsigned int blockSizeZ = 1;\n" ^
@@ -274,11 +274,11 @@ let generate_higher_order_function_decl hofcall =
                       (* Launches kernel *)
                       "checkCudaErrors(cuLaunchKernel(function, gridSizeX, gridSizeY, gridSizeZ, blockSizeX, blockSizeY, blockSizeZ,0, NULL, KernelParams, NULL));\n" ^
                       (* Copies result array back to host *)
-                      "checkCudaErrors(cuMemcpyDtoH(c," ^ Utils.idtos((hofcall.return_array_info).host_name) ^ ", sizeof(" ^ generate_variable_type ((hofcall.return_array_info).variable_type) ^ ")*" ^ string_of_int hofcall.array_length ^ "));\n" ^ 
+                      "checkCudaErrors(cuMemcpyDtoH(c," ^ Utils.idtos((hof.return_array_info).host_name) ^ ", sizeof(" ^ generate_variable_type ((hofcall.return_array_info).variable_type) ^ ")*" ^ string_of_int hofcall.array_length ^ "));\n" ^ 
                       (* Cleanup *)
-                      generate_list generate_mem_cleanup "\n" hofcall.input_arrays_info ^ "\n" ^ 
+                      generate_list generate_mem_cleanup "\n" hof.input_arrays_info ^ "\n" ^ 
                       generate_mem_cleanup fcall.return_array_info ^ "\n" ^ 
-                      generate_list generate_mem_cleanup "\n" hofcall.constants ^ "\n" ^
+                      generate_list generate_mem_cleanup "\n" hof.constants ^ "\n" ^
                       "checkCudaErrors(cuModuleUnload(cudaModule));\n" ^ 
                       "checkCudaErrors(cuCtxDestroy(context));\n" ^  
                   "}\n" 
@@ -326,7 +326,6 @@ let rec generate_statement statement  =
 (*     | _ -> raise Exceptions.Unknown_type_of_statement *)
   in sprintf "%s" statement_string
 
-
 (* Generates function declarations *)
 let generate_fdecl f  =
   let fdecl_string = 
@@ -345,8 +344,9 @@ let write_cuda filename cuda_program_string =
 (* Generates the full CUDA file *)
 let generate_cuda_file filename program = 
   let cuda_program_body = 
-    (generate_list generate_variable_statement "" (Utils.triple_fst(program))) ^ 
-    (generate_list generate_fdecl "" (Utils.triple_trd(program))) 
+    (generate_list generate_variable_statement "" (Utils.quad_fst(program))) ^ 
+    (generate_list generate_higher_order_function_decl "" (Utils.quad_trd(program))) ^
+    (generate_list generate_fdecl "" (Utils.quad_four(program))) 
   in 
   let cuda_program_string = sprintf "\n\
   #include <stdio.h>\n\

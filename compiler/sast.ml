@@ -1,4 +1,3 @@
-open Ast
 (* Contains sast type definitions for conversions during semantic analysis *)
 
 (* -----------------------------------------PTX types -----------------------------------------*)
@@ -11,7 +10,7 @@ type ptx_binary_operator =
 (*     | Plus_Equal | Subtract_Equal | Multiply_Equal | Divide_Equal  *)
 (*     | Exp | Dot | Matrix_Multiplication *)
     | Ptx_And | Ptx_Or | Ptx_Xor
- | Ptx_Bitshift_Right | Ptx_Bitshift_Left 
+ 	| Ptx_Bitshift_Right | Ptx_Bitshift_Left 
     | Ptx_Equal | Ptx_Not_Equal | Ptx_Greater_Than | Ptx_Less_Than | Ptx_Greater_Than_Equal 
     | Ptx_Less_Than_Equal
 (*     Ptx_Greater_Than_Unsigned | Ptx_Less_Than_unsigned | Ptx_Greater_Than_Equal_Unsigned 
@@ -61,8 +60,6 @@ type ptx_vdecl =
 (* * ptx_variable_option  *)
     | Ptx_Vdecl of ptx_state_space *  ptx_data_type *  ptx_variable
 
-
-
 type ptx_expression =
 (*convert may require some options prior to first data type*)
 	| Ptx_Binop of ptx_binary_operator * ptx_data_type * ptx_variable * ptx_variable * ptx_variable
@@ -110,12 +107,35 @@ type ptx_fdecl = {
 	ptx_fdecl_params 							: ptx_pdecl list;
 
 	(* Declares the virtual registers that are needed for the function *)
-	register_decls 								: ptx_vdecl list;
+	(* register_decls 								: ptx_vdecl list; *)
 	(* Statements within the function *)
 	ptx_fdecl_body 								: ptx_statement list;
 }
 
+type ptx_kernel_variable_info = {
+	ptx_variable_type 			: ptx_variable_type;
+	ptx_kernel_name 			: Ast.identifier;
+}
 
+type ptx_higher_order_fdecl = {
+	(* Map or reduce *)
+	ptx_higher_order_function_type 				: Ast.identifier; 
+	(* Name of this function  - ex. map123, map1, map2 *)
+	ptx_higher_order_function_name 				: Ast.identifier;
+	(* Name of kernel function that is called from host (would be global void kernel function corresponding to map/reduce) *)
+    ptx_applied_kernel_function    				: Ast.identifier;
+	(* List of constants passed into map and reduce *)
+	ptx_higher_order_function_constants 		: ptx_kernel_variable_info list;
+	(* Size of input and return arrays *)
+	ptx_array_length 							: int;
+	(* Input array information 
+		--If an array has no name (just simply passed in as something like {1,2,3}) then it is given a temporary generated name *)
+	ptx_input_arrays_info						: ptx_kernel_variable_info list; (* type, host name, kernel name *)
+    (* Return array information *)	
+    ptx_return_array_info              			: ptx_kernel_variable_info; (* type, host name, kernel name*) 
+    (* Dependent functions*)
+    ptx_called_functions 						: Ast.identifier list;   
+}
 (* -----------------------------------------C types -----------------------------------------*)
 type c_binary_operator =
     | Add | Subtract | Multiply | Divide | Modulo
@@ -165,7 +185,7 @@ type c_higher_order_fdecl = {
 	(* Name of kernel function that is called from host (would be global void kernel function corresponding to map/reduce) *)
     applied_kernel_function    				: Ast.identifier;
 	(* List of constants passed into map and reduce *)
-	constants 								: c_kernel_variable_info list;
+	higher_order_function_constants 								: c_kernel_variable_info list;
 	(* Size of input and return arrays *)
 	array_length 							: int;
 	(* Input array information 
@@ -174,7 +194,7 @@ type c_higher_order_fdecl = {
     (* Return array information *)	
     return_array_info              			: c_kernel_variable_info; (* type, host name, kernel name*) 
     (* Dependent functions*)
-    dependent_functions 					: Ast.identifier list;   
+    called_functions 						: Ast.identifier list;   
 }
 
 type c_expression =
@@ -194,7 +214,7 @@ type c_expression =
 type c_variable_statement = 
     | Declaration of c_vdecl
     | Initialization of c_vdecl * c_expression
-    | Assignment of Ast.identifier * c_expression
+    | Assignment of c_expression * c_expression
 
 type c_statement = 
     | Variable_Statement of c_variable_statement
@@ -216,4 +236,4 @@ type c_fdecl = {
 }
 
 (* Overall Program *)
-type program = c_variable_statement list * ptx_fdecl list * c_fdecl list
+type program = c_variable_statement list * ptx_fdecl list * c_higher_order_fdecl list* c_fdecl list

@@ -9,9 +9,10 @@ open Parser
 (*------------------------------------------------------------General Helper Functions------------------------------------------------------------*)
 
 (* Used to access members of our sast 'program' type, which is a triple tuple *)
-let triple_fst (a,_,_) = a
-let triple_snd (_,a,_) = a
-let triple_trd (_,_,a) = a
+let quad_fst (a,_,_,_) = a
+let quad_snd (_,a,_,_) = a
+let quad_trd (_,_,a,_) = a
+let quad_four (_,_,_,a) = a
 
 (*------------------------------------------------------------Parser Debugging Functions------------------------------------------------------------*)
 let token_to_string = function
@@ -84,14 +85,14 @@ let idtos = function
 
 let data_type_to_string = function 
   | Ast.String -> "string"
-  | Ast.Byte -> "byte"
-  | Ast.Unsigned_Byte -> "ubyte"
+ (*  | Ast.Byte -> "byte"
+  | Ast.Unsigned_Byte -> "ubyte" *)
   | Ast.Integer -> "int"
-  | Ast.Unsigned_Integer -> "uint"
+  (* | Ast.Unsigned_Integer -> "uint"
   | Ast.Long -> "long"
-  | Ast.Unsigned_Long -> "ulong"
+  | Ast.Unsigned_Long -> "ulong" *)
   | Ast.Float -> "float"
-  | Ast.Double -> "double"
+  (* | Ast.Double -> "double" *)
   | Ast.Void -> "void"
   | Ast.Boolean -> "bool"
 
@@ -123,7 +124,7 @@ let rec expression_to_string = function
   | Ast.Ternary(e1,e2,e3) -> (expression_to_string e1) ^ " if(" ^ (expression_to_string e2) ^ ") else " ^ (expression_to_string e3)
 and constant_to_string = function
   | Ast.Constant(id,e) -> (idtos id) ^ "=" ^ (expression_to_string e)
-and higher_order_function_call_to_string fcall = (idtos fcall.higher_order_function_type) ^ "(" ^ idtos(fcall.kernel_function_name) ^ "," ^ "consts(" ^ (String.concat "," (List.map constant_to_string fcall.constants)) ^ ")," ^ (String.concat "," (List.map expression_to_string fcall.input_arrays)) ^ ")"
+and higher_order_function_call_to_string fcall = (idtos fcall.hof_type) ^ "(" ^ idtos(fcall.kernel_function_name) ^ "," ^ "consts(" ^ (String.concat "," (List.map constant_to_string fcall.constants)) ^ ")," ^ (String.concat "," (List.map expression_to_string fcall.input_arrays)) ^ ")"
 
 
 

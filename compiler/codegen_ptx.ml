@@ -225,9 +225,29 @@ let generate_ptx_function f =
   in 
   sprintf "%s" ptx_function_body
 
+(* Generates global ptx functions *)
+let generate_ptx_hof_function hof = 
+  match hof.higher_order_function_type with 
+    | "map" -> 
+    let ptx_function_string = ".visible .entry " ^ hof.higher_order_function_name ^ " ( " ^ 
+    ") "
+    in sprintf "%s" ptx_function_string
+(*     | "reduce" -> *)
+
 (* Main function for generating all ptx files*)
 let generate_ptx_function_files program = 
-  let ptx_function_list = Utils.triple_snd(program) in
+  let ptx_hof_function_list = Utils.quad_trd(program) in
+  (* Generates global ptx functions*)
+  let rec generate_ptx_hof_files ptx_hof_func_list = 
+    match ptx_hof_func_list with 
+      | [] -> ()
+      | hd::tl -> 
+        write_ptx (Utils.idtos(hd.higher_order_function_name)) (generate_ptx_hof_function hd);
+        generate_ptx_hof_files tl
+  in
+  generate_ptx_hof_files ptx_hof_function_list
+  (* Generates device ptx functions*)
+  let ptx_function_list = Utils.quad_snd(program) in
   let rec generate_ptx_files ptx_func_list =
   	match ptx_func_list with
   		| [] -> ()
