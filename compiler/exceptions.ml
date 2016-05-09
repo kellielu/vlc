@@ -18,7 +18,7 @@ exception Exception of string
 exception Already_declared
 exception Name_not_found of string
 exception Invalid_environment
-exception Variable_not_found_in_scope
+exception Variable_not_found_in_scope of string
 exception Function_not_defined
 exception Cannot_pop_empty_variable_scope_stack
 exception Variable_already_declared
@@ -36,7 +36,6 @@ exception Function_already_declared
 exception Have_statements_after_return_break_continue
 exception Invalid_statement_in_for
 exception Constants_missing_in_defg
-exception Cannot_pop_original_scope
 exception Variable_scope_not_initialized
 exception Empty_array_access
 exception Invalid_array_expression

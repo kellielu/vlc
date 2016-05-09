@@ -169,8 +169,7 @@ let push_scope env =
 (* Pops a scope from the top of the variable_scope_stack *)
 let pop_scope env = 
     match env.variable_scope_stack with
-      | [] -> raise Exceptions.Variable_scope_not_initialized
-      | hd::[] -> raise Exceptions.Cannot_pop_original_scope
+      | [] -> raise Exceptions.Cannot_pop_empty_variable_scope_stack
       | local_scope :: tail ->
           update_env tail env.kernel_function_map env.host_function_map env.is_gpu_env env.hof_function_list
 
@@ -205,7 +204,7 @@ let is_variable_in_scope id env =
 let get_variable_type id env = 
   let rec check_scopes scope_stack = 
     match scope_stack with 
-      | [] -> raise Exceptions.Variable_not_found_in_scope
+      | [] -> raise (Exceptions.Variable_not_found_in_scope id)
       | scope::larger_scopes -> 
           if Variable_Map.mem id scope then 
             (Variable_Map.find id scope).vtype
@@ -238,7 +237,7 @@ let get_function_info id env =
 (* ----------------------------------- Functions for Checking Ast -----------------------------------*)
 (* Checks a variable declaration and initialization to ensure variable hasn't already been declared *)
 let check_already_declared id env = 
-  if ((is_variable_in_scope id env) = true) then false else true
+  if ((is_variable_in_scope id env) = true) then true else false
 
 
 (* Note: for host only! Checks that a variable in assignments and expressions have been declared*)
@@ -266,7 +265,7 @@ let rec infer_type expression env=
        let f expression = infer_type expression env in
       Ast.Array(match_type (List.map f expr_list),(List.length expr_list))
     | Ast.Identifier_Literal(id) -> 
-        if(check_already_declared (Utils.idtos id) env) = true then raise Exceptions.Variable_not_found_in_scope 
+        if(check_already_declared (Utils.idtos id) env) = true then raise (Exceptions.Variable_not_found_in_scope (Utils.idtos id)) 
         else (get_variable_type (Utils.idtos id) env)
     | Ast.Binop(e1,op,e2) -> 
         (match op with 
@@ -472,6 +471,8 @@ let rec convert_to_c_variable_type vtype env =
 let convert_to_c_vdecl vdecl env  = 
     match vdecl with 
       | Ast.Variable_Declaration(vtype,id) ->
+          print_endline "vdecl";
+          print_endline (Utils.idtos id);
           if(check_already_declared (Utils.idtos(id)) env) = true then raise Exceptions.Variable_already_declared
           else
             let v_info = {
@@ -653,7 +654,7 @@ let rec convert_to_c_expression e env =
           let c_e_list = List.map (fun x-> fst(convert_to_c_expression x env)) e_list in
           Sast.Array_Literal(c_e_list,array_dim),env
       | Ast.Identifier_Literal(id) -> 
-          if(check_already_declared (Utils.idtos id) env) = true then raise Exceptions.Variable_not_found_in_scope
+          if(check_already_declared (Utils.idtos id) env) = true then raise (Exceptions.Variable_not_found_in_scope (Utils.idtos id))
           else Sast.Identifier_Literal(id),env
       | Ast.Cast(vtype, e) -> 
           let c_vtype,env = convert_to_c_variable_type vtype env in
@@ -947,9 +948,9 @@ let convert_to_c_param vdecl env  =
             }
             in
             let updated_scope = Variable_Map.add (Utils.idtos id) v_info (List.hd env.variable_scope_stack) in
-            let env1 = update_scope updated_scope env in
-            let c_vtype, env2 = convert_to_c_variable_type vtype env1 in
-            Sast.Variable_Declaration(c_vtype,id),env2
+            let env = update_scope updated_scope env in
+            let c_vtype, env = convert_to_c_variable_type vtype env in
+            Sast.Variable_Declaration(c_vtype,id),env
 
 (* Converts from fdecl to c_fdecl *)
 let convert_to_c_fdecl fdecl env =
