@@ -32,6 +32,13 @@ exception String_not_accepted_in_binop
 exception Invalid_input_argument_to_map
 exception Not_a_valid_constant
 exception Nonarray_argument_passed_into_higher_order_function
+exception Function_already_declared
+exception Have_statements_after_return_break_continue
+exception Invalid_statement_in_for
+exception Constants_missing_in_defg
+exception Cannot_pop_original_scope
+exception Variable_scope_not_initialized
+exception Empty_array_access
 (*-------------------------------------Codegen C-------------------------------------*)
 exception Unknown_variable_type
 exception Unknown_operator

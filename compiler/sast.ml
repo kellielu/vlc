@@ -113,7 +113,30 @@ type ptx_fdecl = {
 	ptx_fdecl_body 								: ptx_statement list;
 }
 
+type ptx_kernel_variable_info = {
+	ptx_variable_type 			: ptx_variable_type;
+	ptx_kernel_name 			: Ast.identifier;
+}
 
+type ptx_higher_order_fdecl = {
+	(* Map or reduce *)
+	higher_order_function_type 				: Ast.identifier; 
+	(* Name of this function  - ex. map123, map1, map2 *)
+	higher_order_function_name 				: Ast.identifier;
+	(* Name of kernel function that is called from host (would be global void kernel function corresponding to map/reduce) *)
+    applied_kernel_function    				: Ast.identifier;
+	(* List of constants passed into map and reduce *)
+	constants 								: ptx_kernel_variable_info list;
+	(* Size of input and return arrays *)
+	array_length 							: int;
+	(* Input array information 
+		--If an array has no name (just simply passed in as something like {1,2,3}) then it is given a temporary generated name *)
+	input_arrays_info						: ptx_kernel_variable_info list; (* type, host name, kernel name *)
+    (* Return array information *)	
+    return_array_info              			: ptx_kernel_variable_info; (* type, host name, kernel name*) 
+    (* Dependent functions*)
+    dependent_functions 					: Ast.identifier list;   
+}
 (* -----------------------------------------C types -----------------------------------------*)
 type c_binary_operator =
     | Add | Subtract | Multiply | Divide | Modulo

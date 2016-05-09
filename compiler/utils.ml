@@ -85,14 +85,14 @@ let idtos = function
 
 let data_type_to_string = function 
   | Ast.String -> "string"
-  | Ast.Byte -> "byte"
-  | Ast.Unsigned_Byte -> "ubyte"
+ (*  | Ast.Byte -> "byte"
+  | Ast.Unsigned_Byte -> "ubyte" *)
   | Ast.Integer -> "int"
-  | Ast.Unsigned_Integer -> "uint"
+  (* | Ast.Unsigned_Integer -> "uint"
   | Ast.Long -> "long"
-  | Ast.Unsigned_Long -> "ulong"
+  | Ast.Unsigned_Long -> "ulong" *)
   | Ast.Float -> "float"
-  | Ast.Double -> "double"
+  (* | Ast.Double -> "double" *)
   | Ast.Void -> "void"
   | Ast.Boolean -> "bool"
 

@@ -230,7 +230,6 @@ let generate_ptx_hof_function hof =
   match hof.higher_order_function_type with 
     | "map" -> 
     let ptx_function_string = ".visible .entry " ^ hof.higher_order_function_name ^ " ( " ^ 
-      
     ") "
     in sprintf "%s" ptx_function_string
 (*     | "reduce" -> *)
