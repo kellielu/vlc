@@ -9,10 +9,11 @@ open Parser
 (*------------------------------------------------------------General Helper Functions------------------------------------------------------------*)
 
 (* Used to access members of our sast 'program' type, which is a triple tuple *)
-let quad_fst (a,_,_,_) = a
-let quad_snd (_,a,_,_) = a
-let quad_trd (_,_,a,_) = a
-let quad_four (_,_,_,a) = a
+let quint_fst  (a,_,_,_,_)  = a
+let quint_snd  (_,a,_,_,_)  = a
+let quint_trd  (_,_,a,_,_)  = a
+let quint_four (_,_,_,a,_)  = a
+let quint_five (_,_,_,_,a)  = a
 
 (*------------------------------------------------------------Parser Debugging Functions------------------------------------------------------------*)
 let token_to_string = function

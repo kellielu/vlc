@@ -51,8 +51,8 @@ exception Unknown_variable_type
 exception Unknown_operator
 exception Unknown_data_type
 exception Unknown_type_of_param
-exception Unknown_higher_order_function_call
-exception Unknown_type_of_vdecl
+exception Unknown_higher_order_function_call of string 
+exception Unknown_type_of_vdecl 
 exception Unknown_type_of_expression
 exception Unknown_variable_statement
 exception Unknown_type_of_statement

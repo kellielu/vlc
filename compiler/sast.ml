@@ -125,9 +125,9 @@ type ptx_higher_order_fdecl = {
 	ptx_higher_order_function_type 				: Ast.identifier; 
 	(* Name of this function  - ex. map123, map1, map2 *)
 	ptx_higher_order_function_name 				: Ast.identifier;
-	(* Name of kernel function that is called from host (would be global void kernel function corresponding to map/reduce) *)
+	(* Name of kernel function that is called by this function *)
     ptx_applied_kernel_function    				: Ast.identifier;
-	(* List of constants passed into map and reduce *)
+	(* List of constants passed in that the function can use *)
 	ptx_higher_order_function_constants 		: ptx_kernel_variable_info list;
 	(* Size of input and return arrays *)
 	ptx_array_length 							: int;
@@ -188,16 +188,14 @@ type c_higher_order_fdecl = {
 	(* Name of kernel function that is called from host (would be global void kernel function corresponding to map/reduce) *)
     applied_kernel_function    				: Ast.identifier;
 	(* List of constants passed into map and reduce *)
-	higher_order_function_constants 								: c_kernel_variable_info list;
+	higher_order_function_constants 		: c_kernel_variable_info list;
 	(* Size of input and return arrays *)
 	array_length 							: int;
 	(* Input array information 
 		--If an array has no name (just simply passed in as something like {1,2,3}) then it is given a temporary generated name *)
 	input_arrays_info						: c_kernel_variable_info list; (* type, host name, kernel name *)
     (* Return array information *)	
-    return_array_info              			: c_kernel_variable_info; (* type, host name, kernel name*) 
-    (* Dependent functions*)
-    called_functions 						: Ast.identifier list;   
+    return_array_info              			: c_kernel_variable_info; (* type, host name, kernel name*)    
 }
 
 type c_expression =
@@ -239,4 +237,4 @@ type c_fdecl = {
 }
 
 (* Overall Program *)
-type program = c_variable_statement list * ptx_fdecl list * c_higher_order_fdecl list* c_fdecl list
+type program = c_variable_statement list * ptx_fdecl list * ptx_higher_order_fdecl * c_higher_order_fdecl list * c_fdecl list

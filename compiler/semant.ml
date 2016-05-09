@@ -100,8 +100,9 @@ type environment = {
   host_function_map                                 : function_info Function_Map.t;
   (* Bool specifying whether environment is being evaluated on the gpu *)
   is_gpu_env                                        : bool;
-  (*Global Void functions for map and reduce*)
-  hof_function_list                                 : Sast.c_higher_order_fdecl list;
+  (*List of functions for higher order functions *)
+  hof_c_function_list                               : Sast.c_higher_order_fdecl list;
+  hof_ptx_function_list                             : Sast.ptx_higher_order_fdecl list;
 }
 
 (*-----------------------------------Helper functions to check variables and functions in the environment -----------------------------------*)
@@ -155,42 +156,47 @@ let init_env = {
   host_function_map           = init_host_function_map;
   is_gpu_env                  = false;
   (* Two lists that stores the new higher order functions we need to add*)
-  hof_function_list                = []
+  hof_c_function_list         = [];
+  hof_ptx_function_list       = [];
 }
 
 
 (* Updates the environment *)
-let update_env vscope_stack kfmap hfmap is_gpu hof_list = {
+let update_env vscope_stack kfmap hfmap is_gpu hof_c_list hof_ptx_list= {
   variable_scope_stack        = vscope_stack;
   kernel_function_map         = kfmap;
   host_function_map           = hfmap;
   is_gpu_env                  = is_gpu;
-  hof_function_list           = hof_list
+  hof_c_function_list         = hof_c_list;
+  hof_ptx_function_list       = hof_ptx_list;
 }
 
 
 (* Pushes a new scope on top of the  variable_scope_stack *)
 let push_scope env = 
-    update_env (Variable_Map.empty :: env.variable_scope_stack) env.kernel_function_map env.host_function_map env.is_gpu_env env.hof_function_list
+    update_env (Variable_Map.empty :: env.variable_scope_stack) env.kernel_function_map env.host_function_map env.is_gpu_env env.hof_c_function_list env.hof_ptx_function_list
 
 (* Pops a scope from the top of the variable_scope_stack *)
 let pop_scope env = 
     match env.variable_scope_stack with
       | [] -> raise Exceptions.Cannot_pop_empty_variable_scope_stack
       | local_scope :: tail ->
-          update_env tail env.kernel_function_map env.host_function_map env.is_gpu_env env.hof_function_list
+          update_env tail env.kernel_function_map env.host_function_map env.is_gpu_env env.hof_c_function_list env.hof_ptx_function_list
 
 let update_scope updated_scope env = 
     let env = pop_scope env in 
-    update_env (updated_scope::env.variable_scope_stack) env.kernel_function_map env.host_function_map env.is_gpu_env env.hof_function_list
+    update_env (updated_scope::env.variable_scope_stack) env.kernel_function_map env.host_function_map env.is_gpu_env env.hof_c_function_list env.hof_ptx_function_list
 
 let update_kernel_fmap f_info env = 
     let new_kfmap = Function_Map.add (Utils.idtos(f_info.function_name)) f_info env.kernel_function_map in
-    update_env env.variable_scope_stack new_kfmap env.host_function_map env.is_gpu_env env.hof_function_list
+    update_env env.variable_scope_stack new_kfmap env.host_function_map env.is_gpu_env env.hof_c_function_list env.hof_ptx_function_list
 
 let update_host_fmap f_info env = 
     let new_hfmap = Function_Map.add (Utils.idtos(f_info.function_name)) f_info env.host_function_map in
-    update_env env.variable_scope_stack env.kernel_function_map new_hfmap env.is_gpu_env env.hof_function_list
+    update_env env.variable_scope_stack env.kernel_function_map new_hfmap env.is_gpu_env env.hof_c_function_list env.hof_ptx_function_list
+
+let update_hof_lists hof_c_fdecl hof_ptx_fdecl env = 
+    update_env env.variable_scope_stack env.kernel_function_map env.host_function_map env.is_gpu_env (List.rev(hof_c_fdecl::List.rev(env.hof_c_function_list))) (List.rev(hof_ptx_fdecl::List.rev(env.hof_ptx_function_list))) 
 
 
 (* Checks if variable has been declared - is valid - in the scope *)
@@ -391,7 +397,7 @@ let rec good_statement_order stmt_list =
           | Ast.Return(e)-> false
           | _ -> good_statement_order tl
     
-    
+    (* Binop *)
 let convert_to_c_binop binop env = 
   match binop with
     | Ast.Add -> Sast.Add,env 
@@ -430,6 +436,8 @@ let convert_to_ptx_binop binop env =
     | Ast.Bitshift_Right -> Sast.Ptx_Bitshift_Right,env
     | Ast.Bitshift_Left -> Sast.Ptx_Bitshift_Left,env
     
+
+  (* Unop *)
 let convert_to_c_unop unop env =
   match unop with
     | Ast.Not -> Sast.Not,env
@@ -444,6 +452,8 @@ let convert_to_ptx_unop unop env =
     | Ast.Plus_Plus -> Sast.Ptx_Plus_Plus,env
     | Ast.Minus_Minus -> Sast.Ptx_Minus_Minus,env
 
+
+(* Datatype *)
 let convert_to_c_data_type dtype env = 
   match dtype with
       | Ast.Integer -> Sast.Integer,env
@@ -460,6 +470,8 @@ let convert_to_ptx_data_type dtype env =
     | Ast.String -> raise Exceptions.NO_STRINGS_ALLOWED_IN_GDECL
     | Ast.Void -> raise Exceptions.Void_type_in_gdecl
     
+
+    (* Variable Type *)
 let rec convert_to_c_variable_type vtype env = 
   match vtype with
       | Ast.Primitive(p) -> 
@@ -475,6 +487,23 @@ let rec convert_to_c_variable_type vtype env =
                 Sast.Primitive(c_p),env
           )
 
+(* TO IMPLEMENT *)
+(* let rec convert_to_ptx_variable_type vtype env = 
+  match vtype with
+      | Ast.Primitive(p) -> 
+          let c_p,env = convert_to_ptx_data_type p env in
+          Sast.Primitive(c_p),env
+      | Ast.Array(t,n) ->
+          (match t with 
+            | Ast.Array(t,n) -> 
+                let c_t,env = convert_to_ptx_variable_type t env in
+                Sast.Array(c_t,n),env
+            | Ast.Primitive(p) -> 
+                let c_p,env= convert_to_ptx_data_type p env in
+                Sast.Primitive(c_p),env
+          ) *)
+
+(* Variable Declarations *)
 let convert_to_c_vdecl vdecl env  = 
     match vdecl with 
       | Ast.Variable_Declaration(vtype,id) ->
@@ -583,20 +612,64 @@ let get_return_array_info kfunc_id env =
   var_info
 
 (* Main function for creating the C map function (when we see a map function call) *)
-let make_map_c_fdecl hof_call env =  
-  let kfunc_name = Ast.Identifier(generate_map_ptx_function_name ()) in
- {
-    higher_order_function_type                                          =  Ast.Identifier("map");
-    higher_order_function_name                                          =  Ast.Identifier(generate_map_c_function_name ());
-    applied_kernel_function                                             =  kfunc_name;
-    higher_order_function_constants                                     =  get_constants_info hof_call.constants [] env;
-    array_length                                                        =  List.length (hof_call.input_arrays);
-    input_arrays_info                                                   =  get_input_arrays_info hof_call.input_arrays [] env;
-    return_array_info                                                   =  get_return_array_info (Utils.idtos(hof_call.kernel_function_name)) env; 
-    called_functions                                                 = [kfunc_name]
- }  
+let make_hof_c_fdecl hof_call env =  
+  match Utils.idtos(hof_call.hof_type) with
+    | "map" ->
+          let kfunc_name = Ast.Identifier(generate_map_ptx_function_name ()) in
+         {
+            higher_order_function_type                                          =  Ast.Identifier("map");
+            higher_order_function_name                                          =  Ast.Identifier(generate_map_c_function_name ());
+            applied_kernel_function                                             =  kfunc_name;
+            higher_order_function_constants                                     =  get_constants_info hof_call.constants [] env;
+            array_length                                                        =  List.length (hof_call.input_arrays);
+            input_arrays_info                                                   =  get_input_arrays_info hof_call.input_arrays [] env;
+            return_array_info                                                   =  get_return_array_info (Utils.idtos(hof_call.kernel_function_name)) env; 
+         } 
+    | "reduce" -> 
+          let kfunc_name = Ast.Identifier(generate_reduce_ptx_function_name ()) in
+           {
+              higher_order_function_type                                          =  Ast.Identifier("reduce");
+              higher_order_function_name                                          =  Ast.Identifier(generate_reduce_c_function_name ());
+              applied_kernel_function                                             =  kfunc_name;
+              higher_order_function_constants                                     =  get_constants_info hof_call.constants [] env;
+              array_length                                                        =  List.length (hof_call.input_arrays);
+              input_arrays_info                                                   =  get_input_arrays_info hof_call.input_arrays [] env;
+              return_array_info                                                   =  get_return_array_info (Utils.idtos(hof_call.kernel_function_name)) env; 
+           }  
+    | _ -> raise (Exceptions.Unknown_higher_order_function_call (Utils.idtos hof_call.hof_type))
 
+(* TO IMPLEMENT 
+Converts c_kernel_variable_info to ptx_kernel_variable_info *)
+let change_to_ptx_data_type sast_c_dtype = 
+    match sast_c_dtype with 
+      | Sast.Integer -> S32
+      | Sast.Float   -> F32
+      | Sast.Boolean -> Pred
+      | _ -> raise Exceptions.NO_STRINGS_ALLOWED_IN_GDECL
 
+let rec change_to_ptx_variable_type sast_c_vtype = 
+  match sast_c_vtype with 
+      | Sast.Primitive(p) -> Ptx_Primitive(change_to_ptx_data_type p)
+      | Sast.Array(t,n) -> Ptx_Array(change_to_ptx_variable_type t, n)
+
+let change_to_ptx_kernel_variable ckv_info =
+  {
+      ptx_variable_type = change_to_ptx_variable_type ckv_info.variable_type;
+      ptx_kernel_name   = ckv_info.kernel_name;
+  }
+
+(* Creates a ptx_fdecl based on the hof_c_fdecl*)
+let make_hof_ptx_fdecl hof_c_fdecl hof env= 
+  {
+    ptx_higher_order_function_type                      = hof_c_fdecl.higher_order_function_type;
+    ptx_higher_order_function_name                      = hof_c_fdecl.applied_kernel_function;
+    ptx_applied_kernel_function                         = hof.kernel_function_name;
+    ptx_higher_order_function_constants                 = List.map (fun x -> change_to_ptx_kernel_variable x ) hof_c_fdecl.higher_order_function_constants;
+    ptx_array_length                                    = hof_c_fdecl.array_length;
+    ptx_input_arrays_info                               = List.map (fun x -> change_to_ptx_kernel_variable x ) hof_c_fdecl.input_arrays_info;
+    ptx_return_array_info                               = change_to_ptx_kernel_variable hof_c_fdecl.return_array_info;
+    ptx_called_functions                                = [hof.kernel_function_name]
+  }
 
 (* TO IMPLEMENT  let convert_to_ptx_pdecl e = 
     match e with 
@@ -631,6 +704,7 @@ let rec get_types args types env =
               | [] -> types
               | hd::tl -> get_types tl (List.rev((infer_type hd env)::List.rev types)) env
 
+(* Expressions *)
 let rec convert_to_c_expression e env = 
     match e with 
       | Ast.Function_Call(id,e_list) ->
@@ -721,7 +795,6 @@ let rec convert_to_c_expression e env =
                   (match (infer_type e1 env) with
                     | Ast.Primitive(t) -> if t = Ast.String then raise (Exceptions.Cannot_perform_operation_on_string (Utils.binary_operator_to_string op)) else ()
                     | Ast.Array(t,n) -> raise (Exceptions.Cannot_perform_operation_on_array (Utils.binary_operator_to_string op))
-                    | _ -> ()
                   );
                   let c_e1,env = convert_to_c_expression e1 env in
                   let c_op,env = convert_to_c_binop op env in
@@ -736,8 +809,8 @@ let rec convert_to_c_expression e env =
         let good_arrays = (List.iter same_types_list input_arrays) in *)
         (* Check that function arguments match that of function declaration *)
         let f_info = (get_function_info (Utils.idtos hof.kernel_function_name) env) in
-        if f_info.function_type != Kernel_Device then raise (Exceptions.Higher_order_function_call_only_takes_defg_functions)
-      else
+        (* if f_info.function_type != Kernel_Device then raise (Exceptions.Higher_order_function_call_only_takes_defg_functions)
+      else *)
         let expected_arg_types = f_info.function_args in 
         let get_array_types arr = 
             match arr with 
@@ -765,13 +838,14 @@ let rec convert_to_c_expression e env =
         match Utils.idtos(hof.hof_type) with 
             | "map" ->
                 (*Add the c map function to the environment*)
-                let map_fdecl = make_map_c_fdecl hof env in
-                let env = update_env env.variable_scope_stack env.kernel_function_map env.host_function_map env.is_gpu_env (List.rev(map_fdecl::List.rev(env.hof_function_list))) in
+                let hof_c_fdecl = make_hof_c_fdecl hof env in
+                let hof_ptx_fdecl = make_hof_ptx_fdecl hof_c_fdecl hof env in
+                let env = update_hof_lists hof_c_fdecl hof_ptx_fdecl env in
                 (* Convert *)
-                Sast.Function_Call(map_fdecl.higher_order_function_name,(List.map (fun x -> Sast.Identifier_Literal(x.host_name)) map_fdecl.input_arrays_info)),env
+                Sast.Function_Call(hof_c_fdecl.higher_order_function_name,(List.map (fun x -> Sast.Identifier_Literal(x.host_name)) hof_c_fdecl.input_arrays_info)),env
             (* | "reduce" ->
                 in Sast.FunctionCall(c_ma) *)
-            | _ -> raise Exceptions.Unknown_higher_order_function_call
+            | _ -> raise (Exceptions.Unknown_higher_order_function_call (Utils.idtos(hof.hof_type)))
 
 (* TO IMPLEMENT *)
 (* 
@@ -1015,7 +1089,7 @@ let rec convert_fdecl_list fdecl_list ptx_fdecl_list c_fdecl_list env =
 let convert ast env =
     let vstmt_list,env                      = convert_list convert_to_c_variable_statement (fst(ast)) [] env in
     let ptx_fdecl_list,c_fdecl_list, env    = convert_fdecl_list (snd(ast)) [] [] env in
-    let sast                                = (vstmt_list,ptx_fdecl_list,(env.hof_function_list),c_fdecl_list) in 
+    let sast                                = (vstmt_list,ptx_fdecl_list,(env.hof_ptx_function_list),(env.hof_c_function_list),c_fdecl_list) in 
     sast
 
 (* Main function for Sast *)

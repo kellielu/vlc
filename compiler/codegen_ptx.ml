@@ -182,10 +182,11 @@ let generate_ptx_subroutine subroutine =
   in
   sprintf "%s" s
 
-let generate_ptx_statement statement =
+let rec generate_ptx_statement statement =
   let s = match statement with
     | Ptx_expression(e) -> generate_ptx_expression(e)
     | Ptx_subroutine(s) -> generate_ptx_subroutine(s)
+    | Ptx_statement_block(s_list) -> generate_list generate_ptx_statement "\n" s_list
   in 
   sprintf "%s" s
 
@@ -230,29 +231,29 @@ let generate_ptx_function f =
 
 (* Generates global ptx functions *)
 let generate_ptx_hof_function hof = 
-  match Utils.idtos(hof.higher_order_function_type) with 
+  match Utils.idtos(hof.ptx_higher_order_function_type) with 
     | "map" -> 
-    let ptx_function_string = ".visible .entry " ^ Utils.idtos(hof.higher_order_function_name)^ " ( " ^ 
+    let ptx_function_string = ".visible .entry " ^ Utils.idtos(hof.ptx_higher_order_function_name)^ " ( " ^ 
     ") "
     in sprintf "%s" ptx_function_string
 (*     | "reduce" -> *)
     | _ -> ""
 (* Main function for generating all ptx files*)
 let generate_ptx_function_files program = 
-  (let ptx_hof_function_list = Utils.quad_trd(program) in
+  (let ptx_hof_function_list = Utils.quint_trd(program) in
   (* Generates global ptx functions*)
   let rec generate_ptx_hof_files ptx_hof_func_list = 
     match ptx_hof_func_list with 
       | [] -> ()
       | hd::tl -> 
         let ptx_hof_function_string = generate_ptx_hof_function hd in
-        write_ptx (Utils.idtos(hd.higher_order_function_name)) ptx_hof_function_string;
+        write_ptx (Utils.idtos(hd.ptx_higher_order_function_name)) ptx_hof_function_string;
         print_endline ptx_hof_function_string;
         generate_ptx_hof_files tl
   in
   generate_ptx_hof_files ptx_hof_function_list);
   (* Generates device ptx functions*)
-  let ptx_function_list = Utils.quad_snd program in
+  let ptx_function_list = Utils.quint_snd program in
   let rec generate_ptx_files ptx_func_list =
   	match ptx_func_list with
   		| [] -> ()

@@ -291,8 +291,7 @@ let generate_higher_order_function_decl hof =
                       "checkCudaErrors(cuModuleUnload(cudaModule));\n" ^ 
                       "checkCudaErrors(cuCtxDestroy(context));\n" ^  
                   "}\n" 
-    | "reduce" -> raise Exceptions.Unknown_higher_order_function_call
-    | _ -> raise Exceptions.Unknown_higher_order_function_call
+    | _ -> raise Exceptions.Not_implemented_yet
    in sprintf "%s" higher_order_function_decl_string
 
 
@@ -353,9 +352,9 @@ let write_cuda filename cuda_program_string =
 (* Generates the full CUDA file *)
 let generate_cuda_file filename program = 
   let cuda_program_body = 
-    (generate_list generate_variable_statement "" (Utils.quad_fst(program))) ^ 
-    (generate_list generate_higher_order_function_decl "" (Utils.quad_trd(program))) ^
-    (generate_list generate_fdecl "" (Utils.quad_four(program))) 
+    (generate_list generate_variable_statement "" (Utils.quint_fst(program))) ^ 
+    (generate_list generate_higher_order_function_decl "" (Utils.quint_four(program))) ^
+    (generate_list generate_fdecl "" (Utils.quint_five(program))) 
   in 
   let cuda_program_string = sprintf "\n\
   #include <stdio.h>\n\
