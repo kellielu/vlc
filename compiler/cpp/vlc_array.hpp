@@ -1,13 +1,15 @@
 #ifndef VLC_ARRAY_H
 #define VLC_ARRAY_H
+#endif
 
 // Defines the default block and grid size
 #ifndef BLOCK_SIZE
 #define BLOCK_SIZE 1024
+#endif
 
 #ifndef GRID_SIZE
 #define GRID_SIZE 32
-
+#endif
 // Include statements
 #include <stdlib.h>
 #include <iostream>
@@ -47,7 +49,8 @@ class VLC_Array {
 		int *dimensions; // Integer array of the dimensions of the VLC_Array
 	public:
 		// Constructors and Destructors
-		VLC_Array(int num_dimensions,...); 			// For declarations and initializations like int a[5] = {1,2,3,4,5}
+		VLC_Array(int num_values, T*values, int num_dimensions, int *dimensions);
+		VLC_Array(int num_values, int num_dimensions,...); 			// For declarations and initializations like int a[5] = {1,2,3,4,5}
 		VLC_Array(const VLC_Array<T> &vlcarray); 	// For assignments like int a[1] = {5}, int b[1]={7},  a=b
 		~VLC_Array();
 		
@@ -58,45 +61,49 @@ class VLC_Array {
 		int  total_elements(); // Returns total elements in the array 
 
 		/* Element Accessors and Getters */
-		T operator[](int i); // Accesses ith element of the array
-		void assign(T,int number_accessing_dims,...); // Assigns ith element of the array with value T
-		
-
-
-		// // Assignment
-		// VLC_Array& operator=(const VLC_Array& vlcarray);
-		// // Arithmetic Operators
-		// VLC_Array& operator+(const VLC_Array& vlcarray);
-		// VLC_Array& operator-(const VLC_Array& vlcarray);
-		// VLC_Array& operator*(const VLC_Array& vlcarray);
-		// VLC_Array& operator/(const VLC_Array& vlcarray);
-		// // Matrix multiplication
-		// VLC_Array& operator**(const VLC_Array& vlcarray);
-		// // Bitshift
-		// VLC_Array& operator<<(int shift_level);
-		// VLC_Array& operator>>(int shift_level);
-		// // Copy from host to kernel
-		// void copyToKernel();
-		// // Copy from kernel to host
-		// void copyToHost();
+		T get_element_value(int number_accessing_dims,...); 
+		VLC_Array<T> get_array_value(int number_accessing_dims,...);
+		void set_element_value(int number_accessing_dims, T new_value,...);
+		void set_array_value(int number_accessing_dims, VLC_Array<T> array,...);
+	
 };
 
 /*---------------------------------- Regular constructors ----------------------------------*/
+template <class T>
+VLC_Array<T>::VLC_Array(int num_values, T*values, int num_dimensions, int *dimensions){
+	this->num_values = num_values;
+	this->num_dimensions = num_dimensions;
+
+	T *values_copy = (T*)malloc(sizeof(T) * num_values);
+	for(int i = 0; i < num_values; i++){
+		values_copy[i] = values[i];
+	}
+
+	int *dims_copy = (int*)malloc(sizeof(int) * num_dimensions);
+	for(int j = 0; j < num_dimensions; j++){
+		dims_copy[j] = dimensions[j];
+	}
+
+	this->values = values_copy;
+	this->dimensions = dims_copy;
+}
+
 // Declarations, Assignments by value
 template <class T>
 VLC_Array<T>::VLC_Array(int num_values, int num_dimensions,...){ 
 	/* Assign the dimensions and values */
-	this.num_dimensions = num_dimensions;
-	this.num_values = num_values;
+	this->num_dimensions = num_dimensions;
+	this->num_values = num_values;
 
-	this.dimensions = malloc(sizeof(int) * num_dimensions);
-	this.values = malloc(sizeof(T) * num_values);
+	this->dimensions = (int *)malloc(sizeof(int) * num_dimensions);
+	this->values = (T*)malloc(sizeof(T) * num_values);
 
 	/* Now access the values that are passed in */
+	int total = num_dimensions + num_values;
 	va_list args;
-	va_start(args,num_dimensions + num_values);
-	for(int i = 0; i < num_dimensions)	{ 	this.dimensions[i] = va_arg(args,int); 	}
-	for(int j = 0; j < num_values; j++)	{	this.values[j] = va_arg(args,T);		}
+	va_start(args,total);
+	for(int i = 0; i < num_dimensions; 	i++)	{ 	this->dimensions[i] = va_arg(args,int); 	}
+	for(int j = 0; j < num_values; 		j++)	{	this->values[j] = va_arg(args,T);			}
 	va_end(args);
 }
 
@@ -104,45 +111,120 @@ VLC_Array<T>::VLC_Array(int num_values, int num_dimensions,...){
 template <class T>
 VLC_Array<T>::VLC_Array(const VLC_Array<T> &vlcarray){
 	/* For now, make a deep copy every time. Can optimize later */
-	this.num_values = vlcarray.num_values;
-	this.num_dimensions = vlcarray.num_dimensions;
+	this->num_values = vlcarray.num_values;
+	this->num_dimensions = vlcarray.num_dimensions;
 
-	this.values = malloc(sizeof(T) * this.num_values);
-	this.dimensions = malloc(sizeof(int) * this.num_dimensions);
+	this->values = malloc(sizeof(T) * this->num_values);
+	this->dimensions = malloc(sizeof(int) * this->num_dimensions);
 
 	/* Now access the values that are passed in */
-	for(int j = 0; j < this.num_values; j++){ 		this.values[j] 		= vlcarray.get_values()[j]; 			}
-	for(int i = 0; i < num_dimensions;  i++){ 		this.dimensions[i] 	= vlcarray.get_dimensions()[i]; 		}
+	for(int j = 0; j < this->num_values; 	j++)	{ 		this->values[j] 		= vlcarray.get_values()[j]; 			}
+	for(int i = 0; i < this->num_dimensions;i++)	{ 		this->dimensions[i] 	= vlcarray.get_dimensions()[i]; 		}
 }
 
 // Destructor
 template <class T>
 VLC_Array<T>::~VLC_Array(){
-	free(this.values);
-	free(this.dimensions);
+	free(this->values);
+	free(this->dimensions);
 }
 
 /*---------------------------------- Accessing Functions ----------------------------------*/
-// Accesses ith element of the array
-template <class T,int n>
-T VLC_Array<T,n>::operator[](int i){
-	return this.values[i];
-}
-
-// Assigns ith element of the array with value T
-template <class T,int n>
-void VLC_Array<T,n>::assign(int i,T){
-	this.values[i] = T;
-}
-
+// Get Values
 // Returns the pointer to VLC's internal array
-template <class T,int n>
-T* VLC_Array<T,n>::get_array_pointer(){
-	return this.values;
+template <class T>
+T* VLC_Array<T>::get_values()		{ return this->values; }
+
+
+// Get Dimensions
+// Returns the pointer to VLC's dimension list
+template <class T>
+int* VLC_Array<T>::get_dimensions()	{ return this->dimensions; }
+
+
+// Get Element Value
+// Accesses element of the array - must check num_accessing = num_dims in semant
+template <class T>
+T VLC_Array<T>::get_element_value(int number_accessing_dims,...){
+	int index = 1;
+
+	va_list dims;
+	va_start(dims,number_accessing_dims);
+	for(int i=0; i < number_accessing_dims;i ++){
+		index = va_arg(dims,int) * index;
+	}
+	va_end(dims);
+	return this->values[index];
 }
 
-//Gets size of array
-template <class T,int n>
-int VLC_Array<T,n>::size(){
-	return this.length;
+// Get Array Value
+// Accesses an array of the array - must check num_accessing < num_dims in semant
+template <class T>
+VLC_Array<T> VLC_Array<T>::get_array_value(int number_accessing_dims,...){
+	// Get where new array starts
+	int index = 1;
+	va_list dims;
+	va_start(dims,number_accessing_dims);
+	for(int i=0; i < number_accessing_dims; i++){
+		index = va_arg(dims,int) * index;
+	}
+	va_end(dims);
+
+	// Get all the elements in this new array
+	int num_elements = 1;
+	for(int i = this->num_dimensions - num_accessing_dims; i < this->num_dimensions;i++){
+		num_elements = num_elements * this->dimensions[i];
+	}
+
+	// Set values
+	int num_dimensions = this->num_dimensions - number_accessing_dims;
+	int *new_dimensions = this->dimensions[this->num_dimensions - number_accessing_dims];
+	int num_values = num_elements;
+	int *new_values = this->values[index];
+
+	// Return a VLC_Array
+	return VLC_Array(num_values,new_values,num_dimensions,new_dimensions);
+
 }
+
+// Set Element Value
+// Sets value for element of an array
+template <class T>
+void VLC_Array<T>::set_element_value(int number_accessing_dims,T new_value,...){
+	// Get where new array starts
+	int index = 1;
+	va_list dims;
+	va_start(dims,number_accessing_dims);
+	for(int i=0; i < number_accessing_dims; i++){
+		index = va_arg(dims,int) * index;
+	}
+	va_end(dims);
+
+	this->values[index] = new_value;
+}
+
+// Set Array Value
+// Sets value for an array of an array 
+template <class T>
+void VLC_Array<T>::set_array_value(int number_accessing_dims,VLC_Array<T> array,...){
+	// Get where new array starts
+	int index = 1;
+	va_list dims;
+	va_start(dims,number_accessing_dims);
+	for(int i=0; i < number_accessing_dims; i++){
+		index = va_arg(dims,int) * index;
+	}
+	va_end(dims);
+
+	//Get number of elements to replace
+	int num_elements = 1;
+	for(int i = this->num_dimensions - number_accessing_dims; i < this->num_dimensions;i++){
+		num_elements = num_elements * this->dimensions[i];
+	}
+	// Copy values
+	for(int i =0; i < num_elements; i++){
+		this->values[index + i] = array[i];
+	}
+}
+
+
