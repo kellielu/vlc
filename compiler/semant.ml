@@ -948,7 +948,7 @@ let rec convert_fdecl_list fdecl_list ptx_fdecl_list c_fdecl_list env =
 (* TEMP          | true -> 
               let ptx_fdecl, new_env = convert_to_ptx_fdecl hd env in
               convert_fdecl_list tl List.rev(ptx_fdecl::List.rev(ptx_fdecl_list)) c_fdecl_list new_env *)
-          | _  -> raise Exceptions.NO_STRINGS_ALLOWED_IN_GDECL
+          | _  -> raise Exceptions.C'est_La_Vie
         )
 
 (* Main function for converting ast to sast *)
