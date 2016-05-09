@@ -6,14 +6,8 @@
 	| "string" -> String
     | "bool" -> Boolean
     | "void" -> Void
-    | "ubyte" -> Unsigned_Byte
-    | "byte" -> Byte
-    | "uint" -> Unsigned_Integer
 	| "int" -> Integer
-    | "ulong" -> Unsigned_Long
-    | "long" -> Long
     | "float" -> Float 
-    | "double" -> Double
 	| dtype -> raise (Exceptions.Invalid_data_type dtype)
 
 %}

@@ -1,6 +1,6 @@
 open Ast 
 open Sast
-open Utils 
+(* open Utils *) 
 open Exceptions
 
 (* Maps variable name to variable type and value *)
@@ -175,7 +175,7 @@ let pop_scope env =
           update_env tail env.kernel_function_map env.host_function_map env.is_gpu_env env.hof_function_list
 
 let update_scope updated_scope env = 
-    let env1 = pop_scope env in 
+    let env = pop_scope env in 
     update_env (updated_scope::env.variable_scope_stack) env.kernel_function_map env.host_function_map env.is_gpu_env env.hof_function_list
 
 let update_kernel_fmap f_info env = 
@@ -277,13 +277,11 @@ let rec infer_type expression env=
     | Ast.Cast(vtype,e) -> vtype
     | Ast.Unop(e,unop) -> infer_type e env
     | Ast.Array_Accessor(e1,e_list) -> 
-        (* Check e1 is an array *)
-        let check_array = 
+        (* Check e1 is an array *) 
           (match infer_type e1 env with 
-            | Ast.Array(t,n) -> true
+            | Ast.Array(t,n) -> ()
             | _ -> (raise (Exceptions.Not_an_array_expression))
-          )
-        in
+          );
         (* Check valid access *)
         let rec get_array_type arr dim_list = 
           match dim_list with
@@ -517,7 +515,6 @@ let rec get_constants_info constant_list c_constant_list env =
                 arg_name = a_name;
                 kernel_name = k_name;   
             } in get_constants_info tl (List.rev(constant_info::List.rev(c_constant_list))) env1
-        | _ -> raise Exceptions.Not_a_valid_constant
       )
     
 (* Creates list of sast structs storing information about info arrays from higher order function *)
@@ -610,12 +607,12 @@ let rec convert_to_c_expression e env =
     match e with 
       | Ast.Function_Call(id,e_list) ->
         (* Check that function exists in environment *)
-        let check_exists = (is_function_in_scope (Utils.idtos id) env) in
+         if (is_function_in_scope (Utils.idtos id) env) = false then (raise Exceptions.Function_not_defined);
         (* Check that function arguments match that of function declaration *)
         let f_info = (get_function_info (Utils.idtos id) env) in
         let f_arg_types = List.map (fun x -> snd(x)) f_info.function_args in 
               let check_args expected_arg_types f_args = List.map2 same_types expected_arg_types f_args in
-        let good_args = check_args f_arg_types (get_types e_list [] env) in
+        ignore(check_args f_arg_types (get_types e_list [] env));
         (* Convert *)
         let e_list = List.map (fun x -> fst(convert_to_c_expression x env)) e_list in
         Sast.Function_Call(id,e_list),env
@@ -626,7 +623,7 @@ let rec convert_to_c_expression e env =
       | Ast.Array_Literal(e_list) -> 
           (* Check all elements of the array are the same type *)
           let type_list = List.map (fun x -> infer_type x env) e_list in 
-          let good_type_list = same_types_list type_list in
+          ignore(same_types_list type_list);
           (* Get array dimensions and pass to sast *)
           let arr = Ast.Array(infer_type (List.hd e_list) env ,List.length e_list) in
           let array_dim = get_array_dimensions arr [] in
@@ -669,27 +666,23 @@ let rec convert_to_c_expression e env =
       | Ast.Array_Accessor(e,e_list) ->
         (* Check e is an array *)
           let array_type = infer_type e env in 
-          let is_array = 
-             match array_type with 
-            | Ast.Array(t,n) -> true
-            | _ -> raise Exceptions.Not_an_array_expression
-          in
+          (match array_type with 
+            | Ast.Array(t,n) -> ()
+            | _ -> raise Exceptions.Not_an_array_expression);
           (* Check that e_list can access a*)
-          let integer_access = List.map (fun x -> same_types (infer_type x env) (Ast.Primitive(Ast.Integer))) e_list in
+          ignore(List.map (fun x -> same_types (infer_type x env) (Ast.Primitive(Ast.Integer))) e_list);
           (* Convert *)
           let c_e,env = convert_to_c_expression e env  in
           let c_e_list = List.map (fun x -> fst(convert_to_c_expression x env)) e_list in
           Sast.Array_Accessor(c_e,c_e_list),env
-
       | Ast.Binop(e1,op,e2) -> 
           (* Check that expressions match *)
-          if((same_types (infer_type e1 env) (infer_type e2 env)) = false) then raise (Exceptions.(Type_mismatch("Binop doesn't match")))
+          if((same_types (infer_type e1 env) (infer_type e2 env)) = false) then raise (Exceptions.Type_mismatch "Binop doesn't match")
           else
             (match op with 
               | Ast.And | Ast.Or | Ast.Xor -> 
                 (* Check that type is boolean if using boolean operator *)
-                if(same_types (infer_type e1 env) (Ast.Primitive(Ast.Boolean))) = false then raise (Exceptions.(Type_mismatch("Boolean operator not having a boolean type")))
-                else 
+                ignore(same_types (infer_type e1 env) (Ast.Primitive(Ast.Boolean)));
                   let c_e1,env = convert_to_c_expression e1 env in
                   let c_op,env = convert_to_c_binop op env in
                   let c_e2,env = convert_to_c_expression e2 env in
@@ -705,7 +698,7 @@ let rec convert_to_c_expression e env =
             )
       | Ast.Higher_Order_Function_Call(hof) -> 
        (* Check that function exists in environment *)
-        let check_exists = (is_function_in_scope (Utils.idtos(hof.kernel_function_name)) env) in
+        if (is_function_in_scope (Utils.idtos(hof.kernel_function_name)) env) = false then raise Exceptions.Function_not_defined;
         (* Check that arrays are valid arrays *)
 (*         let input_arrays = List.map (fun e -> infer_type e env) hof.input_arrays in 
         let good_arrays = (List.iter same_types_list input_arrays) in *)
@@ -719,12 +712,11 @@ let rec convert_to_c_expression e env =
         in
         let f_arg_types = List.map get_array_types (get_types hof.input_arrays [] env) in
         let check_args expected_arg_types f_args = List.map2 same_types expected_arg_types f_args in
-        let good_args = check_args f_arg_types expected_arg_types in
+        ignore(check_args f_arg_types expected_arg_types);
         (*Check that constants match those unknown variables in the defg*)
         let retrive_constant_name c = 
           match c with 
             | Ast.Constant(id,e) -> Utils.idtos(id)
-            | _ -> raise Exceptions.Not_a_valid_constant
         in
         let hof_call_constants_names = List.map (retrive_constant_name) hof.constants in
         let hof_constants_names = List.map (fun x -> Utils.idtos(x)) f_info.unknown_variables in 
@@ -734,7 +726,7 @@ let rec convert_to_c_expression e env =
             | hd::tl -> if (List.exists (fun s -> s = hd) hof_call_c) = false then raise Exceptions.Constants_missing_in_defg
               else check_constants hof_call_c tl 
           in
-        let good_constants = check_constants hof_call_constants_names hof_constants_names in
+        ignore(check_constants hof_call_constants_names hof_constants_names);
         match Utils.idtos(hof.hof_type) with 
             | "map" ->
                 (*Add the c map function to the environment*)
@@ -778,9 +770,8 @@ let convert_to_c_variable_statement vstmt env =
             (*Check same types*)
             let vtype = match vdecl with 
               | Ast.Variable_Declaration(v,id) -> v
-              | _ -> raise Exceptions.Not_a_valid_variable_declaration
             in
-            let check_types = same_types (vtype) (infer_type e env) in
+            ignore(same_types (vtype) (infer_type e env));
             (* Convert  - note vdecl also checks if declared *)
             let c_vdecl, env1 = convert_to_c_vdecl vdecl env in
             let c_e, env2 = convert_to_c_expression e env1 in
@@ -789,10 +780,10 @@ let convert_to_c_variable_statement vstmt env =
             (* Check that identifiers are declared *)
             match e1 with 
               | Ast.Identifier_Literal(id) -> 
-                  if (check_already_declared (Utils.idtos(id)) env)= false then (raise Exceptions.(Name_not_found(Utils.idtos(id))))
+                  if (check_already_declared (Utils.idtos(id)) env) = false then raise (Exceptions.Name_not_found (Utils.idtos id))
                   else
                     (* Check same types*)
-                    same_types (get_variable_type (Utils.idtos id) env) (infer_type e2 env);
+                    ignore(same_types (get_variable_type (Utils.idtos id) env) (infer_type e2 env));
                     (*Convert*)
                     let c_e1, env = convert_to_c_expression e1 env in 
                     let c_e2, env = convert_to_c_expression e2 env in
@@ -800,16 +791,14 @@ let convert_to_c_variable_statement vstmt env =
               | Ast.Array_Accessor(e,e_list)->
                     (match e with 
                       | Ast.Identifier_Literal(id) -> 
-                          (if (check_already_declared (Utils.idtos id) env )= false then (raise Exceptions.(Name_not_found(Utils.idtos id)))
+                          if (check_already_declared (Utils.idtos id) env )= false then raise (Exceptions.Name_not_found (Utils.idtos id))
                           else
                             (* Check same types*)
-                            let check_types = 
-                                let arr = get_variable_type (Utils.idtos id) env in same_types (get_array_el_type arr (List.length e_list)) (infer_type e2 env)
-                              in
-                                (*Convert*)
+                              let arr = get_variable_type (Utils.idtos id) env in ignore(same_types (get_array_el_type arr (List.length e_list)) (infer_type e2 env));
+                              (*Convert*)
                               let c_e1, env = convert_to_c_expression e1 env in 
                               let c_e2,env = convert_to_c_expression e2 env in 
-                              Sast.Assignment(c_e1,c_e2),env)
+                              Sast.Assignment(c_e1,c_e2),env
                       | _ -> (raise Exceptions.Cannot_assign_expression)
                     )
               | _ -> raise Exceptions.Cannot_assign_expression
@@ -848,31 +837,29 @@ let rec convert_to_c_statement stmt env =
         Sast.Expression(c_e),env1
     | Ast.If(e,stmt1,stmt2) ->
         (* Check that e is a boolean expression *)
-        let check_bool = same_types (infer_type e env) (Ast.Primitive(Ast.Boolean)) in
+        ignore(same_types (infer_type e env) (Ast.Primitive(Ast.Boolean)));
         (* Convert*)
         let c_e, env1 = convert_to_c_expression e env in 
         let c_stmt1,env2 = convert_to_c_statement stmt1 env1 in 
         let c_stmt2,env3 = convert_to_c_statement stmt2 env2 in
         Sast.If(c_e,c_stmt1,c_stmt2),env3
     | Ast.While(e,stmt) ->
-        let check_bool = same_types (infer_type e env) (Ast.Primitive(Ast.Boolean)) in
+        ignore(same_types (infer_type e env) (Ast.Primitive(Ast.Boolean)));
         (* Check that e is a boolean expression *)
         let c_e, env1 = convert_to_c_expression e env in 
         let c_stmt,env2 = convert_to_c_statement stmt env1 in
         Sast.While(c_e,c_stmt),env2
     | Ast.For(stmt1,e,stmt2,stmt3) ->
         (* Check that stmt1 is an initialization expression *)
-        let valid_stmt1 = 
-          match stmt1 with
+          (match stmt1 with
             | Ast.Variable_Statement(vstmt) ->
               (match vstmt with 
-                | Ast.Assignment(e1,e2) -> true
-                | Ast.Initialization(vdecl,e) -> true
+                | Ast.Assignment(e1,e2) -> ()
+                | Ast.Initialization(vdecl,e) -> ()
                 | _ -> raise Exceptions.Invalid_statement_in_for)
-            | _ -> raise Exceptions.Invalid_statement_in_for
-        in
+            | _ -> raise Exceptions.Invalid_statement_in_for);
         (* Check that e is a boolean expression *)
-        let check_bool = (same_types (infer_type e env) (Ast.Primitive(Ast.Boolean))) in
+        ignore(same_types (infer_type e env) (Ast.Primitive(Ast.Boolean)));
         (* Convert *)
         let env = push_scope env in
         let c_stmt1,  env1 = convert_to_c_statement   stmt1 env   in
@@ -920,7 +907,6 @@ let convert_to_c_fdecl fdecl env =
       let vdecl_to_param vdecl = 
         match vdecl with 
           | Ast.Variable_Declaration(vtype,id) -> id,vtype
-          | _ -> raise Exceptions.Not_a_valid_variable_declaration
       in
       (* Add to function map*)
       (let host_func_info = {

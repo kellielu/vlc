@@ -1,5 +1,4 @@
 open Sast
-open Exceptions 
 (* For sprintf *)
 open Printf
 (*------------------------------------------------------------ KERNEL CODE GENERATION ------------------------------------------------------------*)
@@ -79,8 +78,8 @@ let generate_ptx_unary_operator operator =
   let op = match operator with
     | Ptx_Not -> "not"
     | Ptx_Negate -> "neg"
-    | Ptx_Plus_Plus -> Exceptions.PTXCREMENT_GENERATED_ERROR
-    | Ptx_Minus_Minus -> -> Exceptions.PTXCREMENT_GENERATED_ERROR
+    | Ptx_Plus_Plus -> raise Exceptions.PTXCREMENT_GENERATED_ERROR
+    | Ptx_Minus_Minus -> raise Exceptions.PTXCREMENT_GENERATED_ERROR
   in
   sprintf "%s" op
 
@@ -212,7 +211,7 @@ let generate_ptx_function f =
     ".visible " ^ generate_ptx_function_type(f.ptx_fdecl_type) ^ (generate_id(f.ptx_fdecl_name)) ^ "(" 
     ^ (generate_list generate_ptx_pdecl "," f.ptx_fdecl_params) ^ ")\n" ^ 
     "{" ^ 
-    (generate_list generate_ptx_vdecl "\n" f.register_decls ) ^ "\n" ^ 
+(*     (generate_list generate_ptx_vdecl "\n" f.register_decls ) ^ "\n" ^  *)
     (generate_list generate_ptx_statement "\n" f.ptx_fdecl_body) ^ 
     "}"
   in
@@ -223,20 +222,20 @@ let generate_ptx_function f =
   .address_size 64\n\
   %s" ptx_function_body 
   in 
-  sprintf "%s" ptx_function_body
+  sprintf "%s" ptx_function_string
 
 (* Generates global ptx functions *)
 let generate_ptx_hof_function hof = 
-  match hof.higher_order_function_type with 
+  match Utils.idtos(hof.higher_order_function_type) with 
     | "map" -> 
-    let ptx_function_string = ".visible .entry " ^ hof.higher_order_function_name ^ " ( " ^ 
+    let ptx_function_string = ".visible .entry " ^ Utils.idtos(hof.higher_order_function_name)^ " ( " ^ 
     ") "
     in sprintf "%s" ptx_function_string
 (*     | "reduce" -> *)
-
+    | _ -> ""
 (* Main function for generating all ptx files*)
 let generate_ptx_function_files program = 
-  let ptx_hof_function_list = Utils.quad_trd(program) in
+  (let ptx_hof_function_list = Utils.quad_trd(program) in
   (* Generates global ptx functions*)
   let rec generate_ptx_hof_files ptx_hof_func_list = 
     match ptx_hof_func_list with 
@@ -245,9 +244,9 @@ let generate_ptx_function_files program =
         write_ptx (Utils.idtos(hd.higher_order_function_name)) (generate_ptx_hof_function hd);
         generate_ptx_hof_files tl
   in
-  generate_ptx_hof_files ptx_hof_function_list
+  generate_ptx_hof_files ptx_hof_function_list);
   (* Generates device ptx functions*)
-  let ptx_function_list = Utils.quad_snd(program) in
+  let ptx_function_list = Utils.quad_snd program in
   let rec generate_ptx_files ptx_func_list =
   	match ptx_func_list with
   		| [] -> ()
