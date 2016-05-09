@@ -37,27 +37,31 @@ using namespace std;
 */
 
 // VLC Array class
-template <class T,int n>
+template <class T>
 class VLC_Array {
 	private:
-		int length; // Size of current array
+		int num_values; //Tells us how many values are in the array in total. Ex. would be 4 if [2][2] array
 		T*  values; // Pointer to values in array
-
-		int ndimensions; // Integer that tells us how many dimensions the array contains
-		int *dimensions; // Integer array of the dimensions of the VLC_Array
 		
+		int num_dimensions; // Integer that tells us how many dimensions the array contains
+		int *dimensions; // Integer array of the dimensions of the VLC_Array
 	public:
 		// Constructors and Destructors
-		VLC_Array(); // For declarations like int a[5]
-		VLC_Array(...); // For initializations like int a[5] = {1,2,3,4,5}
-		VLC_Array(T* values);
-		VLC_Array(const VLC_Array<T> &vlcarray); // For assignments like int a[1] = {5}, int b[1]={7},  a=b
+		VLC_Array(int num_dimensions,...); 			// For declarations and initializations like int a[5] = {1,2,3,4,5}
+		VLC_Array(const VLC_Array<T> &vlcarray); 	// For assignments like int a[1] = {5}, int b[1]={7},  a=b
 		~VLC_Array();
 		
+		/* Class Accessors and Getters */
+		T* 	 get_values(); // Returns the pointer to VLC's internal array
+		int* get_dimensions(); // Returns the pointer to VLC's dimensions
+		int  size(); // Returns length of first dimension
+		int  total_elements(); // Returns total elements in the array 
+
+		/* Element Accessors and Getters */
 		T operator[](int i); // Accesses ith element of the array
-		void assign(int i,T); // Assigns ith element of the array with value T
-		T* get_array_pointer(); // Returns the pointer to VLC's internal array
-		int size();
+		void assign(T,int number_accessing_dims,...); // Assigns ith element of the array with value T
+		
+
 
 		// // Assignment
 		// VLC_Array& operator=(const VLC_Array& vlcarray);
@@ -78,41 +82,44 @@ class VLC_Array {
 };
 
 /*---------------------------------- Regular constructors ----------------------------------*/
-// Declarations
-template <class T,int n>
-VLC_Array<T, n>::VLC_Array(){ this.length = n; this.values = malloc(sizeof(T) * n); }
+// Declarations, Assignments by value
+template <class T>
+VLC_Array<T>::VLC_Array(int num_values, int num_dimensions,...){ 
+	/* Assign the dimensions and values */
+	this.num_dimensions = num_dimensions;
+	this.num_values = num_values;
 
-// Assignments direct
-template <class T,int n>
-VLC_Array<T, n>::VLC_Array(...){
+	this.dimensions = malloc(sizeof(int) * num_dimensions);
+	this.values = malloc(sizeof(T) * num_values);
 
-	va_list array_elements;// Retrieve arguments
-	va_start(array_elements,n);
-	T* values = malloc(sizeof(T)* n);// Set values to the what is given
-	for(int i = 0; i < n; i++){
-		values[i] = va_arg(array_elements,T);
-	}
-	va_end(array_elements);
-	this.length = n;// Set private values
-	this.values = values;
+	/* Now access the values that are passed in */
+	va_list args;
+	va_start(args,num_dimensions + num_values);
+	for(int i = 0; i < num_dimensions)	{ 	this.dimensions[i] = va_arg(args,int); 	}
+	for(int j = 0; j < num_values; j++)	{	this.values[j] = va_arg(args,T);		}
+	va_end(args);
 }
 
 // Assignments to other arrays
-template <class T,int n>
-VLC_Array<T, n>::VLC_Array(const VLC_Array<T> &vlcarray){
-	this.length = vlcarray.length;
-	this.values = vlcarray.values;
+template <class T>
+VLC_Array<T>::VLC_Array(const VLC_Array<T> &vlcarray){
+	/* For now, make a deep copy every time. Can optimize later */
+	this.num_values = vlcarray.num_values;
+	this.num_dimensions = vlcarray.num_dimensions;
+
+	this.values = malloc(sizeof(T) * this.num_values);
+	this.dimensions = malloc(sizeof(int) * this.num_dimensions);
+
+	/* Now access the values that are passed in */
+	for(int j = 0; j < this.num_values; j++){ 		this.values[j] 		= vlcarray.get_values()[j]; 			}
+	for(int i = 0; i < num_dimensions;  i++){ 		this.dimensions[i] 	= vlcarray.get_dimensions()[i]; 		}
 }
 
-template <class T,int n>
-VLC_Array<T,n>::VLC_Array(T*values){
-
-	this.values = values;
-}
 // Destructor
-template <class T,int n>
-VLC_Array<T, n>::~VLC_Array(){
+template <class T>
+VLC_Array<T>::~VLC_Array(){
 	free(this.values);
+	free(this.dimensions);
 }
 
 /*---------------------------------- Accessing Functions ----------------------------------*/
