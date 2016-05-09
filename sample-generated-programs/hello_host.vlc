@@ -1,10 +1,6 @@
+string helloworld
+
 int def vlc():
-	helloworld = "Hello world!\n"
-	int test = 4
-	int x = 5
-	if(test == 4):
-		if(x == 5):
-			print(helloworld)
-		else:
-			print("yoohoo\n")
+	helloworld = "Hello world!"
+	print(helloworld)
 	return 0

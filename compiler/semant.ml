@@ -204,7 +204,7 @@ let is_variable_in_scope id env =
 let get_variable_type id env = 
   let rec check_scopes scope_stack = 
     match scope_stack with 
-      | [] -> raise (Exceptions.Variable_not_found_in_scope id)
+      | [] -> raise (Exceptions.Variable_not_found_in_scope  ("get_vtype" ^ id))
       | scope::larger_scopes -> 
           if Variable_Map.mem id scope then 
             (Variable_Map.find id scope).vtype
@@ -265,7 +265,7 @@ let rec infer_type expression env=
        let f expression = infer_type expression env in
       Ast.Array(match_type (List.map f expr_list),(List.length expr_list))
     | Ast.Identifier_Literal(id) -> 
-        if(check_already_declared (Utils.idtos id) env) = true then raise (Exceptions.Variable_not_found_in_scope (Utils.idtos id)) 
+        if(check_already_declared (Utils.idtos id) env) = false then raise (Exceptions.Variable_not_found_in_scope ("infer" ^ Utils.idtos id)) 
         else (get_variable_type (Utils.idtos id) env)
     | Ast.Binop(e1,op,e2) -> 
         (match op with 
@@ -654,7 +654,7 @@ let rec convert_to_c_expression e env =
           let c_e_list = List.map (fun x-> fst(convert_to_c_expression x env)) e_list in
           Sast.Array_Literal(c_e_list,array_dim),env
       | Ast.Identifier_Literal(id) -> 
-          if(check_already_declared (Utils.idtos id) env) = true then raise (Exceptions.Variable_not_found_in_scope (Utils.idtos id))
+          if(check_already_declared (Utils.idtos id) env) = false then raise (Exceptions.Variable_not_found_in_scope ("expr" ^ Utils.idtos id))
           else Sast.Identifier_Literal(id),env
       | Ast.Cast(vtype, e) -> 
           let c_vtype,env = convert_to_c_variable_type vtype env in
