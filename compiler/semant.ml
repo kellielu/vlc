@@ -78,7 +78,7 @@ type function_info = {
   function_name                   : Ast.identifier;
   (* Function return type and arguments *)
   function_return_type            : Ast.variable_type;
-  function_args                   : (Ast.identifier * Ast.variable_type) list;
+  function_args                   : (Ast.variable_type) list;
   (* Functions that are called within this function - needs to be specifically noted for gpu and ptx functions *)
   dependent_functions             : Ast.identifier list;
   (* Unknown ,possibly constant variables -> for kernel_device and kernel_global *)
@@ -106,7 +106,7 @@ type environment = {
 
 (*-----------------------------------Helper functions to check variables and functions in the environment -----------------------------------*)
 
-let builtin_functions = ["print";"map";"reduce"]
+let builtin_functions = ["print";]
 
 
 (* Checks if function is a builtin function *)
@@ -136,9 +136,18 @@ let init_host_function_map =
   in
   (* For now, map/reduce is assigned a return type of Void. 
   Map is included in the function map really so that user can't declare another function with the name map *)
-  let create_built_in_function = (create_function_info Host (Ast.Primitive(Ast.Void)) [] [] []) in 
-  let builtin_function_info_structs = List.map create_built_in_function builtin_functions in
-  add_functions fmap builtin_function_info_structs
+  let print_function = {
+      function_type = Host;
+      function_name = Ast.Identifier("print");
+      function_return_type = Ast.Primitive(Ast.Void);
+      function_args = [Ast.Primitive(Ast.String)];
+      dependent_functions = [];
+      unknown_variables = [];
+  }
+  in
+ (*  let create_built_in_function = (create_function_info Host (Ast.Primitive(Ast.Void)) [] [] []) in 
+  let builtin_function_info_structs = List.map create_built_in_function builtin_functions in *)
+  add_functions fmap [print_function]
 
 
 (* Creates a new environment *)
@@ -633,8 +642,11 @@ let rec convert_to_c_expression e env =
          if (is_function_in_scope (Utils.idtos id) env) = false then (raise Exceptions.Function_not_defined);
         (* Check that function arguments match that of function declaration *)
         let f_info = (get_function_info (Utils.idtos id) env) in
-        let f_arg_types = List.map (fun x -> snd(x)) f_info.function_args in 
-              let check_args expected_arg_types f_args = List.map2 same_types expected_arg_types f_args in
+        let f_arg_types = f_info.function_args in 
+              let check_args expected_arg_types f_args = 
+              print_endline (string_of_int (List.length expected_arg_types));
+              print_endline (string_of_int (List.length f_args)); 
+              List.map2 same_types expected_arg_types f_args in
         ignore(check_args f_arg_types (get_types e_list [] env));
         (* Convert *)
         let e_list = List.map (fun x -> fst(convert_to_c_expression x env)) e_list in
@@ -727,14 +739,17 @@ let rec convert_to_c_expression e env =
         let good_arrays = (List.iter same_types_list input_arrays) in *)
         (* Check that function arguments match that of function declaration *)
         let f_info = (get_function_info (Utils.idtos hof.kernel_function_name) env) in
-        let expected_arg_types = List.map (fun x -> snd(x)) f_info.function_args in 
+        let expected_arg_types = f_info.function_args in 
         let get_array_types arr = 
             match arr with 
                 | Ast.Array(t,n) -> t
                 | _ -> raise Exceptions.Invalid_input_argument_to_map
         in
         let f_arg_types = List.map get_array_types (get_types hof.input_arrays [] env) in
-        let check_args expected_arg_types f_args = List.map2 same_types expected_arg_types f_args in
+        let check_args expected_arg_types f_args =
+        print_endline (string_of_int (List.length expected_arg_types));
+        print_endline (string_of_int (List.length f_args)); 
+        List.map2 same_types expected_arg_types f_args in
         ignore(check_args f_arg_types expected_arg_types);
         (*Check that constants match those unknown variables in the defg*)
         let retrive_constant_name c = 
@@ -958,7 +973,7 @@ let convert_to_c_fdecl fdecl env =
     else
       let vdecl_to_param vdecl = 
         match vdecl with 
-          | Ast.Variable_Declaration(vtype,id) -> id,vtype
+          | Ast.Variable_Declaration(vtype,id) -> vtype
       in
       (* Add to function map*)
       (let host_func_info = {
