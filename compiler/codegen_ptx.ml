@@ -79,8 +79,8 @@ let generate_ptx_unary_operator operator =
   let op = match operator with
     | Ptx_Not -> "not"
     | Ptx_Negate -> "neg"
-    | Ptx_Plus_Plus -> Exceptions.PTXCREMENT_GENERATED_ERROR
-    | Ptx_Minus_Minus -> -> Exceptions.PTXCREMENT_GENERATED_ERROR
+    | Ptx_Plus_Plus -> raise Exceptions.PTXCREMENT_GENERATED_ERROR
+    | Ptx_Minus_Minus -> raise Exceptions.PTXCREMENT_GENERATED_ERROR
   in
   sprintf "%s" op
 
@@ -227,16 +227,17 @@ let generate_ptx_function f =
 
 (* Generates global ptx functions *)
 let generate_ptx_hof_function hof = 
-  match hof.higher_order_function_type with 
+  match Utils.idtos(hof.higher_order_function_type) with 
     | "map" -> 
-    let ptx_function_string = ".visible .entry " ^ hof.higher_order_function_name ^ " ( " ^ 
+    let ptx_function_string = ".visible .entry " ^ Utils.idtos(hof.higher_order_function_name) ^ " ( " ^ 
     ") "
     in sprintf "%s" ptx_function_string
 (*     | "reduce" -> *)
 
 (* Main function for generating all ptx files*)
 let generate_ptx_function_files program = 
-  let ptx_hof_function_list = Utils.quad_trd(program) in
+  let ptx_hof_function_list = Utils.quad_trd(program) 
+  in
   (* Generates global ptx functions*)
   let rec generate_ptx_hof_files ptx_hof_func_list = 
     match ptx_hof_func_list with 
@@ -246,14 +247,16 @@ let generate_ptx_function_files program =
         generate_ptx_hof_files tl
   in
   generate_ptx_hof_files ptx_hof_function_list
-  (* Generates device ptx functions*)
-  let ptx_function_list = Utils.quad_snd(program) in
-  let rec generate_ptx_files ptx_func_list =
-  	match ptx_func_list with
-  		| [] -> ()
-  		| hd::tl ->
-  			write_ptx (Utils.idtos(hd.ptx_fdecl_name)) (generate_ptx_function hd);
-  			generate_ptx_files tl
-  in generate_ptx_files ptx_function_list
 
+(* (* Generates device ptx functions*)
+let ptx_function_list = Utils.quad_snd(program) 
+in
+let rec generate_ptx_files ptx_func_list =
+	match ptx_func_list with
+		| [] -> ()
+		| hd::tl ->
+			write_ptx (Utils.idtos(hd.ptx_fdecl_name)) (generate_ptx_function hd);
+			generate_ptx_files tl
+in generate_ptx_files ptx_function_list
+ *)
 

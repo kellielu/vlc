@@ -107,7 +107,7 @@ type ptx_fdecl = {
 	ptx_fdecl_params 							: ptx_pdecl list;
 
 	(* Declares the virtual registers that are needed for the function *)
-	(* register_decls 								: ptx_vdecl list; *)
+	register_decls 								: ptx_vdecl list;
 	(* Statements within the function *)
 	ptx_fdecl_body 								: ptx_statement list;
 }

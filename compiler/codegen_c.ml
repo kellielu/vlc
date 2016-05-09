@@ -75,7 +75,7 @@ let generate_id id  =
   sprintf "%s" id_string
 
 let generate_function_id id = 
-let id_string = Utils.idtos(id)
+let id_string = Utils.idtos(id) in
   match id_string with
     | "print" -> sprintf "printf"
     | _ as identifier -> sprintf identifier
