@@ -11,6 +11,7 @@ exception Parsing_error of string (* Unused atm *)
 (*-------------------------------------Processor-------------------------------------*)
 exception Missing_eof
 (*-------------------------------------Utils-------------------------------------*)
+exception Not_implemented_yet
 (*-------------------------------------Semantic Analyzer-------------------------------------*)
 exception Cannot_infer_expression_type
 exception Exception of string

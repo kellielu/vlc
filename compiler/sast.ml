@@ -69,6 +69,8 @@ type ptx_expression =
 	| Ptx_vdecl of ptx_vdecl
 	| Ptx_Move of ptx_data_type * ptx_variable * ptx_variable
 	| Ptx_Branch of Ast.identifier
+	| Ptx_Call of ptx_variable * Ast.identifier * ptx_variable list
+	| Ptx_Empty_Call of Ast.identifier * ptx_variable list
 	| Predicated_statement of ptx_variable * ptx_expression
 	| Ptx_Convert of ptx_data_type * ptx_data_type * ptx_variable * ptx_variable
 	| Ptx_Return
@@ -107,7 +109,7 @@ type ptx_fdecl = {
 	ptx_fdecl_params 							: ptx_pdecl list;
 
 	(* Declares the virtual registers that are needed for the function *)
-	(* register_decls 								: ptx_vdecl list; *)
+	register_decls 								: ptx_vdecl list;
 	(* Statements within the function *)
 	ptx_fdecl_body 								: ptx_statement list;
 }

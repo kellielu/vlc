@@ -167,6 +167,10 @@ let rec generate_ptx_expression expression =
     | Ptx_Convert (d1, d2, v1, v2) -> "cvt" ^ generate_ptx_data_type(d1) ^
       generate_ptx_data_type(d2) ^ " " ^ generate_ptx_variable(v1) ^ ", " ^
       generate_ptx_variable(v2) ^ ";"
+    | Ptx_Call(v1, id, vlist) -> "call " ^ generate_ptx_variable(v1) ^ " " ^
+      generate_id(id) ^ " " ^ (generate_list generate_ptx_variable " " vlist) ^ ";"
+    | Ptx_Empty_Call(id, vlist) -> "call " ^ generate_id(id) 
+      ^ (generate_list generate_ptx_variable " " vlist) ^ ";"
     | Ptx_Return -> "ret;"
   in
   sprintf "%s" e

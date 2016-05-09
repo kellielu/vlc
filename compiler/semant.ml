@@ -484,6 +484,28 @@ let convert_to_c_vdecl vdecl env  =
             let c_vtype, env2 = convert_to_c_variable_type vtype env1 in
             Sast.Variable_Declaration(c_vtype,id),env2
 
+let convert_to_ptx_vdecl vdecl env =
+  match vdecl with
+    | Ast.Variable_Declaration(vtype,id) ->
+        if(check_already_declared (Utils.idtos(id)) env) = true then raise Exceptions.Variable_already_declared
+        else
+          let regNum = match vtype with
+            | Ast.Primitive(Ast.Integer) -> incr signed_int_counter ; !signed_int_counter
+            | Ast.Primitive(Ast.Float) -> incr signed_float_counter ; !signed_float_counter
+            | Ast.Primitive(Ast.Boolean) -> incr predicate_counter ; !predicate_counter
+            | Ast.Primitive(Ast.String) -> raise Exceptions.NO_STRINGS_ALLOWED_IN_GDECL
+            | Ast.Primitive(Ast.Void) -> raise Exceptions.Void_type_in_gdecl
+            | Ast.Array(vtype2, i) -> raise Exceptions.Not_implemented_yet
+          in
+          let v_info = {
+            vtype = vtype;
+            register_number = regNum;
+          }
+          in
+          let new_vmap = Variable_Map.add (Utils.idtos id) v_info (List.hd env.variable_scope_stack) in
+          update_scope new_vmap env
+
+
 let same_types_list type_list = 
   let main_type = (List.hd type_list) in 
     let rec check_each_type main_type type_list =
@@ -738,14 +760,29 @@ let rec convert_to_c_expression e env =
                 in Sast.FunctionCall(c_ma) *)
             | _ -> raise Exceptions.Unknown_higher_order_function_call
 
-(* TO IMPLEMENT let rec convert_to_ptx_expression e = 
+(* TO IMPLEMENT *)
+(* 
+let rec convert_to_ptx_expression e = 
   match e with 
+
+    | Ast.Function_Call(id, exp) ->
+
+    | Higher_Order_Function_Call of higher_order_function_call
+    | String_Literal of string
+    | Integer_Literal of int
+    | Boolean_Literal of bool
+    | Floating_Point_Literal of float
+    | Array_Literal of expression list
+    | Identifier_Literal of identifier 
+    | Cast of variable_type * expression
     | Ast.Binop(e1,o,e2) ->
-      convert_expression_to_ptx(e1) ^ 
-      convert_expression_To_ptx(e2) ^ 
-      convert_operator(o)
-    | Integer_Literal -> Sast.Constant_Int(int)
-    |  *)
+      convert_to_ptx_expression(e1) ^ 
+      convert_to_ptx_expression(e2) ^ 
+      convert_to_ptx_binop(o)
+    | Unop of expression * unary_operator
+    | Array_Accessor of expression * expression list (* Array, indexes *)
+    | Ternary of expression * expression * expression *)
+
 let rec get_array_el_type arr num_dim =
   match num_dim with 
     | 1 -> 
@@ -803,10 +840,23 @@ let convert_to_c_variable_statement vstmt env =
                     )
               | _ -> raise Exceptions.Cannot_assign_expression
 
-(* TO IMPLEMENT
+(* TO IMPLEMENT *)
 let convert_to_ptx_variable_statement vstmt env =
     match vstmt with
-        | Ast.Declaration(vdecl) -> *)
+      | Ast.Declaration(vdecl) -> 
+          convert_to_ptx_vdecl(vdecl)
+      | Ast.Initialization(vdecl, e) -> raise Exceptions.Not_implemented_yet
+      | Ast.Assignment(e1, e2) -> raise Exceptions.Not_implemented_yet
+(*       | Ast.Initialization(vdecl, expression) ->
+        let 
+          | Ast.Primitive(Integer) -> incr signed_int_counter ; !signed_int_counter
+          | Ast.Primitive(Float) -> incr signed_float_counter ; !signed_float_counter
+          | Ast.Primitive(Boolean) -> incr predicate_counter ; !predicate_counter
+          | Ast.Primitive(String) -> raise Exceptions.NO_STRINGS_ALLOWED_IN_GDECL
+          | Ast.Primitive(Void) -> raise Exceptions.Void_type_in_gdecl
+          | Ast.Array(vtype2, i) -> raise Exceptions.Not_implemented_yet
+
+      | Assignment of expression * expression *)
             
         
 (* Converts global vstmt list into c vstmt list *)
