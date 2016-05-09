@@ -245,7 +245,9 @@ let generate_ptx_function_files program =
     match ptx_hof_func_list with 
       | [] -> ()
       | hd::tl -> 
-        write_ptx (Utils.idtos(hd.higher_order_function_name)) (generate_ptx_hof_function hd);
+        let ptx_hof_function_string = generate_ptx_hof_function hd in
+        write_ptx (Utils.idtos(hd.higher_order_function_name)) ptx_hof_function_string;
+        print_endline ptx_hof_function_string;
         generate_ptx_hof_files tl
   in
   generate_ptx_hof_files ptx_hof_function_list);
@@ -257,7 +259,7 @@ let generate_ptx_function_files program =
   		| hd::tl ->
         let ptx_function_string = (generate_ptx_function hd) in
   			write_ptx (Utils.idtos(hd.ptx_fdecl_name)) ptx_function_string;
-        sprintf "%s" ptx_function_string;
+        print_endline ptx_function_string;
   			generate_ptx_files tl
   in generate_ptx_files ptx_function_list
 

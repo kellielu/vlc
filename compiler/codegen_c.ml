@@ -65,7 +65,7 @@ let rec generate_variable_type variable_type  =
     | Primitive(p) -> generate_data_type p
     | Array(t,n) -> 
       (match t with
-        | Array(t1,n1) -> generate_variable_type t1 
+        | Array(t1,n1) -> "VLC_Array<" ^ generate_variable_type t1 ^ ">"
         | Primitive(p) -> generate_data_type p)
   in sprintf "%s" vtype
 
@@ -95,8 +95,8 @@ let id_string = Utils.idtos(id) in
     sprintf "checkCudaErrors(cuMemAlloc(&" ^ Utils.idtos(ktype.kernel_name) ^ ", sizeof(" ^ (generate_variable_type ktype.variable_type) ^ ")*" ^ string_of_int arr_length ^ "));"
 
  let generate_mem_alloc_host_to_device fcall = 
-    let rec create_list mylist length element = if length > 0 then create_list (element::mylist) (length-1) element else mylist in
-    let mem_alloc_string = 
+    (* let rec create_list mylist length element = if length > 0 then create_list (element::mylist) (length-1) element else mylist in
+     *)let mem_alloc_string = 
     String.concat "\n" (List.map generate_mem_alloc_statement_host_to_device fcall.input_arrays_info) in
     sprintf "%s" mem_alloc_string
 
@@ -117,8 +117,8 @@ let id_string = Utils.idtos(id) in
     sprintf "%s" mem_cpy_string
 
  let generate_mem_cpy_host_to_device fcall = 
-    let rec create_list mylist length element = if length > 0 then create_list (element::mylist) (length-1) element else mylist in
-    let mem_cpy_string = String.concat "\n" (List.map generate_mem_cpy_statement_host_to_device fcall.input_arrays_info ) in
+    (* let rec create_list mylist length element = if length > 0 then create_list (element::mylist) (length-1) element else mylist in
+     *)let mem_cpy_string = String.concat "\n" (List.map generate_mem_cpy_statement_host_to_device fcall.input_arrays_info ) in
     sprintf "%s" mem_cpy_string
 
 (* Generates CUDA statement for kernel params *)
@@ -177,7 +177,7 @@ let rec generate_expression expression  =
         string_of_bool b
     | Sast.Floating_Point_Literal(f) ->
         string_of_float f
-    | Sast.Array_Literal(e_list,int_list) -> "VLC_Array(int" ^ string_of_int (List.length int_list) ^ "," ^ (generate_list string_of_int "," int_list) ^ "," ^ (generate_list generate_expression "," e_list) ^ ")" 
+    | Sast.Array_Literal(e_list,int_list) -> "VLC_Array(" ^ string_of_int (List.length e_list) ^ "," ^ (generate_list string_of_int "," int_list) ^ "," ^ (generate_list generate_expression "," e_list) ^ ")" 
     | Sast.Identifier_Literal(id) -> 
         (generate_id id)
     | Sast.Cast(vtype,e) ->
@@ -247,7 +247,7 @@ let generate_higher_order_function_decl hof =
                       "checkCudaErrors(cuCtxCreate(&context, 0, device));\n" ^ 
                       "std::ifstream t(\"" ^ Utils.idtos hof.applied_kernel_function ^ ".ptx\");\n" ^ 
                       "if (!t.is_open()) {\n" ^
-                              " std::cerr << \"" ^ Utils.idtos hof.applied_kernel_function ^ ".ptx not found\n\";\n" ^
+                              " std::cerr << \"" ^ Utils.idtos hof.applied_kernel_function ^ ".ptx not found\";\n" ^
                               "return 1;\n" ^
                       "}\n" ^
                       "std::string " ^ Utils.idtos hof.applied_kernel_function ^ "_str" ^ "((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());\n" ^ 
@@ -260,8 +260,8 @@ let generate_higher_order_function_decl hof =
                       generate_list generate_device_ptr "\n" hof.higher_order_function_constants ^ "\n" ^  
                       generate_list generate_device_ptr "\n" hof.input_arrays_info ^ "\n" ^ 
                       generate_device_ptr hof.return_array_info ^ 
-                      generate_list generate_mem_alloc_statement_host_to_device "" hof.higher_order_function_constants ^
-                      generate_list generate_mem_cpy_statement_host_to_device "" hof.higher_order_function_constants ^
+                      generate_list generate_mem_alloc_statement_host_to_device "" hof.higher_order_function_constants ^ "\n" ^
+                      generate_list generate_mem_cpy_statement_host_to_device "" hof.higher_order_function_constants ^ "\n" ^
                       (* " va_list constants;\n" 
                       " va_start(constants,num_constants)\n" ^
                       "for(int i = 0; i < num_constants; i++){\n" ^ 
@@ -292,7 +292,7 @@ let generate_higher_order_function_decl hof =
                       "checkCudaErrors(cuCtxDestroy(context));\n" ^  
                   "}\n" 
     | "reduce" -> raise Exceptions.Unknown_higher_order_function_call
-   (* | _ -> raise Exceptions.Unknown_higher_order_function_call *)
+    | _ -> raise Exceptions.Unknown_higher_order_function_call
    in sprintf "%s" higher_order_function_decl_string
 
 
@@ -325,7 +325,7 @@ let rec generate_statement statement  =
     | Sast.While(e,stmt) -> "while(" ^ (generate_expression e) ^ "){\n" ^ (generate_statement stmt) ^ "}\n"
     | Sast.For(stmt1,e,stmt2,stmt3) -> "for(" ^ (generate_statement stmt1) ^ (generate_expression e) ^ ";" ^ (generate_statement stmt2) ^ "){\n" ^ (generate_statement stmt3) ^ "}\n"
     | Sast.Return(e) ->
-        "return" ^ (generate_expression e) ^ ";\n"
+        "return " ^ (generate_expression e) ^ ";\n"
     | Sast.Return_Void ->  
         "return;\n"
     | Sast.Continue ->
@@ -363,7 +363,7 @@ let generate_cuda_file filename program =
   #include \"cuda.h\"\n\
   #include <iostream>\n\
   #include <vlc>\n\
-  #include <stdargs.h>
+  #include <stdargs.h>\n\
   CUdevice    device;\n\
   CUmodule    cudaModule;\n\
   CUcontext   context;\n\
@@ -371,7 +371,7 @@ let generate_cuda_file filename program =
   %s" cuda_program_body ^
   "int main(void) { return vlc(); }" in
   write_cuda filename cuda_program_string;
-  sprintf "%s" cuda_program_string
+  print_endline cuda_program_string
 
 (* Generate program *)
 let generate_program cuda_filename program = 

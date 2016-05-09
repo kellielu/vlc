@@ -19,7 +19,7 @@ exception Already_declared
 exception Name_not_found of string
 exception Invalid_environment
 exception Variable_not_found_in_scope of string
-exception Function_not_defined
+exception Function_not_defined of string
 exception Cannot_pop_empty_variable_scope_stack
 exception Variable_already_declared
 exception Not_an_array_expression
@@ -41,9 +41,11 @@ exception Empty_array_access
 exception Invalid_array_expression
 exception Array_elements_not_all_same_type
 exception Not_a_valid_variable_declaration
-exception String_not_accepted_by_operator
 exception Conditional_must_be_a_boolean
 exception Invalid_accessor_value
+exception Higher_order_function_call_only_takes_defg_functions
+exception Cannot_perform_operation_on_string of string 
+exception Cannot_perform_operation_on_array of string
 (*-------------------------------------Codegen C-------------------------------------*)
 exception Unknown_variable_type
 exception Unknown_operator

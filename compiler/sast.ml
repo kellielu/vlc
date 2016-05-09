@@ -83,6 +83,7 @@ type ptx_subroutine = {
 type ptx_statement = 
     | Ptx_expression of ptx_expression
     | Ptx_subroutine of ptx_subroutine
+    | Ptx_statement_block of ptx_statement list
 
 type ptx_function_type = 
 	| Global_func 
