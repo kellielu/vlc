@@ -362,14 +362,16 @@ let generate_cuda_file filename program =
   #include <stdlib.h>\n\
   #include \"cuda.h\"\n\
   #include <iostream>\n\
-  #include <vlc.hpp>\n\
+  #include <vlc>\n\
   #include <stdargs.h>
   CUdevice    device;\n\
   CUmodule    cudaModule;\n\
   CUcontext   context;\n\
   CUfunction  function;\n\
-  %s" cuda_program_body in
-  write_cuda filename cuda_program_string
+  %s" cuda_program_body ^
+  "int main(void) { return vlc(); }" in
+  write_cuda filename cuda_program_string;
+  sprintf "%s" cuda_program_string
 
 (* Generate program *)
 let generate_program cuda_filename program = 

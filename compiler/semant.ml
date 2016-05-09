@@ -480,8 +480,6 @@ let rec convert_to_c_variable_type vtype env =
 let convert_to_c_vdecl vdecl env  = 
     match vdecl with 
       | Ast.Variable_Declaration(vtype,id) ->
-          print_endline "vdecl";
-          print_endline (Utils.idtos id);
           if(check_already_declared (Utils.idtos(id)) env) = true then raise Exceptions.Variable_already_declared
           else
             let v_info = {
@@ -643,9 +641,7 @@ let rec convert_to_c_expression e env =
         (* Check that function arguments match that of function declaration *)
         let f_info = (get_function_info (Utils.idtos id) env) in
         let f_arg_types = f_info.function_args in 
-              let check_args expected_arg_types f_args = 
-              print_endline (string_of_int (List.length expected_arg_types));
-              print_endline (string_of_int (List.length f_args)); 
+              let check_args expected_arg_types f_args =  
               List.map2 same_types expected_arg_types f_args in
         ignore(check_args f_arg_types (get_types e_list [] env));
         (* Convert *)
@@ -747,8 +743,6 @@ let rec convert_to_c_expression e env =
         in
         let f_arg_types = List.map get_array_types (get_types hof.input_arrays [] env) in
         let check_args expected_arg_types f_args =
-        print_endline (string_of_int (List.length expected_arg_types));
-        print_endline (string_of_int (List.length f_args)); 
         List.map2 same_types expected_arg_types f_args in
         ignore(check_args f_arg_types expected_arg_types);
         (*Check that constants match those unknown variables in the defg*)
@@ -954,7 +948,6 @@ let rec convert_to_c_statement stmt env =
 let convert_to_c_param vdecl env  = 
     match vdecl with 
       | Ast.Variable_Declaration(vtype,id) ->
-          print_endline (Utils.idtos id);
           if(check_already_declared (Utils.idtos id) env) = true then raise Exceptions.Variable_already_declared
           else
             let v_info = {

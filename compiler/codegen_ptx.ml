@@ -255,7 +255,9 @@ let generate_ptx_function_files program =
   	match ptx_func_list with
   		| [] -> ()
   		| hd::tl ->
-  			write_ptx (Utils.idtos(hd.ptx_fdecl_name)) (generate_ptx_function hd);
+        let ptx_function_string = (generate_ptx_function hd) in
+  			write_ptx (Utils.idtos(hd.ptx_fdecl_name)) ptx_function_string;
+        sprintf "%s" ptx_function_string;
   			generate_ptx_files tl
   in generate_ptx_files ptx_function_list
 
