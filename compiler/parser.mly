@@ -100,14 +100,14 @@ nonempty_constant_list:
 higher_order_function_call:
     | TILDA identifier LPAREN identifier COMMA CONSTS LPAREN constant_list RPAREN COMMA nonempty_array_expression_list RPAREN
                                                                         {{
-                                                                            higher_order_function_type = $2;
+                                                                            hof_type = $2;
                                                                             kernel_function_name = $4;
                                                                             constants = $8;
                                                                             input_arrays = $11;
                                                                         }}
     | TILDA identifier LPAREN identifier COMMA nonempty_array_expression_list RPAREN
                                                                         {{
-                                                                            higher_order_function_type = $2;
+                                                                            hof_type = $2;
                                                                             kernel_function_name = $4;
                                                                             constants = [];
                                                                             input_arrays = $6;

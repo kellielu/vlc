@@ -28,7 +28,6 @@ exception Variable_not_declared
 exception Cannot_assign_expression
 exception NO_STRINGS_ALLOWED_IN_GDECL
 exception Void_type_in_gdecl
-exception String_not_accepted_in_binop
 exception Invalid_input_argument_to_map
 exception Not_a_valid_constant
 exception Nonarray_argument_passed_into_higher_order_function
@@ -39,6 +38,12 @@ exception Constants_missing_in_defg
 exception Cannot_pop_original_scope
 exception Variable_scope_not_initialized
 exception Empty_array_access
+exception Invalid_array_expression
+exception Array_elements_not_all_same_type
+exception Not_a_valid_variable_declaration
+exception String_not_accepted_by_operator
+exception Conditional_must_be_a_boolean
+exception Invalid_accessor_value
 (*-------------------------------------Codegen C-------------------------------------*)
 exception Unknown_variable_type
 exception Unknown_operator

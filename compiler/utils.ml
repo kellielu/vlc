@@ -124,7 +124,7 @@ let rec expression_to_string = function
   | Ast.Ternary(e1,e2,e3) -> (expression_to_string e1) ^ " if(" ^ (expression_to_string e2) ^ ") else " ^ (expression_to_string e3)
 and constant_to_string = function
   | Ast.Constant(id,e) -> (idtos id) ^ "=" ^ (expression_to_string e)
-and higher_order_function_call_to_string fcall = (idtos fcall.higher_order_function_type) ^ "(" ^ idtos(fcall.kernel_function_name) ^ "," ^ "consts(" ^ (String.concat "," (List.map constant_to_string fcall.constants)) ^ ")," ^ (String.concat "," (List.map expression_to_string fcall.input_arrays)) ^ ")"
+and higher_order_function_call_to_string fcall = (idtos fcall.hof_type) ^ "(" ^ idtos(fcall.kernel_function_name) ^ "," ^ "consts(" ^ (String.concat "," (List.map constant_to_string fcall.constants)) ^ ")," ^ (String.concat "," (List.map expression_to_string fcall.input_arrays)) ^ ")"
 
 
 

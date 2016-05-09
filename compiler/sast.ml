@@ -1,4 +1,3 @@
-open Ast
 (* Contains sast type definitions for conversions during semantic analysis *)
 
 (* -----------------------------------------PTX types -----------------------------------------*)
@@ -120,22 +119,22 @@ type ptx_kernel_variable_info = {
 
 type ptx_higher_order_fdecl = {
 	(* Map or reduce *)
-	higher_order_function_type 				: Ast.identifier; 
+	ptx_higher_order_function_type 				: Ast.identifier; 
 	(* Name of this function  - ex. map123, map1, map2 *)
-	higher_order_function_name 				: Ast.identifier;
+	ptx_higher_order_function_name 				: Ast.identifier;
 	(* Name of kernel function that is called from host (would be global void kernel function corresponding to map/reduce) *)
-    applied_kernel_function    				: Ast.identifier;
+    ptx_applied_kernel_function    				: Ast.identifier;
 	(* List of constants passed into map and reduce *)
-	constants 								: ptx_kernel_variable_info list;
+	ptx_higher_order_function_constants 		: ptx_kernel_variable_info list;
 	(* Size of input and return arrays *)
-	array_length 							: int;
+	ptx_array_length 							: int;
 	(* Input array information 
 		--If an array has no name (just simply passed in as something like {1,2,3}) then it is given a temporary generated name *)
-	input_arrays_info						: ptx_kernel_variable_info list; (* type, host name, kernel name *)
+	ptx_input_arrays_info						: ptx_kernel_variable_info list; (* type, host name, kernel name *)
     (* Return array information *)	
-    return_array_info              			: ptx_kernel_variable_info; (* type, host name, kernel name*) 
+    ptx_return_array_info              			: ptx_kernel_variable_info; (* type, host name, kernel name*) 
     (* Dependent functions*)
-    dependent_functions 					: Ast.identifier list;   
+    ptx_called_functions 						: Ast.identifier list;   
 }
 (* -----------------------------------------C types -----------------------------------------*)
 type c_binary_operator =
@@ -186,7 +185,7 @@ type c_higher_order_fdecl = {
 	(* Name of kernel function that is called from host (would be global void kernel function corresponding to map/reduce) *)
     applied_kernel_function    				: Ast.identifier;
 	(* List of constants passed into map and reduce *)
-	constants 								: c_kernel_variable_info list;
+	higher_order_function_constants 								: c_kernel_variable_info list;
 	(* Size of input and return arrays *)
 	array_length 							: int;
 	(* Input array information 
@@ -195,7 +194,7 @@ type c_higher_order_fdecl = {
     (* Return array information *)	
     return_array_info              			: c_kernel_variable_info; (* type, host name, kernel name*) 
     (* Dependent functions*)
-    dependent_functions 					: Ast.identifier list;   
+    called_functions 						: Ast.identifier list;   
 }
 
 type c_expression =
@@ -215,7 +214,7 @@ type c_expression =
 type c_variable_statement = 
     | Declaration of c_vdecl
     | Initialization of c_vdecl * c_expression
-    | Assignment of Ast.identifier * c_expression
+    | Assignment of c_expression * c_expression
 
 type c_statement = 
     | Variable_Statement of c_variable_statement
