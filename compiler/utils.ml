@@ -121,7 +121,7 @@ let rec expression_to_string = function
     (match o with 
         | Ast.Not -> (unary_operator_to_string o) ^ (expression_to_string e)
         | _ -> (expression_to_string e) ^ (unary_operator_to_string o))
-  | Ast.Array_Accessor(e,e_list) -> (expression_to_string e) ^ "[" ^ (String.concat "][" (List.map expression_to_string e_list)) ^ "]"
+  | Ast.Array_Accessor(e,e_list,b) -> (expression_to_string e) ^ "[" ^ (String.concat "][" (List.map expression_to_string e_list)) ^ "]"
   | Ast.Ternary(e1,e2,e3) -> (expression_to_string e1) ^ " if(" ^ (expression_to_string e2) ^ ") else " ^ (expression_to_string e3)
 and constant_to_string = function
   | Ast.Constant(id,e) -> (idtos id) ^ "=" ^ (expression_to_string e)

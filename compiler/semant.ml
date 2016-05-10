@@ -289,7 +289,7 @@ let rec infer_type expression env=
         )
     | Ast.Cast(vtype,e) -> vtype
     | Ast.Unop(e,unop) -> infer_type e env
-    | Ast.Array_Accessor(e1,e_list) -> 
+    | Ast.Array_Accessor(e1,e_list,is_lvalue) -> 
         (* Check e1 is an array *) 
           (match infer_type e1 env with 
             | Ast.Array(t,n) -> ()
@@ -598,9 +598,9 @@ let rec get_input_arrays_info input_arrays var_info_list env =
       )
 
 (* Creates sast struct storing information about return array from higher order function *)
-let get_return_array_info kfunc_id env = 
+let get_return_array_info kfunc_id length env = 
   let f_info            = get_function_info kfunc_id env in
-  let return_vtype,env  = convert_to_c_variable_type f_info.function_return_type env in
+  let return_vtype,env  = convert_to_c_variable_type (Ast.Array(f_info.function_return_type,length)) env in
   let h_name            = Ast.Identifier(generate_host_pointer_name ())in
   let k_name            = Ast.Identifier(generate_device_pointer_name ())in
   let a_name            = Ast.Identifier(generate_arg_name ()) in 
@@ -614,6 +614,12 @@ let get_return_array_info kfunc_id env =
 
 (* Main function for creating the C map function (when we see a map function call) *)
 let make_hof_c_fdecl hof_call env =  
+  let arr_length = 
+              let arr = infer_type (List.hd hof_call.input_arrays) env in
+              (match arr with 
+              | Ast.Array(t,n) -> n
+              | _ -> raise Exceptions.Not_an_array_expression)
+  in
   match Utils.idtos(hof_call.hof_type) with
     | "map" ->
           let kfunc_name = Ast.Identifier(generate_map_ptx_function_name ()) in
@@ -622,9 +628,9 @@ let make_hof_c_fdecl hof_call env =
             higher_order_function_name                                          =  Ast.Identifier(generate_map_c_function_name ());
             applied_kernel_function                                             =  kfunc_name;
             higher_order_function_constants                                     =  get_constants_info hof_call.constants [] env;
-            array_length                                                        =  List.length (hof_call.input_arrays);
+            array_length                                                        =  arr_length;
             input_arrays_info                                                   =  get_input_arrays_info hof_call.input_arrays [] env;
-            return_array_info                                                   =  get_return_array_info (Utils.idtos(hof_call.kernel_function_name)) env;
+            return_array_info                                                   =  get_return_array_info (Utils.idtos(hof_call.kernel_function_name)) arr_length env;
             called_functions                                                    =  [hof_call.kernel_function_name]
          } 
     | "reduce" -> 
@@ -634,9 +640,9 @@ let make_hof_c_fdecl hof_call env =
               higher_order_function_name                                          =  Ast.Identifier(generate_reduce_c_function_name ());
               applied_kernel_function                                             =  kfunc_name;
               higher_order_function_constants                                     =  get_constants_info hof_call.constants [] env;
-              array_length                                                        =  List.length (hof_call.input_arrays);
+              array_length                                                        =  arr_length;
               input_arrays_info                                                   =  get_input_arrays_info hof_call.input_arrays [] env;
-              return_array_info                                                   =  get_return_array_info (Utils.idtos(hof_call.kernel_function_name)) env;
+              return_array_info                                                   =  get_return_array_info (Utils.idtos(hof_call.kernel_function_name)) arr_length env;
               called_functions                                                    =  [hof_call.kernel_function_name]
            }  
     | _ -> raise (Exceptions.Unknown_higher_order_function_call (Utils.idtos hof_call.hof_type))
@@ -785,10 +791,9 @@ let rec convert_to_c_expression e env =
             let c_e2,env = convert_to_c_expression e2 env in 
             let c_e3,env = convert_to_c_expression e3 env in 
             Sast.Ternary(c_e1,c_e2,c_e3),env
-      | Ast.Array_Accessor(e,e_list) ->
+      | Ast.Array_Accessor(e,e_list,is_lvalue) ->
         (* Check e is an array *)
-          let array_type = infer_type e env in 
-          (match array_type with 
+          (match infer_type e env with 
             | Ast.Array(t,n) -> ()
             | _ -> raise Exceptions.Not_an_array_expression);
           (* Check that e_list can access a*)
@@ -796,7 +801,10 @@ let rec convert_to_c_expression e env =
           (* Convert *)
           let c_e,env = convert_to_c_expression e env  in
           let c_e_list = List.map (fun x -> fst(convert_to_c_expression x env)) e_list in
-          Sast.Array_Accessor(c_e,c_e_list),env
+          let array_type = infer_type e env in
+          let array_dims = get_array_dimensions array_type [] in
+          let array_access = ((List.length array_dims) > (List.length e_list)) in
+          Sast.Array_Accessor(c_e,c_e_list,is_lvalue,array_access),env
       | Ast.Binop(e1,op,e2) -> 
           (* Check that expressions match *)
           if((same_types (infer_type e1 env) (infer_type e2 env)) = false) then raise (Exceptions.Type_mismatch "Binop doesn't match")
@@ -861,7 +869,7 @@ let rec convert_to_c_expression e env =
                 let hof_ptx_fdecl = make_hof_ptx_fdecl hof_c_fdecl hof env in
                 let env = update_hof_lists hof_c_fdecl hof_ptx_fdecl env in
                 (* Convert *)
-                Sast.Function_Call(hof_c_fdecl.higher_order_function_name,(List.map (fun x -> Sast.Identifier_Literal(x.host_name)) hof_c_fdecl.input_arrays_info)),env
+                Sast.Function_Call(hof_c_fdecl.higher_order_function_name,(List.map (fun x -> fst(convert_to_c_expression x env)) (List.rev hof.input_arrays))),env
             (* | "reduce" ->
                 in Sast.FunctionCall(c_ma) *)
             | _ -> raise (Exceptions.Unknown_higher_order_function_call (Utils.idtos(hof.hof_type))))
@@ -885,7 +893,7 @@ let convert_to_ptx_expression e env =
       convert_to_ptx_expression(e2) ^ 
       convert_to_ptx_binop(o) *)
     | Ast.Unop(e, u) -> raise Exceptions.C'est_La_Vie
-    | Ast.Array_Accessor(e, e_list) -> raise Exceptions.C'est_La_Vie
+    | Ast.Array_Accessor(e, e_list,is_lvalue) -> raise Exceptions.C'est_La_Vie
     | Ast.Ternary(e1, e2, e3) -> raise Exceptions.C'est_La_Vie
 
 let rec get_array_el_type arr num_dim =
@@ -930,7 +938,7 @@ let convert_to_c_variable_statement vstmt env =
                     let c_e1, env = convert_to_c_expression e1 env in 
                     let c_e2, env = convert_to_c_expression e2 env in
                     Sast.Assignment(c_e1,c_e2),env
-              | Ast.Array_Accessor(e,e_list)->
+              | Ast.Array_Accessor(e,e_list,is_lvalue)->
                     (match e with 
                       | Ast.Identifier_Literal(id) -> 
                           if (check_already_declared (Utils.idtos id) env )= false then raise (Exceptions.Name_not_found (Utils.idtos id))

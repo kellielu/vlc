@@ -1,67 +1,109 @@
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <cuda.h>
-#include <math.h>
+#include "cuda.h"
+#include <iostream>
+#include <vlc>
+#include <stdargs.h>
+CUdevice    device;
+CUmodule    cudaModule;
+CUcontext   context;
+CUfunction  function;
+VLC_Array <VLC_Array<int>>map_c0(...){
 
-#define imin(a,b) (a<b?a:b)
+checkCudaErrors(cuCtxCreate(&context, 0, device));
 
-__global__ void vecAdd(int *x, int *y,int *z, int *scale){
-	int tid = threadIdx.x + blockIdx.x * blockDim.x;
-	z[tid] = *scale *( x[tid] + y[tid]);
+std::ifstream add("add.ptx");
+std::ifstream map_ptx0("map_ptx0.ptx");
+
+std::string add_str((std::istreambuf_iterator<char>(add)), std::istreambuf_iterator<char>());
+std::string map_ptx0_str((std::istreambuf_iterator<char>(map_ptx0)), std::istreambuf_iterator<char>());
+
+map_ptx0_str = add_str +"\n" + map_ptx0_str
+
+checkCudaErrors(cuModuleLoadDataEx(&cudaModule,map_ptx0_str, 0, 0, 0));
+checkCudaErrors(cuModuleGetFunction(&function, cudaModule, "map_ptx0"));
+
+size_t num_constants = 1;
+size_t num_input_arrays = 2;
+
+int host_ptr3;
+int* host_ptr1;
+int* host_ptr2;
+int* host_ptr0;
+
+CUdeviceptr scale;
+CUdeviceptr dev_ptr1;
+CUdeviceptr dev_ptr2;
+CUdeviceptr dev_ptr0;
+
+va_list constants;
+va_start(constants,num_constants);
+for(int i = 0; i < num_constants; i++){
+
+if(i ==0){
+	host_ptr3 = va_args(constants,int);
+	checkCudaErrors(cuMemAlloc(&scale, sizeof(int)*1));
+	checkCudaErrors(cuMemcpyHtoD(scale, &host_ptr3, sizeof(int)*1));
+
 }
 
-int main(){
-	int a[5] = {1,2,3,4,5};
-	int b[5] = {1,2,3,4,5};
-	int c[5];
-
-	int constant_scale = 4;
-	int *dev_a;
-	int *dev_b;
-	int *dev_c;
-	int *scale;
-
-	/* Upon hitting map, this code should generate*/
-	int threadsPerBlock = 512;
-	int blocksPerGrid = ceil(5/512);
-
-	cuInit(0);
-	cuDeviceGetCount(&devCount);
-	cuDeviceGet(&device, 0);
-
-	int devMajor, devMinor;
-  cuDeviceComputeCapability(&devMajor, &devMinor, device);
-  std::cout << "Device Compute Capability: "<< devMajor << \".\" << devMinor << \"\n\";
-  if (devMajor < 2) {
-    std::cerr << \"ERROR: Device 0 is not SM 2.0 or greater\n\";
-    return 1;
-  }
-	cudaMalloc( (void**) &dev_a, 5*sizeof(int) );
-   	cudaMalloc( (void**) &dev_b, 5*sizeof(int) );
-   	cudaMalloc( (void**) &dev_c, 5*sizeof(int) );
-   	cudaMalloc( (void**) &scale, sizeof(int) );
-
-
-   	cudaMemcpy( dev_a, a, 5*sizeof(int), cudaMemcpyHostToDevice ) ;
-   	cudaMemcpy( dev_b, b, 5*sizeof(int), cudaMemcpyHostToDevice ) ;
-   	cudaMemcpy( scale, &constant_scale, sizeof(int), cudaMemcpyHostToDevice );
-
-   	vecAdd<<<blocksPerGrid,threadsPerBlock>>>( dev_a, dev_b, dev_c, scale);
- 	cudaMemcpy( c, dev_c, 5*sizeof(int),cudaMemcpyDeviceToHost ) ;
- 
- 	printf("[");
- 	for(int i = 0; i < 5; i ++){
- 		if(i == 5 - 1){
- 			printf("%d",c[i]);
- 		}
- 		else{
- 			printf("%d,",c[i]);
- 		}
- 	}
- 	printf("]");
-	cudaDeviceSynchronize();
-	cudaFree( dev_a ) ;
-   	cudaFree( dev_b ) ;
-   	cudaFree( dev_c ) ;
-   	cudaFree( scale ) ;
 }
+va_end(constants);
+
+checkCudaErrors(cuMemAlloc(&dev_ptr1, sizeof(int)*5));
+checkCudaErrors(cuMemAlloc(&dev_ptr2, sizeof(int)*5));
+checkCudaErrors(cuMemcpyHtoD(dev_ptr1, host_ptr1, sizeof(int)*5));
+checkCudaErrors(cuMemcpyHtoD(dev_ptr2, host_ptr2, sizeof(int)*5));
+
+
+
+checkCudaErrors(cuMemAlloc(&dev_ptr0, sizeof(int)*5));
+checkCudaErrors(cuMemcpyHtoD(dev_ptr0, host_ptr0, sizeof(int)*5));
+
+
+void *KernelParams[] = { &dev_ptr1, &dev_ptr2, &dev_ptr0};
+
+unsigned int blockSizeX = 16;
+unsigned int blockSizeY = 1;
+unsigned int blockSizeZ = 1;
+unsigned int gridSizeX = 1;
+unsigned int gridSizeY = 1;
+unsigned int gridSizeZ = 1;
+
+checkCudaErrors(cuLaunchKernel(function, gridSizeX, gridSizeY, gridSizeZ, blockSizeX, blockSizeY, blockSizeZ,0, NULL, KernelParams, NULL));
+
+checkCudaErrors(cuMemcpyDtoH(host_ptr0,dev_ptr0, sizeof(VLC_Array<int>)*5));
+
+checkCudaErrors(cuMemFree(dev_ptr1));
+checkCudaErrors(cuMemFree(dev_ptr2));
+checkCudaErrors(cuMemFree(dev_ptr0));
+checkCudaErrors(cuMemFree(scale));
+
+checkCudaErrors(cuModuleUnload(cudaModule));
+checkCudaErrors(cuCtxDestroy(context));
+}
+
+
+int add(int b,int a){
+
+return a + b;
+
+}
+
+
+
+
+int vlc(){
+
+VLC_Array<int> a=VLC_Array(5,1,5,1,2,3,4,5);
+VLC_Array<int> b=VLC_Array(5,1,5,1,2,3,4,5);
+VLC_Array<int> c=map_c0(a,b);
+int d=a.get_element_value(1,2);
+a.set_array_value(5,1);a=b;
+return 0;
+
+}
+
+
+int main(void) { return vlc(); }

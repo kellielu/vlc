@@ -5,11 +5,10 @@ int def vlc():
 	int[5] a =  {1,2,3,4,5}
 	int[5] b =  {1,2,3,4,5}
 	int[5] c = ~map(add,consts(scale=4),a,b)
-	int d = 5
-	if(5):
-		print("yay")
-		return
-	else:
-		print("sad")
+	int d = a[2]
+
+	a[3] = 5
+
+	a = b
 	return 0
 

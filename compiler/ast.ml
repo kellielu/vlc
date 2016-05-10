@@ -34,11 +34,11 @@ type expression =
     | Boolean_Literal of bool
     | Floating_Point_Literal of float
     | Array_Literal of expression list
-    | Identifier_Literal of identifier 
+    | Identifier_Literal of identifier (* id, is_lvalue *)
     | Cast of variable_type * expression
     | Binop of expression * binary_operator * expression
     | Unop of expression * unary_operator
-    | Array_Accessor of expression * expression list (* Array, indexes *)
+    | Array_Accessor of expression * expression list * bool(* array, indexes, is_lvalue *)
     | Ternary of expression * expression * expression
 and constant = 
     | Constant of identifier * expression

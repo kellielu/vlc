@@ -222,17 +222,17 @@ type c_expression =
     | Boolean_Literal of bool
     | Floating_Point_Literal of float
     | Array_Literal of c_expression list * int list
-    | Identifier_Literal of Ast.identifier 
+    | Identifier_Literal of Ast.identifier (*id, is_lvalue*)
     | Cast of c_variable_type * c_expression
     | Binop of c_expression * c_binary_operator * c_expression
     | Unop of c_expression * c_unary_operator
-    | Array_Accessor of c_expression * c_expression list (* Array, indexes *)
+    | Array_Accessor of c_expression * c_expression list* bool*bool(* Array, indexes, is_lvalue, array_access *)
     | Ternary of c_expression * c_expression * c_expression (* expression if true, condition, expression if false *)
 
 type c_variable_statement = 
     | Declaration of c_vdecl
     | Initialization of c_vdecl * c_expression
-    | Assignment of c_expression * c_expression
+    | Assignment of c_expression * c_expression(* bool=true if left hand side is an array *)
 
 type c_statement = 
     | Variable_Statement of c_variable_statement

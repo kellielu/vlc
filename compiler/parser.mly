@@ -195,7 +195,7 @@ expression:
     | variable_type LPAREN expression RPAREN                            { Cast($1, $3)}
 
     | expression IF LPAREN expression RPAREN ELSE expression            { Ternary($1,$4,$7) }
-    | array_expression nonempty_array_accessor_list                     { Array_Accessor($1,$2) }
+    | array_expression nonempty_array_accessor_list                     { Array_Accessor($1,$2,false) }
 
 
 nonempty_expression_list:
@@ -229,7 +229,7 @@ nonempty_array_expression_list:
  /* Expressions that can be assigned on the right side of the assignment statement */
 assignment_expression:
     | identifier                                                        { Identifier_Literal($1) }
-    | array_expression nonempty_array_accessor_list                     { Array_Accessor($1,$2) }
+    | array_expression nonempty_array_accessor_list                     { Array_Accessor($1,$2,true) }
 
 
 /* Variable types  and Data types */
