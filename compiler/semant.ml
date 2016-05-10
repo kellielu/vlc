@@ -670,6 +670,21 @@ let change_to_ptx_kernel_variable ckv_info =
       ptx_kernel_name   = ckv_info.kernel_name;
   }
 
+let change_to_pdecl k_info  =
+  let rec get_dtype d = (match d with
+      | Sast.Primitive(p) -> change_to_ptx_data_type p
+      | Sast.Array(t,n) -> get_dtype t)
+  in 
+  let dtype = get_dtype k_info.variable_type in
+  {
+      ptx_parameter_data_type = dtype;
+(*       ptx_parameter_is_pointer:   int;  *) (* 1 if true, 0 if false*)
+      ptx_parameter_state_space = Sast.Global;
+      (*  ptx_parameter_variable_option:  ptx_variable_option; *)
+      ptx_parameter_name = k_info.kernel_name;
+  }
+
+
 (* Creates a ptx_fdecl based on the hof_c_fdecl*)
 let make_hof_ptx_fdecl hof_c_fdecl hof env= 
   {
@@ -678,10 +693,11 @@ let make_hof_ptx_fdecl hof_c_fdecl hof env=
     ptx_applied_kernel_function                         = hof.kernel_function_name;
     ptx_higher_order_function_constants                 = List.map (fun x -> change_to_ptx_kernel_variable x ) hof_c_fdecl.higher_order_function_constants;
     ptx_array_length                                    = hof_c_fdecl.array_length;
-    ptx_input_arrays_info                               = List.map (fun x -> change_to_ptx_kernel_variable x ) hof_c_fdecl.input_arrays_info;
-    ptx_return_array_info                               = change_to_ptx_kernel_variable hof_c_fdecl.return_array_info;
+    ptx_input_arrays_info                               = List.map change_to_pdecl hof_c_fdecl.input_arrays_info;
+    ptx_return_array_info                               = change_to_pdecl hof_c_fdecl.return_array_info;
     ptx_called_functions                                = [hof.kernel_function_name]
   }
+
 
 (* TO IMPLEMENT  let convert_to_ptx_pdecl e = 
     match e with 
@@ -1188,7 +1204,7 @@ let convert_to_ptx_fdecl fdecl env =
         ptx_variable_type = return_type;
         ptx_kernel_name = fdecl.name;
       }, env in
-      let params,       env    = convert_list convert_to_ptx_param         fdecl.params  [] env in
+      let params,env           = convert_list convert_to_ptx_param fdecl.params [] env in
       let body,         env    = convert_list convert_to_ptx_statement     fdecl.body    [] env in
       let registers,    env    =  [
         Ptx_Vdecl(Register_state, Sast.Ptx_Primitive(S32), Parameterized_variable_register(Ast.Identifier("si"), !signed_int_counter));

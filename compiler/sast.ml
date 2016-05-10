@@ -148,9 +148,9 @@ type ptx_higher_order_fdecl = {
 	ptx_array_length 							: int;
 	(* Input array information 
 		--If an array has no name (just simply passed in as something like {1,2,3}) then it is given a temporary generated name *)
-	ptx_input_arrays_info						: ptx_kernel_variable_info list; (* type, host name, kernel name *)
+	ptx_input_arrays_info						: ptx_pdecl list; (* type, host name, kernel name *)
     (* Return array information *)	
-    ptx_return_array_info              			: ptx_kernel_variable_info; (* type, host name, kernel name*) 
+    ptx_return_array_info              			: ptx_pdecl; (* type, host name, kernel name*) 
     (* Dependent functions*)
     ptx_called_functions 						: Ast.identifier list;   
 }
