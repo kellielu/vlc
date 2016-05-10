@@ -1,0 +1,9 @@
+void defg test():
+	int a
+	return
+
+int def vlc():
+
+	print("success")
+
+	return 0

@@ -32,22 +32,22 @@ clean:
 
 # Make for compiler 
 vlc: $(OBJS)
-	ocamlc -o vlc $(OBJS)
+	ocamlc -g -o vlc $(OBJS)
 
 scanner.ml: scanner.mll
 	ocamllex scanner.mll
 
 parser.cmi: parser.mli
-	ocamlc -c parser.mli
+	ocamlc -g -c parser.mli
 
 parser.ml parser.mli: parser.mly
 	ocamlyacc -v parser.mly
 
 %.cmo: %.ml
-	ocamlc -w Aelz -c $<
+	ocamlc -g -w Aelz -c $<
 
 %.cmi: %.mlix
-	ocamlc -w Aelz -c $<
+	ocamlc -g -w Aelz -c $<
 
 ast.cmo:
 ast.cmx:

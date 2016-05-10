@@ -58,3 +58,4 @@ exception Unknown_variable_statement
 exception Unknown_type_of_statement
 (*-------------------------------------Codegen PTX-------------------------------------*)
 exception PTXCREMENT_GENERATED_ERROR
+exception Value_return_ptx_test

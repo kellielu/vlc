@@ -97,6 +97,7 @@ let generate_ptx_data_type data_type =
     | Pred -> ".red"
 (*     | S64 -> ".s64" *)
     | F32 -> ".f32"
+    | Ptx_Void -> ""
   in
   sprintf "%s" t
 
@@ -171,7 +172,9 @@ let rec generate_ptx_expression expression =
       generate_id(id) ^ " " ^ (generate_list generate_ptx_variable " " vlist) ^ ";"
     | Ptx_Empty_Call(id, vlist) -> "call " ^ generate_id(id) 
       ^ (generate_list generate_ptx_variable " " vlist) ^ ";"
-    | Ptx_Return -> "ret;"
+    | Ptx_Return_void -> "ret;"
+    | Ptx_value_return(i) -> raise Exceptions.Value_return_ptx_test
+    | Ptx_empty -> ""
   in
   sprintf "%s" e
 

@@ -21,7 +21,7 @@ type ptx_unary_operator =
     | Ptx_Plus_Plus | Ptx_Minus_Minus
 
 type ptx_data_type =
-	S32 | F32 | Pred
+	S32 | F32 | Pred | Ptx_Void
 (* 	U8 | U16 | U32 | U64 | S8 | S16 | S32 | S64 | F32 *)
 
 type ptx_state_space = 
@@ -32,6 +32,16 @@ type ptx_state_space =
 	| Shared
 	| Param
 	| State_undefined
+
+type ptx_variable_type = 
+	| Ptx_Primitive of ptx_data_type
+	| Ptx_Array of ptx_variable_type * int 					(* 'int' refers to the length of the array *)
+	| Ptx_Pointer of ptx_variable_type * int 				(* 'int' refers to size of memory pointed by the pointer *)
+
+type ptx_kernel_variable_info = {
+	ptx_variable_type 			: ptx_variable_type;
+	ptx_kernel_name 			: Ast.identifier;
+}
 
 type ptx_variable = 
 	| Parameterized_variable_register of Ast.identifier * int (* register name, number of registers*)
@@ -73,7 +83,9 @@ type ptx_expression =
 	| Ptx_Empty_Call of Ast.identifier * ptx_variable list
 	| Predicated_statement of ptx_variable * ptx_expression
 	| Ptx_Convert of ptx_data_type * ptx_data_type * ptx_variable * ptx_variable
-	| Ptx_Return
+	| Ptx_value_return of ptx_kernel_variable_info
+	| Ptx_empty
+	| Ptx_Return_void
 
 type ptx_subroutine = {
 	routine_name								: Ast.identifier;
@@ -89,16 +101,15 @@ type ptx_function_type =
 	| Global_func 
 	| Device_func
 
-type ptx_variable_type = 
-	| Ptx_Primitive of ptx_data_type
-	| Ptx_Array of ptx_variable_type * int 					(* 'int' refers to the length of the array *)
-	| Ptx_Pointer of ptx_variable_type * int 				(* 'int' refers to size of memory pointed by the pointer *)
+
 (* ptx fdecl is the entire file
 	it seems it really only needs to be composed of a few parts - a name, a variable declaration list
 	and a statement list
 
 	register_decl list should go inside body generated from semantic analyzer
 *)
+
+
 type ptx_fdecl = {
 	(* Global or Device *)
 	ptx_fdecl_type 								: ptx_function_type;
@@ -109,16 +120,18 @@ type ptx_fdecl = {
 	(* Expected parameters of the function *)
 	ptx_fdecl_params 							: ptx_pdecl list;
 
+	(*ptx can't really return anything, so we will generate a parameter
+		for each ptx fdecl that our c code will need to know how to interface
+		with to use as a return type
+	*)
+	ptx_fdecl_return_value						: ptx_kernel_variable_info;
+
 	(* Declares the virtual registers that are needed for the function *)
 	register_decls 								: ptx_vdecl list;
 	(* Statements within the function *)
 	ptx_fdecl_body 								: ptx_statement list;
 }
 
-type ptx_kernel_variable_info = {
-	ptx_variable_type 			: ptx_variable_type;
-	ptx_kernel_name 			: Ast.identifier;
-}
 
 type ptx_higher_order_fdecl = {
 	(* Map or reduce *)

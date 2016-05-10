@@ -28,6 +28,7 @@ let arg_counter = ref 0
 let signed_int_counter = ref 0
 let signed_float_counter = ref 0
 let predicate_counter = ref 0
+let block_counter = ref 0
 (*-----------------------------------Generates Symbols Based on Counters-----------------------------------*)
 let generate_device_pointer_name () = 
     let name = "dev_ptr" ^ (string_of_int !dev_name_counter) in 
@@ -468,8 +469,7 @@ let convert_to_ptx_data_type dtype env =
     | Ast.Float -> Sast.F32,env
     | Ast.Boolean -> Sast.Pred,env
     | Ast.String -> raise Exceptions.NO_STRINGS_ALLOWED_IN_GDECL
-    | Ast.Void -> raise Exceptions.Void_type_in_gdecl
-    
+    | Ast.Void -> Sast.Ptx_Void,env
 
     (* Variable Type *)
 let rec convert_to_c_variable_type vtype env = 
@@ -488,13 +488,13 @@ let rec convert_to_c_variable_type vtype env =
           )
 
 (* TO IMPLEMENT *)
-(* let rec convert_to_ptx_variable_type vtype env = 
+let convert_to_ptx_variable_type vtype env = 
   match vtype with
       | Ast.Primitive(p) -> 
-          let c_p,env = convert_to_ptx_data_type p env in
-          Sast.Primitive(c_p),env
-      | Ast.Array(t,n) ->
-          (match t with 
+          let p2,env = convert_to_ptx_data_type p env in
+          Sast.Ptx_Primitive(p2),env
+      | Ast.Array(t,n) -> raise Exceptions.C'est_La_Vie
+(*           (match t with 
             | Ast.Array(t,n) -> 
                 let c_t,env = convert_to_ptx_variable_type t env in
                 Sast.Array(c_t,n),env
@@ -525,12 +525,12 @@ let convert_to_ptx_vdecl vdecl env =
         if(check_already_declared (Utils.idtos(id)) env) = true then raise Exceptions.Variable_already_declared
         else
           let regNum = match vtype with
-            | Ast.Primitive(Ast.Integer) -> incr signed_int_counter ; !signed_int_counter
-            | Ast.Primitive(Ast.Float) -> incr signed_float_counter ; !signed_float_counter
-            | Ast.Primitive(Ast.Boolean) -> incr predicate_counter ; !predicate_counter
+            | Ast.Primitive(Ast.Integer) -> let num = !signed_int_counter in (incr signed_int_counter ; num)
+            | Ast.Primitive(Ast.Float) -> let num = !signed_float_counter in (incr signed_float_counter ; num)
+            | Ast.Primitive(Ast.Boolean) -> let num = !predicate_counter in (incr predicate_counter ; num)
             | Ast.Primitive(Ast.String) -> raise Exceptions.NO_STRINGS_ALLOWED_IN_GDECL
             | Ast.Primitive(Ast.Void) -> raise Exceptions.Void_type_in_gdecl
-            | Ast.Array(vtype2, i) -> raise Exceptions.Not_implemented_yet
+            | Ast.Array(vtype2, i) -> raise Exceptions.C'est_La_Vie
           in
           let v_info = {
             vtype = vtype;
@@ -538,7 +538,7 @@ let convert_to_ptx_vdecl vdecl env =
           }
           in
           let new_vmap = Variable_Map.add (Utils.idtos id) v_info (List.hd env.variable_scope_stack) in
-          update_scope new_vmap env
+          update_scope new_vmap env 
 
 
 let same_types_list type_list = 
@@ -848,27 +848,26 @@ let rec convert_to_c_expression e env =
             | _ -> raise (Exceptions.Unknown_higher_order_function_call (Utils.idtos(hof.hof_type)))
 
 (* TO IMPLEMENT *)
-(* 
-let rec convert_to_ptx_expression e = 
+
+let convert_to_ptx_expression e = 
   match e with 
-
-    | Ast.Function_Call(id, exp) ->
-
-    | Higher_Order_Function_Call of higher_order_function_call
-    | String_Literal of string
-    | Integer_Literal of int
-    | Boolean_Literal of bool
-    | Floating_Point_Literal of float
-    | Array_Literal of expression list
-    | Identifier_Literal of identifier 
-    | Cast of variable_type * expression
-    | Ast.Binop(e1,o,e2) ->
-      convert_to_ptx_expression(e1) ^ 
+    | Ast.Function_Call(id, exp) -> raise Exceptions.C'est_La_Vie
+    | Ast.Higher_Order_Function_Call(hof) -> raise Exceptions.C'est_La_Vie
+    | Ast.String_Literal(s) -> raise Exceptions.C'est_La_Vie
+    | Ast.Integer_Literal(i) -> raise Exceptions.C'est_La_Vie
+    | Ast.Boolean_Literal(b) -> raise Exceptions.C'est_La_Vie
+    | Ast.Floating_Point_Literal(f) -> raise Exceptions.C'est_La_Vie
+    | Ast.Array_Literal(e_list) -> raise Exceptions.C'est_La_Vie
+    | Ast.Identifier_Literal(i) -> raise Exceptions.C'est_La_Vie
+    | Ast.Cast(v_type, e) -> raise Exceptions.C'est_La_Vie
+    | Ast.Binop(e1,o,e2) -> raise Exceptions.C'est_La_Vie
+(* Need a way to turn one Ast datatype into multiple Sast datatypes      
+ convert_to_ptx_expression(e1) ^ 
       convert_to_ptx_expression(e2) ^ 
-      convert_to_ptx_binop(o)
-    | Unop of expression * unary_operator
-    | Array_Accessor of expression * expression list (* Array, indexes *)
-    | Ternary of expression * expression * expression *)
+      convert_to_ptx_binop(o) *)
+    | Ast.Unop(e, u) -> raise Exceptions.C'est_La_Vie
+    | Ast.Array_Accessor(e, e_list) -> raise Exceptions.C'est_La_Vie
+    | Ast.Ternary(e1, e2, e3) -> raise Exceptions.C'est_La_Vie
 
 let rec get_array_el_type arr num_dim =
   match num_dim with 
@@ -931,9 +930,10 @@ let convert_to_c_variable_statement vstmt env =
 let convert_to_ptx_variable_statement vstmt env =
     match vstmt with
       | Ast.Declaration(vdecl) -> 
-          convert_to_ptx_vdecl(vdecl)
-      | Ast.Initialization(vdecl, e) -> raise Exceptions.Not_implemented_yet
-      | Ast.Assignment(e1, e2) -> raise Exceptions.Not_implemented_yet
+          let new_env = convert_to_ptx_vdecl vdecl env in
+          Ptx_empty, new_env
+      | Ast.Initialization(vdecl, e) -> raise Exceptions.C'est_La_Vie
+      | Ast.Assignment(e1, e2) -> raise Exceptions.C'est_La_Vie
 (*       | Ast.Initialization(vdecl, expression) ->
         let 
           | Ast.Primitive(Integer) -> incr signed_int_counter ; !signed_int_counter
@@ -941,7 +941,7 @@ let convert_to_ptx_variable_statement vstmt env =
           | Ast.Primitive(Boolean) -> incr predicate_counter ; !predicate_counter
           | Ast.Primitive(String) -> raise Exceptions.NO_STRINGS_ALLOWED_IN_GDECL
           | Ast.Primitive(Void) -> raise Exceptions.Void_type_in_gdecl
-          | Ast.Array(vtype2, i) -> raise Exceptions.Not_implemented_yet
+          | Ast.Array(vtype2, i) -> raise Exceptions.C'est_La_vie
 
       | Assignment of expression * expression *)
             
@@ -1018,6 +1018,29 @@ let rec convert_to_c_statement stmt env =
         (* Convert *)
         let c_stmt_list,env = convert_list convert_to_c_statement stmt_list [] env in
          Sast.Block(c_stmt_list),env
+
+let rec convert_to_ptx_statement stmt env =
+  match stmt with 
+    | Ast.Variable_Statement(v) -> 
+      let ptx_vstmt,env = convert_to_ptx_variable_statement v env in
+      Ptx_expression(ptx_vstmt),env
+    | Ast.Expression(e) -> Ptx_expression(convert_to_ptx_expression(e)),env
+    | Ast.Return_Void -> Ptx_expression(Sast.Ptx_Return_void), env
+    | Ast.Block(stmt_list) -> raise Exceptions.C'est_La_Vie       
+(*         if (good_statement_order stmt_list) = false then raise Exceptions.Have_statements_after_return_break_continue
+        else
+        let ptx_stmt_list,env = convert_list convert_to_ptx_statement stmt_list [] env in
+          let subroutine = {
+            routine_name : Ast.identifier;
+            routine_expressions             : ptx_expression list;
+          } *)
+
+    | Ast.If(e, s1, s2) -> raise Exceptions.C'est_La_Vie
+    | Ast.While(e, s) -> raise Exceptions.C'est_La_Vie
+    | Ast.For(s1, e, s2, s3) -> raise Exceptions.C'est_La_Vie
+    | Ast.Return(e) -> raise Exceptions.C'est_La_Vie
+    | Ast.Continue -> raise Exceptions.C'est_La_Vie
+    | Ast.Break -> raise Exceptions.C'est_La_Vie
     
 let convert_to_c_param vdecl env  = 
     match vdecl with 
@@ -1033,6 +1056,10 @@ let convert_to_c_param vdecl env  =
             let env = update_scope updated_scope env in
             let c_vtype, env = convert_to_c_variable_type vtype env in
             Sast.Variable_Declaration(c_vtype,id),env
+
+let convert_to_ptx_param vdecl env =
+  match vdecl with
+    | Ast.Variable_Declaration(vtype,id) -> raise Exceptions.C'est_La_Vie  
 
 (* Converts from fdecl to c_fdecl *)
 let convert_to_c_fdecl fdecl env =
@@ -1070,6 +1097,50 @@ let convert_to_c_fdecl fdecl env =
       let env = pop_scope env in
       c_fdecl, env)
 
+let convert_to_ptx_fdecl fdecl env =
+    if (is_function_in_scope (Utils.idtos fdecl.name) env) = true then (raise Exceptions.Function_already_declared)
+    else
+      let vdecl_to_param vdecl = 
+        match vdecl with 
+          | Ast.Variable_Declaration(vtype,id) -> vtype
+      in
+      (* Add to function map*)
+      (let host_func_info = {
+          function_type = Kernel_Global;
+          function_name = fdecl.name;
+          function_return_type = fdecl.return_type;
+          function_args = List.map vdecl_to_param fdecl.params;
+          dependent_functions = [];
+          unknown_variables = [];
+      } 
+      in
+      let env = update_host_fmap host_func_info env in
+      (* Push new scope for function *)
+      let env = push_scope env in
+      (* Do conversion while passing enviroment *)
+      (*create a ptx_kernel_variable_info obj*)
+      let return_type, env = convert_to_ptx_variable_type fdecl.return_type env in
+      let return_info,  env    = {
+        ptx_variable_type = return_type;
+        ptx_kernel_name = fdecl.name;
+      }, env in
+      (* some function utilizing the defined counters in the beginning*)
+      let registers,    env    =  [],  env in
+      let params,       env    = convert_list convert_to_ptx_param         fdecl.params  [] env in
+      let body,         env    = convert_list convert_to_ptx_statement     fdecl.body    [] env in
+      let ptx_fdecl = {
+        ptx_fdecl_type = Sast.Global_func;
+        ptx_fdecl_name = fdecl.name;
+        ptx_fdecl_params = params;
+        ptx_fdecl_return_value = return_info;
+        register_decls = registers;
+        ptx_fdecl_body = body;
+      }
+      in
+      (* Pop the variable scope for the function *)
+      let env = pop_scope env in
+      ptx_fdecl, env) 
+
 (* Converts a list of function declarations to ptx and c functions *)
 let rec convert_fdecl_list fdecl_list ptx_fdecl_list c_fdecl_list env = 
      match fdecl_list with 
@@ -1079,10 +1150,9 @@ let rec convert_fdecl_list fdecl_list ptx_fdecl_list c_fdecl_list env =
           | false ->
               let c_fdecl, env = convert_to_c_fdecl hd env in 
               convert_fdecl_list tl ptx_fdecl_list (List.rev(c_fdecl::List.rev(c_fdecl_list))) env
-(*         | true -> 
-              let ptx_fdecl, new_env = convert_to_ptx_fdecl hd env in
-              convert_fdecl_list tl List.rev(ptx_fdecl::List.rev(ptx_fdecl_list)) c_fdecl_list new_env *)
-          | _  -> raise Exceptions.C'est_La_Vie
+          | true -> 
+              let ptx_fdecl, env = convert_to_ptx_fdecl hd env in
+              convert_fdecl_list tl (List.rev(ptx_fdecl::List.rev(ptx_fdecl_list))) c_fdecl_list env
         )
 
 (* Main function for converting ast to sast *)
