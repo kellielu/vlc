@@ -94,7 +94,7 @@ let generate_ptx_data_type data_type =
     | S16 -> ".s16"
   *)
     | S32 -> ".s32"
-    | Pred -> ".red"
+    | Pred -> ".pred"
 (*     | S64 -> ".s64" *)
     | F32 -> ".f32"
     | Ptx_Void -> ""
@@ -216,10 +216,10 @@ let write_ptx filename ptx_string =
 (* Generates the ptx function string *)
 let generate_ptx_function f =
   let ptx_function_body = 
-    ".visible " ^ generate_ptx_function_type(f.ptx_fdecl_type) ^ (generate_id(f.ptx_fdecl_name)) ^ "(" 
+    ".visible " ^ generate_ptx_function_type(f.ptx_fdecl_type) ^ " " ^ (generate_id(f.ptx_fdecl_name)) ^ "(" 
     ^ (generate_list generate_ptx_pdecl "," f.ptx_fdecl_params) ^ ")\n" ^ 
     "{" ^ 
-(*     (generate_list generate_ptx_vdecl "\n" f.register_decls ) ^ "\n" ^  *)
+    (generate_list generate_ptx_vdecl "\n" f.register_decls ) ^ "\n" ^ 
     (generate_list generate_ptx_statement "\n" f.ptx_fdecl_body) ^ 
     "}"
   in

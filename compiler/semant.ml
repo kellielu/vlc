@@ -1124,10 +1124,13 @@ let convert_to_ptx_fdecl fdecl env =
         ptx_variable_type = return_type;
         ptx_kernel_name = fdecl.name;
       }, env in
-      (* some function utilizing the defined counters in the beginning*)
-      let registers,    env    =  [],  env in
       let params,       env    = convert_list convert_to_ptx_param         fdecl.params  [] env in
       let body,         env    = convert_list convert_to_ptx_statement     fdecl.body    [] env in
+      let registers,    env    =  [
+        Ptx_Vdecl(Register_state, S32, Parameterized_variable_register(Ast.Identifier("si"), !signed_int_counter));
+        Ptx_Vdecl(Register_state, F32, Parameterized_variable_register(Ast.Identifier("fl"), !signed_float_counter));
+        Ptx_Vdecl(Register_state, Pred, Parameterized_variable_register(Ast.Identifier("pr"), !predicate_counter));
+      ],  env in
       let ptx_fdecl = {
         ptx_fdecl_type = Sast.Global_func;
         ptx_fdecl_name = fdecl.name;
