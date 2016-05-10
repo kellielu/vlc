@@ -149,6 +149,8 @@ let rec generate_ptx_expression expression =
     | Ptx_Binop(o, t, v1, v2, v3) -> generate_ptx_binary_operator(o) ^ generate_ptx_variable_type(t) 
         ^ "     " ^ generate_ptx_expression(v1) ^ ", " ^ generate_ptx_expression(v2) ^ ", " 
         ^ generate_ptx_expression(v3) ^ ";\n"
+    | Ptx_triple(e1, e2, e3) -> generate_ptx_expression(e1) ^ generate_ptx_expression(e2) ^
+      generate_ptx_expression(e2)
     | Ptx_Unop(o, t, v1, v2) -> 
         let unop = match o with 
             | Ptx_Not -> generate_ptx_unary_operator(o) ^ 

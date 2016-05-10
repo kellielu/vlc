@@ -229,6 +229,17 @@ let get_variable_type id env =
             check_scopes larger_scopes
   in check_scopes env.variable_scope_stack
 
+let get_variable_info id env = 
+  let rec check_scopes scope_stack = 
+    match scope_stack with 
+      | [] -> raise (Exceptions.Variable_not_found_in_scope  ( id))
+      | scope::larger_scopes -> 
+          if Variable_Map.mem id scope then 
+            Variable_Map.find id scope
+          else
+            check_scopes larger_scopes
+  in check_scopes env.variable_scope_stack
+
 (* Helper function that returns checks types are the same *)
 let same_types t1 t2 = (t1 = t2)
 
@@ -889,9 +900,43 @@ let rec convert_to_ptx_expression e env =
     | Ast.Boolean_Literal(b) -> Sast.Ptx_expression_variable(Sast.Constant_bool(b)), env
     | Ast.Floating_Point_Literal(f) -> Sast.Ptx_expression_variable(Sast.Constant_float(f)), env
     | Ast.Array_Literal(e_list) -> raise Exceptions.C'est_La_Vie
-    | Ast.Identifier_Literal(i) -> Sast.Ptx_expression_variable(Sast.Ptx_Variable(i)), env
+    | Ast.Identifier_Literal(i) -> 
+      let variable = get_variable_info (Utils.idtos i) env in
+      let regStr = match variable.vtype with
+        | Ast.Primitive(Ast.Integer) -> "%si" ^ (string_of_int(variable.register_number))
+        | Ast.Primitive(Ast.Float) -> "%fl" ^ (string_of_int(variable.register_number))
+        | Ast.Primitive(Ast.Boolean) -> "%pr" ^ (string_of_int(variable.register_number))
+        | Ast.Primitive(Ast.String) -> raise Exceptions.NO_STRINGS_ALLOWED_IN_GDECL
+        | Ast.Primitive(Ast.Void) -> raise Exceptions.Void_type_in_gdecl
+        | Ast.Array(vtype2, i) -> raise Exceptions.C'est_La_Vie
+      in
+      Sast.Ptx_expression_variable(Sast.Ptx_Variable(Ast.Identifier(regStr))), env
     | Ast.Cast(v_type, e) -> raise Exceptions.C'est_La_Vie
-    | Ast.Binop(e1,o,e2) -> raise Exceptions.C'est_La_Vie        
+    | Ast.Binop(e1,o,e2) -> Sast.Ptx_empty, env
+(*       if((same_types (infer_type e1 env) (infer_type e2 env)) = false) then raise (Exceptions.Type_mismatch "Binop doesn't match")
+      else
+      let val1 = match infer_type(e1,env) with
+        | Ast.Primitive(Ast.Integer) -> let num = !signed_int_counter in (incr signed_int_counter ; num)
+        | Ast.Primitive(Ast.Float) -> let num = !signed_float_counter in (incr signed_float_counter ; num)
+        | Ast.Primitive(Ast.Boolean) -> let num = !predicate_counter in (incr predicate_counter ; num)
+        | Ast.Primitive(Ast.String) -> raise Exceptions.NO_STRINGS_ALLOWED_IN_GDECL
+        | Ast.Primitive(Ast.Void) -> raise Exceptions.Void_type_in_gdecl
+        | Ast.Array(vtype2, i) -> raise Exceptions.C'est_La_Vie
+      in
+      let val2 = match infer_type(e2,env) with
+        | Ast.Primitive(Ast.Integer) -> let num = !signed_int_counter in (incr signed_int_counter ; num)
+        | Ast.Primitive(Ast.Float) -> let num = !signed_float_counter in (incr signed_float_counter ; num)
+        | Ast.Primitive(Ast.Boolean) -> let num = !predicate_counter in (incr predicate_counter ; num)
+        | Ast.Primitive(Ast.String) -> raise Exceptions.NO_STRINGS_ALLOWED_IN_GDECL
+        | Ast.Primitive(Ast.Void) -> raise Exceptions.Void_type_in_gdecl
+        | Ast.Array(vtype2, i) -> raise Exceptions.C'est_La_Vie
+      in
+      Ptx_Binop(
+        convert_to_ptx_binop(o),
+        convert_to_ptx_variable_type(infer_type(e1)),
+        convert_to_ptx_expression()
+
+      ) *)
 (* Need a way to turn one Ast datatype into multiple Sast datatypes      
  convert_to_ptx_expression(e1) ^ 
       convert_to_ptx_expression(e2) ^ 
@@ -964,29 +1009,43 @@ let rec convert_to_ptx_variable_statement vstmt env =
           let new_env = convert_to_ptx_vdecl vdecl env in
           Ptx_empty, new_env
       | Ast.Initialization(vdecl, e) -> 
-          let movInit = (let vtype = match vdecl with
-                | Ast.Variable_Declaration(v,id) -> v
-              in
-              let regVal = match vtype with
-                | Ast.Primitive(Ast.Integer) -> "%si" ^ (string_of_int(!signed_int_counter))
-                | Ast.Primitive(Ast.Float) -> "%fl" ^ (string_of_int(!signed_float_counter))
-                | Ast.Primitive(Ast.Boolean) -> "%pr" ^ (string_of_int(!predicate_counter))
-                | Ast.Primitive(Ast.String) -> raise Exceptions.NO_STRINGS_ALLOWED_IN_GDECL
-                | Ast.Primitive(Ast.Void) -> raise Exceptions.Void_type_in_gdecl
-                | Ast.Array(vtype2, i) -> raise Exceptions.C'est_La_Vie
-              in
-              let env2 = convert_to_ptx_vdecl vdecl env in
-              let v_type,env3 = convert_to_ptx_variable_type vtype env2 in
-              let exp2, env4 = convert_to_ptx_expression e env3 in
+          let vtype = match vdecl with
+            | Ast.Variable_Declaration(v, id) -> v
+          in
+          let regStr,env = (
+            let regVal = match vtype with
+              | Ast.Primitive(Ast.Integer) -> "%si" ^ (string_of_int(!signed_int_counter))
+              | Ast.Primitive(Ast.Float) -> "%fl" ^ (string_of_int(!signed_float_counter))
+              | Ast.Primitive(Ast.Boolean) -> "%pr" ^ (string_of_int(!predicate_counter))
+              | Ast.Primitive(Ast.String) -> raise Exceptions.NO_STRINGS_ALLOWED_IN_GDECL
+              | Ast.Primitive(Ast.Void) -> raise Exceptions.Void_type_in_gdecl
+              | Ast.Array(vtype2, i) -> raise Exceptions.C'est_La_Vie
+            in
+            let env2 = convert_to_ptx_vdecl vdecl env in
+            regVal, env2) in
+          let exp2, env = convert_to_ptx_expression e env in
+          let v_type, env = convert_to_ptx_variable_type vtype env in
+          let movInit = (
               Ptx_Move(
-                v_type, Ptx_expression_variable(Ptx_Variable(Ast.Identifier(regVal))), exp2
-              ),env4) in
+                v_type, Ptx_expression_variable(Ptx_Variable(Ast.Identifier(regStr))), exp2
+              ),env) in
           let res = match e with 
             (*array accessor as well*)
             | Ast.Integer_Literal(i) -> movInit
             | Ast.Boolean_Literal(b) -> movInit
             | Ast.Floating_Point_Literal(f) -> movInit
             | Ast.Identifier_Literal(i) -> movInit
+            | Ast.Binop(e1, o, e2) -> 
+              let ptx_b, env = convert_to_ptx_binop o env in
+              let bexp1, env = convert_to_ptx_expression e1 env in
+              let bexp2, env = convert_to_ptx_expression e2 env in
+              Sast.Ptx_Binop(
+                ptx_b,
+                v_type,
+                Ptx_expression_variable(Ptx_Variable(Ast.Identifier(regStr))),
+                bexp1,
+                bexp2
+            ), env
           in res
       | Ast.Assignment(e1, e2) -> raise Exceptions.C'est_La_Vie
 (*       | Ast.Initialization(vdecl, expression) ->

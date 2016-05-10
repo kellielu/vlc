@@ -74,6 +74,7 @@ type ptx_vdecl =
 type ptx_expression =
 (*convert may require some options prior to first data type*)
 	| Ptx_Binop of ptx_binary_operator * ptx_variable_type * ptx_expression * ptx_expression * ptx_expression
+	| Ptx_triple of ptx_expression * ptx_expression * ptx_expression
 	| Ptx_Unop of ptx_unary_operator * ptx_variable_type * ptx_expression * ptx_expression
 	| Ptx_Load of ptx_state_space * ptx_variable_type * ptx_expression * ptx_expression
 	| Ptx_Store of ptx_state_space * ptx_variable_type * ptx_expression * ptx_expression
