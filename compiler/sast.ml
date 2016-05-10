@@ -126,7 +126,7 @@ type ptx_fdecl = {
 		for each ptx fdecl that our c code will need to know how to interface
 		with to use as a return type
 	*)
-	ptx_fdecl_return_value						: ptx_kernel_variable_info;
+	ptx_fdecl_return_type						: ptx_pdecl;
 
 	(* Declares the virtual registers that are needed for the function *)
 	register_decls 								: ptx_vdecl list;

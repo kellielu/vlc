@@ -22,13 +22,13 @@ let reduce_c_name_counter = ref 0
 let reduce_ptx_name_counter = ref 0
 (* For generating arg names*)
 let arg_counter = ref 0
-
+let ptx_return_counter = ref 0
 
 (* For generating register counters for datatypes *)
-let signed_int_counter = ref 0
-let signed_float_counter = ref 0
-let predicate_counter = ref 0
-let block_counter = ref 0
+let signed_int_counter = ref 1
+let signed_float_counter = ref 1
+let predicate_counter = ref 1
+let block_counter = ref 1
 (*-----------------------------------Generates Symbols Based on Counters-----------------------------------*)
 let generate_device_pointer_name () = 
     let name = "dev_ptr" ^ (string_of_int !dev_name_counter) in 
@@ -63,7 +63,10 @@ let generate_arg_name () =
     let name = "arg" ^ (string_of_int !arg_counter) in 
     incr arg_counter;
     name
-
+let generate_ptx_return_name () = 
+    let name = "func_ret" ^ (string_of_int !ptx_return_counter) in 
+    incr arg_counter;
+    name
 (*-----------------------------------Types for Semantic Analysis-----------------------------------*)
 (* Three types of functions *)
 type cuda_function_type  = 
@@ -847,6 +850,7 @@ let rec convert_to_c_expression e env =
         let f_arg_types = List.map get_array_types (get_types hof.input_arrays [] env) in
         let check_args expected_arg_types f_args =
         List.map2 same_types expected_arg_types f_args in
+        ignore(same_types (List.length f_arg_types) (List.length expected_arg_types));
         ignore(check_args f_arg_types expected_arg_types);
         (*Check that constants match those unknown variables in the defg*)
         let retrive_constant_name c = 
@@ -876,7 +880,7 @@ let rec convert_to_c_expression e env =
 
 (* TO IMPLEMENT *)
 
-let convert_to_ptx_expression e env = 
+let rec convert_to_ptx_expression e env = 
   match e with 
     | Ast.Function_Call(id, exp) -> raise Exceptions.C'est_La_Vie
     | Ast.Higher_Order_Function_Call(hof) -> raise Exceptions.No_Hof_Allowed
@@ -887,7 +891,7 @@ let convert_to_ptx_expression e env =
     | Ast.Array_Literal(e_list) -> raise Exceptions.C'est_La_Vie
     | Ast.Identifier_Literal(i) -> Sast.Ptx_expression_variable(Sast.Ptx_Variable(i)), env
     | Ast.Cast(v_type, e) -> raise Exceptions.C'est_La_Vie
-    | Ast.Binop(e1,o,e2) -> raise Exceptions.C'est_La_Vie
+    | Ast.Binop(e1,o,e2) -> raise Exceptions.C'est_La_Vie        
 (* Need a way to turn one Ast datatype into multiple Sast datatypes      
  convert_to_ptx_expression(e1) ^ 
       convert_to_ptx_expression(e2) ^ 
@@ -1111,7 +1115,15 @@ let convert_to_c_param vdecl env  =
 
 let convert_to_ptx_param vdecl env =
   match vdecl with
-    | Ast.Variable_Declaration(vtype,id) -> raise Exceptions.C'est_La_Vie  
+    | Ast.Variable_Declaration(vtype,id) -> 
+      match vtype with
+      | Ast.Primitive(p) ->
+        {
+          ptx_parameter_data_type = fst(convert_to_ptx_data_type p env);
+          ptx_parameter_state_space = Sast.State_undefined;
+          ptx_parameter_name = id;
+        },env
+      | Ast.Array(t,n) -> raise (Exceptions.Exception("Array not a valid ptx param"))
 
 (* Converts from fdecl to c_fdecl *)
 let convert_to_c_fdecl fdecl env =
@@ -1184,10 +1196,10 @@ let convert_to_ptx_fdecl fdecl env =
         Ptx_Vdecl(Register_state, Sast.Ptx_Primitive(Pred), Parameterized_variable_register(Ast.Identifier("pr"), !predicate_counter));
       ],  env in
       let ptx_fdecl = {
-        ptx_fdecl_type = Sast.Global_func;
+        ptx_fdecl_type = Sast.Device_func;
         ptx_fdecl_name = fdecl.name;
         ptx_fdecl_params = params;
-        ptx_fdecl_return_value = return_info;
+        ptx_fdecl_return_type = fst(convert_to_ptx_param (Ast.Variable_Declaration (fdecl.return_type, (Ast.Identifier (generate_ptx_return_name()) ) )) env);
         register_decls = registers;
         ptx_fdecl_body = body;
       }

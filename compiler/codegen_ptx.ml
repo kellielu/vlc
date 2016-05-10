@@ -211,12 +211,15 @@ let generate_ptx_function_type fun_type =
   sprintf "%s" t
 
 let generate_ptx_pdecl p = 
-  let pdecl = 
-    ".param " ^ (generate_ptx_data_type(p.ptx_parameter_data_type)) ^ " " ^
-    (generate_ptx_state_space(p.ptx_parameter_state_space)) ^ " " ^
-    (generate_id(p.ptx_parameter_name))
-  in
-  sprintf "%s" pdecl
+  match p.ptx_parameter_data_type with 
+    | Ptx_Void -> ""
+    | _ ->
+      let pdecl = 
+        ".param " ^ (generate_ptx_data_type(p.ptx_parameter_data_type)) ^ " " ^
+        (generate_ptx_state_space(p.ptx_parameter_state_space)) ^ " " ^
+        (generate_id(p.ptx_parameter_name))
+      in
+      sprintf "%s" pdecl
 
 (* Writing out to PTX file *)
 let write_ptx filename ptx_string = 
@@ -226,7 +229,7 @@ let write_ptx filename ptx_string =
 (* Generates the ptx function string *)
 let generate_ptx_function f =
   let ptx_function_body = 
-    ".visible " ^ generate_ptx_function_type(f.ptx_fdecl_type) ^ " " ^ (generate_id(f.ptx_fdecl_name)) ^ "(" 
+    ".visible " ^ generate_ptx_function_type(f.ptx_fdecl_type) ^ " (" ^ generate_ptx_pdecl f.ptx_fdecl_return_type ^ ") " ^ (generate_id(f.ptx_fdecl_name)) ^ "(" 
     ^ (generate_list generate_ptx_pdecl "," f.ptx_fdecl_params) ^ ")\n\n" ^ 
     "{\n" ^ 
     (generate_list generate_ptx_vdecl "\n" f.register_decls ) ^ "\n\n\n" ^ 

@@ -250,41 +250,75 @@ let generate_function_string_assignment id =
 let generate_function_string_read id = 
   "std::string " ^ Utils.idtos id ^ "_str" ^ "((std::istreambuf_iterator<char>(" ^ Utils.idtos id ^ ")), std::istreambuf_iterator<char>());"
 
-let generate_if_statements constant_list index = 
+let rec generate_if_statements_constants constant_list str index = 
   match constant_list with 
     | [] -> ""
     | hd::[] -> 
+      let statement_string = 
         if index = 0 then
+          "if(i ==" ^ string_of_int index ^ "){\n" ^ 
+            "\t" ^ Utils.idtos hd.host_name  ^ " = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^ 
+            "\t" ^ generate_mem_alloc_statement_host_to_device hd ^ "\n" ^
+            "\t" ^ generate_mem_cpy_statement_host_to_device hd ^ "\n" ^ 
+          "}\n"
+        else
+          "else{\n" ^ 
+            "\t" ^ Utils.idtos hd.host_name ^ " = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^ 
+            "\t" ^ generate_mem_alloc_statement_host_to_device hd ^ "\n" ^
+            "\t" ^ generate_mem_cpy_statement_host_to_device hd ^ "\n" ^ 
+          "}\n"
+      in str ^ statement_string
+    | hd::tl ->
+      let statement_string = 
+        if index = 0 then
+          "if(i ==" ^ string_of_int index ^ "){\n" ^ 
+            "\t" ^ Utils.idtos hd.host_name  ^ " = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^ 
+            "\t" ^ generate_mem_alloc_statement_host_to_device hd ^ "\n" ^
+            "\t" ^ generate_mem_cpy_statement_host_to_device hd ^ "\n" ^ 
+          "}\n"
+        else
+          "else if(i ==" ^ string_of_int index ^ "){\n" ^ 
+            "\t" ^ Utils.idtos hd.host_name  ^ " = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^ 
+            "\t" ^ generate_mem_alloc_statement_host_to_device hd ^ "\n" ^
+            "\t" ^ generate_mem_cpy_statement_host_to_device hd ^ "\n" ^ 
+          "}\n"
+      in generate_if_statements_constants tl (str ^ statement_string) (index+1)
+
+let rec generate_if_statements_input_arrays input_arrays str index = 
+    match input_arrays with
+    | [] -> ""
+    | hd::[] ->
+    let statement_string = 
+      if index = 0 then
         "if(i ==" ^ string_of_int index ^ "){\n" ^ 
-          "\t" ^ Utils.idtos hd.host_name  ^ " = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^ 
-          "\t" ^ generate_mem_alloc_statement_host_to_device hd ^ "\n" ^
-          "\t" ^ generate_mem_cpy_statement_host_to_device hd ^ "\n" ^ 
+          "\t"^ generate_variable_type hd.variable_type ^ " tmp = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^
+          "\t" ^ Utils.idtos hd.host_name  ^ " = tmp.get_values();\n" ^ 
         "}\n"
         else
         "else{\n" ^ 
-          "\t" ^ Utils.idtos hd.host_name ^ " = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^ 
-          "\t" ^ generate_mem_alloc_statement_host_to_device hd ^ "\n" ^
-          "\t" ^ generate_mem_cpy_statement_host_to_device hd ^ "\n" ^ 
+          "\t" ^ generate_variable_type hd.variable_type ^ " tmp = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^
+          "\t" ^ Utils.idtos hd.host_name  ^ " = tmp.get_values();\n" ^ 
         "}\n"
+      in str ^ statement_string
     | hd::tl ->
+    let statement_string = 
       if index = 0 then
         "if(i ==" ^ string_of_int index ^ "){\n" ^ 
-          "\t" ^ Utils.idtos hd.host_name  ^ " = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^ 
-          "\t" ^ generate_mem_alloc_statement_host_to_device hd ^ "\n" ^
-          "\t" ^ generate_mem_cpy_statement_host_to_device hd ^ "\n" ^ 
+         "\t" ^ generate_variable_type hd.variable_type ^ " tmp = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^
+          "\t" ^ Utils.idtos hd.host_name  ^ " = tmp.get_values();\n" ^ 
         "}\n"
       else
         "else if(i ==" ^ string_of_int index ^ "){\n" ^ 
-          "\t" ^ Utils.idtos hd.host_name  ^ " = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^ 
-          "\t" ^ generate_mem_alloc_statement_host_to_device hd ^ "\n" ^
-          "\t" ^ generate_mem_cpy_statement_host_to_device hd ^ "\n" ^ 
+          "\t" ^ generate_variable_type hd.variable_type ^ " tmp = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^
+          "\t" ^ Utils.idtos hd.host_name  ^ " = tmp.get_values();\n" ^ 
         "}\n"
+    in generate_if_statements_input_arrays tl (str ^ statement_string) (index+1)
 
 (* Generates c function declaration for map  *)
 let generate_higher_order_function_decl hof = 
     let higher_order_function_decl_string = 
       match Utils.idtos(hof.higher_order_function_type) with
-      | "map" -> "VLC_Array <" ^ (generate_variable_type hof.return_array_info.variable_type) ^ ">" ^ 
+      | "map" ->  (generate_variable_type hof.return_array_info.variable_type) ^ 
                 Utils.idtos hof.higher_order_function_name ^ "(...)" ^ "{\n\n" ^ 
                       "checkCudaErrors(cuCtxCreate(&context, 0, device));\n\n" ^ 
                       (* Generates strings for all the functions that are called*)
@@ -313,9 +347,13 @@ let generate_higher_order_function_decl hof =
                       "va_list constants;\n" ^ 
                       "va_start(constants,num_constants);\n" ^ 
                       "for(int i = 0; i < num_constants; i++){\n\n" ^
-                          generate_if_statements hof.higher_order_function_constants 0 ^ "\n" ^ 
+                          generate_if_statements_constants hof.higher_order_function_constants "" 0 ^ "\n" ^ 
                       "}\n" ^ 
                       "va_end(constants);\n\n" ^ 
+                      (* Matches arguments with host pointers*)
+                      "for(int i =0;i < num_input_arrays; i++){\n\n" ^ 
+                          generate_if_statements_input_arrays hof.input_arrays_info "" 0 ^ "\n" ^ 
+                      "}\n" ^ 
                       (* Performs mem alloc and mem copy for input arrays*)
                       generate_list generate_mem_alloc_statement_host_to_device "\n" hof.input_arrays_info ^ "\n" ^ 
                       generate_list generate_mem_cpy_statement_host_to_device "" hof.input_arrays_info ^ "\n\n\n" ^ 
@@ -363,8 +401,8 @@ let generate_variable_statement vstatement =
     | Sast.Assignment (e1, e2) -> 
         (match e1 with
           | Sast.Array_Accessor(e,e_list,array_access,is_lvalue) ->
-              if array_access = true then (generate_expression e1) ^ ".set_array_value(" ^ (generate_expression e2) ^ "," ^ string_of_int (List.length e_list) ^ ");"
-              else (generate_expression e1) ^ ".set_element_value(" ^ (generate_expression e2) ^ "," ^ string_of_int (List.length e_list)^ ");"
+              if array_access = true then (generate_expression e1) ^ ".set_array_value(" ^ (generate_expression e2) ^ "," ^ string_of_int (List.length e_list) ^ ","^(generate_list generate_expression "," e_list )^");\n"
+              else (generate_expression e1) ^ ".set_element_value(" ^ (generate_expression e2) ^ "," ^ string_of_int (List.length e_list)^ ");\n"
           | _ -> (generate_expression e1) ^ "=" ^ (generate_expression e2) ^ ";\n")
     | Sast.Initialization(d,e) ->
         (generate_vdecl d) ^ "=" ^ (generate_expression e) ^ ";\n"
@@ -403,8 +441,8 @@ let generate_fdecl f  =
   let fdecl_string = 
     (generate_variable_type f.c_fdecl_return_type) ^ " " ^ 
     (generate_id f.c_fdecl_name) ^ "(" ^ 
-    (generate_list generate_param "," f.c_fdecl_params) ^ "){\n\n" ^ 
-    (generate_list generate_statement "" f.c_fdecl_body) ^ "\n}\n\n\n" 
+    (generate_list generate_param "," f.c_fdecl_params) ^ "){\n" ^ 
+    (generate_list generate_statement "" f.c_fdecl_body) ^ "}\n\n\n" 
   in
   sprintf "%s" fdecl_string
 

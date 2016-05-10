@@ -263,7 +263,7 @@ VLC_Array<T>& VLC_Array<T>::operator=(VLC_Array<T> &vlcarray){
 	/* Now access the values that are passed in */
 	for(size_t j = 0; j < this->num_values; 	j++)	{ 		this->values[j] 		= vlcarray.get_values()[j]; 			}
 	for(size_t i = 0; i < this->num_dimensions;i++)	{ 		this->dimensions[i] 	= vlcarray.get_dimensions()[i]; 		}
-
+f
 }
 template <class T> 
 T* VLC_Array<T>::get_values(){ return this->values;}
