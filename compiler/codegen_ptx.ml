@@ -113,6 +113,14 @@ let generate_ptx_state_space space =
   in
   sprintf "%s" s
 
+let generate_ptx_variable_type vtype = 
+  let t = match vtype with
+    | Ptx_Primitive(d) -> generate_ptx_data_type(d)
+    | Ptx_Array(d, i) -> raise Exceptions.C'est_La_Vie     
+    | Ptx_Pointer(d, i) -> raise Exceptions.C'est_La_Vie
+  in
+  sprintf "%s" t
+
 let generate_ptx_variable variable = 
   let v = match variable with
     | Parameterized_variable_register(id, i) -> "%" ^ (generate_id(id)) ^ "<" ^
@@ -131,43 +139,43 @@ let generate_ptx_variable variable =
 
 let generate_ptx_vdecl declaration =
   let v = match declaration with
-    | Ptx_Vdecl (space, dtype, v) -> generate_ptx_state_space(space) ^ " " ^
-      (generate_ptx_data_type(dtype)) ^ " " ^ (generate_ptx_variable(v)) ^ ";"
+    | Ptx_Vdecl (space, vtype, v) -> generate_ptx_state_space(space) ^ " " ^
+      (generate_ptx_variable_type(vtype)) ^ " " ^ (generate_ptx_variable(v)) ^ ";"
   in
   sprintf "%s" v
 
 let rec generate_ptx_expression expression =
   let e = match expression with
-    | Ptx_Binop(o, t, v1, v2, v3) -> generate_ptx_binary_operator(o) ^ generate_ptx_data_type(t) 
+    | Ptx_Binop(o, t, v1, v2, v3) -> generate_ptx_binary_operator(o) ^ generate_ptx_variable_type(t) 
         ^ "     " ^ generate_ptx_expression(v1) ^ ", " ^ generate_ptx_expression(v2) ^ ", " 
         ^ generate_ptx_expression(v3) ^ ";\n"
     | Ptx_Unop(o, t, v1, v2) -> 
         let unop = match o with 
             | Ptx_Not -> generate_ptx_unary_operator(o) ^ 
-                generate_ptx_data_type(t) ^ "     " ^ generate_ptx_expression(v1) 
+                generate_ptx_variable_type(t) ^ "     " ^ generate_ptx_expression(v1) 
                 ^ ", " ^ generate_ptx_expression(v2) ^ ";\n"
             | Ptx_Negate -> generate_ptx_unary_operator(o) ^ 
-                generate_ptx_data_type(t) ^ "     " ^ generate_ptx_expression(v1) 
+                generate_ptx_variable_type(t) ^ "     " ^ generate_ptx_expression(v1) 
                 ^ ", " ^ generate_ptx_expression(v2) ^ ";\n"
-            | Ptx_Plus_Plus -> "add" ^ generate_ptx_data_type(t) ^ "     " ^
+            | Ptx_Plus_Plus -> "add" ^ generate_ptx_variable_type(t) ^ "     " ^
                 generate_ptx_expression(v1) ^ ", " ^ generate_ptx_expression(v2) ^
                 ", 1;\n"
-            | Ptx_Minus_Minus -> "sub" ^ generate_ptx_data_type(t) ^ "     " ^
+            | Ptx_Minus_Minus -> "sub" ^ generate_ptx_variable_type(t) ^ "     " ^
                 generate_ptx_expression(v1) ^ ", " ^ generate_ptx_expression(v2) ^
                 ", 1;\n"
         in unop
     | Ptx_vdecl(v) -> generate_ptx_vdecl(v) ^ "\n"
-    | Ptx_Move(d, v1, v2) -> "mov" ^ generate_ptx_data_type(d) ^ "     " ^
-      generate_ptx_expression(v1) ^ generate_ptx_expression(v2) ^ ";\n"
-    | Ptx_Load(ss, d, v1, v2) -> "ld" ^ generate_ptx_state_space(ss) ^ generate_ptx_data_type(d)
+    | Ptx_Move(d, v1, v2) -> "mov" ^ generate_ptx_variable_type(d) ^ "     " ^
+      generate_ptx_expression(v1) ^ ", " ^ generate_ptx_expression(v2) ^ ";\n"
+    | Ptx_Load(ss, d, v1, v2) -> "ld" ^ generate_ptx_state_space(ss) ^ generate_ptx_variable_type(d)
       ^ "     " ^ generate_ptx_expression(v1) ^ ",[" ^ generate_ptx_expression(v2) ^ "];\n"
-    | Ptx_Store(ss, d, v1, v2) -> "st" ^ generate_ptx_state_space(ss) ^ generate_ptx_data_type(d)
+    | Ptx_Store(ss, d, v1, v2) -> "st" ^ generate_ptx_state_space(ss) ^ generate_ptx_variable_type(d)
       ^ "     " ^ "[" ^ generate_ptx_expression(v1) ^ "]," ^ generate_ptx_expression(v2) ^ ";\n"
     | Ptx_Branch(sub) -> "bra " ^ generate_id(sub) ^ ";\n"
     | Predicated_statement(v, s) -> "@" ^ generate_ptx_expression(v) ^ " " ^
       generate_ptx_expression(s) ^ "\n"
-    | Ptx_Convert (d1, d2, v1, v2) -> "cvt" ^ generate_ptx_data_type(d1) ^
-      generate_ptx_data_type(d2) ^ " " ^ generate_ptx_expression(v1) ^ ", " ^
+    | Ptx_Convert (d1, d2, v1, v2) -> "cvt" ^ generate_ptx_variable_type(d1) ^
+      generate_ptx_variable_type(d2) ^ " " ^ generate_ptx_expression(v1) ^ ", " ^
       generate_ptx_expression(v2) ^ ";\n"
     | Ptx_Call(v1, id, vlist) -> "call " ^ generate_ptx_expression(v1) ^ " " ^
       generate_id(id) ^ " " ^ (generate_list generate_ptx_expression " " vlist) ^ ";\n"
@@ -175,7 +183,7 @@ let rec generate_ptx_expression expression =
       ^ (generate_list generate_ptx_expression " " vlist) ^ ";\n"
     | Ptx_Return_void -> "ret;\n"
     | Ptx_value_return(i) -> raise Exceptions.Value_return_ptx_test
-    | Ptx_expression_variable(v) -> generate_ptx_variable(v) ^ "\n"
+    | Ptx_expression_variable(v) -> generate_ptx_variable(v)
     | Ptx_empty -> ""
   in
   sprintf "%s" e

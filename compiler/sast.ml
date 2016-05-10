@@ -49,7 +49,7 @@ type ptx_variable =
 	| Constant_int of int 
 	| Constant_float of float
 	| Constant_bool of bool
-	| Variable_array of Ast.identifier * int (* array name, size of array *)
+	| Variable_array of Ast.identifier * int (* array name, si+ze of array *)
 	| Variable_array_initialized of Ast.identifier * ptx_literal list
 	| Ptx_Variable of Ast.identifier
 	| Ptx_Variable_initialized of Ast.identifier * ptx_literal
@@ -69,23 +69,22 @@ type ptx_pdecl = {
 
 type ptx_vdecl = 
 (* * ptx_variable_option  *)
-    | Ptx_Vdecl of ptx_state_space *  ptx_data_type *  ptx_variable
+    | Ptx_Vdecl of ptx_state_space *  ptx_variable_type *  ptx_variable
 
 type ptx_expression =
 (*convert may require some options prior to first data type*)
-	| Ptx_Binop of ptx_binary_operator * ptx_data_type * ptx_expression * ptx_expression * ptx_expression
-	| Ptx_Unop of ptx_unary_operator * ptx_data_type * ptx_expression * ptx_expression
-	| Ptx_Load of ptx_state_space * ptx_data_type * ptx_expression * ptx_expression
-	| Ptx_Store of ptx_state_space * ptx_data_type * ptx_expression * ptx_expression
+	| Ptx_Binop of ptx_binary_operator * ptx_variable_type * ptx_expression * ptx_expression * ptx_expression
+	| Ptx_Unop of ptx_unary_operator * ptx_variable_type * ptx_expression * ptx_expression
+	| Ptx_Load of ptx_state_space * ptx_variable_type * ptx_expression * ptx_expression
+	| Ptx_Store of ptx_state_space * ptx_variable_type * ptx_expression * ptx_expression
 	| Ptx_vdecl of ptx_vdecl
-	| Ptx_Move of ptx_data_type * ptx_expression * ptx_expression
+	| Ptx_Move of ptx_variable_type * ptx_expression * ptx_expression
 	| Ptx_Branch of Ast.identifier
 	| Ptx_Call of ptx_expression * Ast.identifier * ptx_expression list
 	| Ptx_Empty_Call of Ast.identifier * ptx_expression list
 	| Predicated_statement of ptx_expression * ptx_expression
-	| Ptx_Convert of ptx_data_type * ptx_data_type * ptx_expression * ptx_expression
+	| Ptx_Convert of ptx_variable_type * ptx_variable_type * ptx_expression * ptx_expression
 	| Ptx_value_return of ptx_kernel_variable_info
-	(*this is bad grammar but whatever yolo*)
 	| Ptx_expression_variable of ptx_variable
 	| Ptx_empty
 	| Ptx_Return_void

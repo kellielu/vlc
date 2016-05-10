@@ -849,16 +849,16 @@ let rec convert_to_c_expression e env =
 
 (* TO IMPLEMENT *)
 
-let convert_to_ptx_expression e = 
+let convert_to_ptx_expression e env = 
   match e with 
     | Ast.Function_Call(id, exp) -> raise Exceptions.C'est_La_Vie
-    | Ast.Higher_Order_Function_Call(hof) -> raise Exceptions.C'est_La_Vie
+    | Ast.Higher_Order_Function_Call(hof) -> raise Exceptions.No_Hof_Allowed
     | Ast.String_Literal(s) -> raise Exceptions.NO_STRINGS_ALLOWED_IN_GDECL
-    | Ast.Integer_Literal(i) -> Sast.Ptx_expression_variable(Sast.Constant_int(i))
-    | Ast.Boolean_Literal(b) -> Sast.Ptx_expression_variable(Sast.Constant_bool(b))
-    | Ast.Floating_Point_Literal(f) -> Sast.Ptx_expression_variable(Sast.Constant_float(f))
+    | Ast.Integer_Literal(i) -> Sast.Ptx_expression_variable(Sast.Constant_int(i)), env
+    | Ast.Boolean_Literal(b) -> Sast.Ptx_expression_variable(Sast.Constant_bool(b)), env
+    | Ast.Floating_Point_Literal(f) -> Sast.Ptx_expression_variable(Sast.Constant_float(f)), env
     | Ast.Array_Literal(e_list) -> raise Exceptions.C'est_La_Vie
-    | Ast.Identifier_Literal(i) -> raise Exceptions.C'est_La_Vie
+    | Ast.Identifier_Literal(i) -> Sast.Ptx_expression_variable(Sast.Ptx_Variable(i)), env
     | Ast.Cast(v_type, e) -> raise Exceptions.C'est_La_Vie
     | Ast.Binop(e1,o,e2) -> raise Exceptions.C'est_La_Vie
 (* Need a way to turn one Ast datatype into multiple Sast datatypes      
@@ -927,12 +927,36 @@ let convert_to_c_variable_statement vstmt env =
               | _ -> raise Exceptions.Cannot_assign_expression
 
 (* TO IMPLEMENT *)
-let convert_to_ptx_variable_statement vstmt env =
+let rec convert_to_ptx_variable_statement vstmt env =
     match vstmt with
       | Ast.Declaration(vdecl) -> 
           let new_env = convert_to_ptx_vdecl vdecl env in
           Ptx_empty, new_env
-      | Ast.Initialization(vdecl, e) -> raise Exceptions.C'est_La_Vie
+      | Ast.Initialization(vdecl, e) -> 
+          let movInit = (let vtype = match vdecl with
+                | Ast.Variable_Declaration(v,id) -> v
+              in
+              let regVal = match vtype with
+                | Ast.Primitive(Ast.Integer) -> "%si" ^ (string_of_int(!signed_int_counter))
+                | Ast.Primitive(Ast.Float) -> "%fl" ^ (string_of_int(!signed_float_counter))
+                | Ast.Primitive(Ast.Boolean) -> "%pr" ^ (string_of_int(!predicate_counter))
+                | Ast.Primitive(Ast.String) -> raise Exceptions.NO_STRINGS_ALLOWED_IN_GDECL
+                | Ast.Primitive(Ast.Void) -> raise Exceptions.Void_type_in_gdecl
+                | Ast.Array(vtype2, i) -> raise Exceptions.C'est_La_Vie
+              in
+              let env2 = convert_to_ptx_vdecl vdecl env in
+              let v_type,env3 = convert_to_ptx_variable_type vtype env2 in
+              let exp2, env4 = convert_to_ptx_expression e env3 in
+              Ptx_Move(
+                v_type, Ptx_expression_variable(Ptx_Variable(Ast.Identifier(regVal))), exp2
+              ),env4) in
+          let res = match e with 
+            (*array accessor as well*)
+            | Ast.Integer_Literal(i) -> movInit
+            | Ast.Boolean_Literal(b) -> movInit
+            | Ast.Floating_Point_Literal(f) -> movInit
+            | Ast.Identifier_Literal(i) -> movInit
+          in res
       | Ast.Assignment(e1, e2) -> raise Exceptions.C'est_La_Vie
 (*       | Ast.Initialization(vdecl, expression) ->
         let 
@@ -1024,7 +1048,8 @@ let rec convert_to_ptx_statement stmt env =
     | Ast.Variable_Statement(v) -> 
       let ptx_vstmt,env = convert_to_ptx_variable_statement v env in
       Ptx_expression(ptx_vstmt),env
-    | Ast.Expression(e) -> Ptx_expression(convert_to_ptx_expression(e)),env
+    | Ast.Expression(e) -> let e1, env = convert_to_ptx_expression e env in
+      Ptx_expression(e1),env
     | Ast.Return_Void -> Ptx_expression(Sast.Ptx_Return_void), env
     | Ast.Block(stmt_list) -> raise Exceptions.C'est_La_Vie       
 (*         if (good_statement_order stmt_list) = false then raise Exceptions.Have_statements_after_return_break_continue
@@ -1127,9 +1152,9 @@ let convert_to_ptx_fdecl fdecl env =
       let params,       env    = convert_list convert_to_ptx_param         fdecl.params  [] env in
       let body,         env    = convert_list convert_to_ptx_statement     fdecl.body    [] env in
       let registers,    env    =  [
-        Ptx_Vdecl(Register_state, S32, Parameterized_variable_register(Ast.Identifier("si"), !signed_int_counter));
-        Ptx_Vdecl(Register_state, F32, Parameterized_variable_register(Ast.Identifier("fl"), !signed_float_counter));
-        Ptx_Vdecl(Register_state, Pred, Parameterized_variable_register(Ast.Identifier("pr"), !predicate_counter));
+        Ptx_Vdecl(Register_state, Sast.Ptx_Primitive(S32), Parameterized_variable_register(Ast.Identifier("si"), !signed_int_counter));
+        Ptx_Vdecl(Register_state, Sast.Ptx_Primitive(F32), Parameterized_variable_register(Ast.Identifier("fl"), !signed_float_counter));
+        Ptx_Vdecl(Register_state, Sast.Ptx_Primitive(Pred), Parameterized_variable_register(Ast.Identifier("pr"), !predicate_counter));
       ],  env in
       let ptx_fdecl = {
         ptx_fdecl_type = Sast.Global_func;
