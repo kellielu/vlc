@@ -13,6 +13,8 @@ type ptx_binary_operator =
  	| Ptx_Bitshift_Right | Ptx_Bitshift_Left 
     | Ptx_Equal | Ptx_Not_Equal | Ptx_Greater_Than | Ptx_Less_Than | Ptx_Greater_Than_Equal 
     | Ptx_Less_Than_Equal
+    | Ptx_Bitwise_Or
+    | Ptx_Bitwise_And
 (*     Ptx_Greater_Than_Unsigned | Ptx_Less_Than_unsigned | Ptx_Greater_Than_Equal_Unsigned 
     | Ptx_Less_Than_Equal_Unsigned  *)
 
@@ -74,6 +76,7 @@ type ptx_vdecl =
 type ptx_expression =
 (*convert may require some options prior to first data type*)
 	| Ptx_Binop of ptx_binary_operator * ptx_variable_type * ptx_expression * ptx_expression * ptx_expression
+	| Ptx_triple of ptx_expression * ptx_expression * ptx_expression
 	| Ptx_Unop of ptx_unary_operator * ptx_variable_type * ptx_expression * ptx_expression
 	| Ptx_Load of ptx_state_space * ptx_variable_type * ptx_expression * ptx_expression
 	| Ptx_Store of ptx_state_space * ptx_variable_type * ptx_expression * ptx_expression
@@ -162,6 +165,8 @@ type c_binary_operator =
     | And | Or | Xor
     | Equal | Not_Equal | Greater_Than | Less_Than | Greater_Than_Equal | Less_Than_Equal
     | Bitshift_Right | Bitshift_Left 
+    | Bitwise_Or | Bitwise_And
+
 type c_unary_operator = 
     | Not | Negate
     | Plus_Plus | Minus_Minus

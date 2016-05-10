@@ -45,7 +45,7 @@ let token_to_string = function
   | LESS_THAN -> "LESS_THAN" | LESS_THAN_EQUAL -> "LESS_THAN_EQUAL"
   | IF -> "IF" | ELSE -> "ELSE" | WHILE -> "WHILE" | FOR -> "FOR"
   | CONTINUE -> "CONTINUE" | BREAK -> "BREAK"
-
+  | BITWISE_AND -> "BITWISE_AND" | BITWISE_OR -> "BITWISE_OR"
 
 let token_list_to_string token_list = 
  	let rec helper token_list acc_string = 
@@ -74,6 +74,8 @@ let binary_operator_to_string = function
   | Ast.Less_Than_Equal -> "<="
   | Ast.Bitshift_Left -> "<<"
   | Ast.Bitshift_Right -> "<<"
+  | Ast.Bitwise_Or -> "|"
+  | Ast.Bitwise_And -> "&"
 
 let unary_operator_to_string = function
   | Ast.Not -> "not"

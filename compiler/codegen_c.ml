@@ -32,6 +32,8 @@ let generate_binary_operator operator  =
     | Less_Than_Equal -> "<="
     | Bitshift_Right -> ">>"
     | Bitshift_Left -> "<<"
+    | Bitwise_And -> "&"
+    | Bitwise_Or -> "|"
   in
   sprintf "%s" op
 
@@ -66,7 +68,7 @@ let rec generate_pure_data_type arr =
   | Array(t,n) -> generate_pure_data_type t
 
 (* Generate variable type *)
-let rec generate_variable_type variable_type  =
+let generate_variable_type variable_type  =
   let vtype = match variable_type with
     | Primitive(p) -> generate_data_type p
     | Array(t,n) ->  

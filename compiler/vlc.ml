@@ -1,4 +1,4 @@
-type action = Tokens | Ast | Compile | Sast | Run
+type action = Tokens | Ast | Compile | Sast 
 
 let _ = 
 	if Array.length Sys.argv < 2 then
@@ -7,14 +7,12 @@ let _ =
       "\t-t: prints tokens read in by scanner\n" ^
       "\t-a: prints ast as a program\n" ^
       "\t-s: prints sast as a program\n" ^
-      "\t-c: compiles VLC program to CUDA C file and PTX files\n" ^
-      "\t-r: compiles and runs VLC program\n" )
+      "\t-c: compiles VLC program to CUDA C file and PTX files\n")
 	else
     let action = List.assoc Sys.argv.(1) [ ("-t", Tokens);
                                            ("-a", Ast);
                                            ("-s", Sast);
-                                           ("-c", Compile);
-                                           ("-r", Run)] and
+                                           ("-c", Compile);] and
 filename = Sys.argv.(2) in
 (* let base_filename = List.hd (Str.split (Str.regexp ".vlc") (List.hd (List.rev (Str.split (Str.regexp "/") filename)))) in
  *)let file_in = open_in filename in
@@ -31,4 +29,3 @@ filename = Sys.argv.(2) in
             print_string (Utils.sast_to_string sast)
         | Compile ->
             ignore(Codegen_c.generate_program filename sast)
-(*         | Run -> Acts as an interpreter *)

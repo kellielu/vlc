@@ -43,12 +43,14 @@ rule token = parse
 	| "<<"		{ BITSHIFT_LEFT }
 	| "++"		{ PLUS_PLUS }
 	| "--"		{ MINUS_MINUS }
+	| "&"		{ BITWISE_AND}
+	| "|" 		{ BITWISE_OR}
 
 	(* Logic Operators *)
 	| "and"  	{ AND }
 	| "or"	 	{ OR }
 	| "not" 	{ NOT }
-	| "xor" 	{ XOR }
+	| "xor"	 	{ XOR }
 
 	(* Comparison Operators *)
 	| "==" 		{ EQUAL }

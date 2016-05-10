@@ -23,6 +23,7 @@
 %token EQUAL NOT_EQUAL GREATER_THAN GREATER_THAN_EQUAL LESS_THAN LESS_THAN_EQUAL
 %token IF ELSE WHILE FOR
 %token CONTINUE BREAK 
+%token BITWISE_AND BITWISE_OR
 
 %token ASSIGNMENT 
 
@@ -40,7 +41,7 @@
 %left LBRACKET RBRACKET
 %left EQUAL NOT_EQUAL GREATER_THAN GREATER_THAN_EQUAL LESS_THAN LESS_THAN_EQUAL
 %left AND NOT OR XOR
-%left BITSHIFT_RIGHT BITSHIFT_LEFT
+%left BITSHIFT_RIGHT BITSHIFT_LEFT BITWISE_OR BITWISE_AND
 %left ADD SUBTRACT PLUS_PLUS MINUS_MINUS
 %left MULTIPLY DIVIDE MODULO
 %right NEGATE 
@@ -174,6 +175,9 @@ expression:
     | expression OR  expression                                         { Binop($1, Or, $3) }
     | expression XOR expression                                         { Binop($1, Xor, $3) }
     | NOT expression                                                    { Unop($2, Not) }
+
+    | expression BITWISE_AND expression                                 { Binop($1, Bitwise_And, $3)}
+    | expression BITWISE_OR expression                                  { Binop($1,Bitwise_Or, $3)}
 
     | expression EQUAL expression                                       { Binop($1, Equal, $3) }
     | expression NOT_EQUAL expression                                   { Binop($1, Not_Equal, $3 )}

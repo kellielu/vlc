@@ -1,14 +1,14 @@
-int def add(int a,int b):
-	return a+b
+int defg add(int a,int b):
+	int g = 5
+	bool a = true
+	float f = 2.3
+	float q = .1
+	float t = 1.
+	return
 
 int def vlc():
 	int[5] a =  {1,2,3,4,5}
 	int[5] b =  {1,2,3,4,5}
 	int[5] c = ~map(add,consts(scale=4),a,b)
 	int d = a[2]
-
-	a[3] = 5
-
-	a = b
-	return 0
 

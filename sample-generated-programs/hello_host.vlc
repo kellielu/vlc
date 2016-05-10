@@ -1,3 +1,10 @@
+int BLOOM_SIZE = 32
+int KILO = 1024
+int PASSES = 50
+int[BLOOM_SIZE] bloom_filt_seq
+int[BLOOM_SIZE] bloom_filt_gpu
+int[PASSES * KILO * 2] test_vals
+
 string helloworld
 
 int def vlc():

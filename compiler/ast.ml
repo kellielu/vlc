@@ -5,6 +5,8 @@ type binary_operator =
     | And | Or | Xor
     | Equal | Not_Equal | Greater_Than | Less_Than | Greater_Than_Equal | Less_Than_Equal
     | Bitshift_Right | Bitshift_Left 
+    | Bitwise_Or | Bitwise_And
+    
 type unary_operator = 
     | Not  | Negate
     | Plus_Plus | Minus_Minus
