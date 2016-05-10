@@ -337,7 +337,7 @@ let is_one_layer_array expression env =
 let rec get_array_dimensions vtype dimensions = 
   match vtype with
   | Ast.Array(t,n) -> 
-      get_array_dimensions t (List.rev(n::dimensions))
+      get_array_dimensions t (List.rev(n::List.rev(dimensions)))
   | Ast.Primitive(p) -> dimensions
 (*   | _ -> raise Exceptions.Unknown_variable_type *)
 
@@ -478,14 +478,15 @@ let rec convert_to_c_variable_type vtype env =
           let c_p,env = convert_to_c_data_type p env in
           Sast.Primitive(c_p),env
       | Ast.Array(t,n) ->
-          (match t with 
+          let inside = (match t with 
             | Ast.Array(t,n) -> 
                 let c_t,env = convert_to_c_variable_type t env in
-                Sast.Array(c_t,n),env
+                Sast.Array(c_t,n)
             | Ast.Primitive(p) -> 
                 let c_p,env= convert_to_c_data_type p env in
-                Sast.Primitive(c_p),env
-          )
+                Sast.Primitive(c_p)
+          ) in
+          Sast.Array(inside, n),env
 
 (* TO IMPLEMENT *)
 (* let rec convert_to_ptx_variable_type vtype env = 
@@ -561,16 +562,16 @@ let rec get_constants_info constant_list c_constant_list env =
         | Ast.Constant(id,e) -> 
             let vtype = infer_type e env in 
             (* Name of constant in defg gpu function*)
-            let k_name = Ast.Identifier(generate_device_pointer_name ()) in 
+            let h_name = Ast.Identifier(generate_host_pointer_name ()) in 
             (* Name of constant when input as an argument *)
             let a_name = Ast.Identifier(generate_arg_name ())in
             let v_type,env = convert_to_c_variable_type vtype env in
             (* Sast.type*)
             let constant_info = {
                 variable_type = v_type;
-                host_name = id;
+                host_name = h_name;
                 arg_name = a_name;
-                kernel_name = k_name;   
+                kernel_name = id;   
             } in get_constants_info tl (List.rev(constant_info::List.rev(c_constant_list))) env
       )
     
@@ -623,7 +624,8 @@ let make_hof_c_fdecl hof_call env =
             higher_order_function_constants                                     =  get_constants_info hof_call.constants [] env;
             array_length                                                        =  List.length (hof_call.input_arrays);
             input_arrays_info                                                   =  get_input_arrays_info hof_call.input_arrays [] env;
-            return_array_info                                                   =  get_return_array_info (Utils.idtos(hof_call.kernel_function_name)) env; 
+            return_array_info                                                   =  get_return_array_info (Utils.idtos(hof_call.kernel_function_name)) env;
+            called_functions                                                    =  [hof_call.kernel_function_name]
          } 
     | "reduce" -> 
           let kfunc_name = Ast.Identifier(generate_reduce_ptx_function_name ()) in
@@ -634,7 +636,8 @@ let make_hof_c_fdecl hof_call env =
               higher_order_function_constants                                     =  get_constants_info hof_call.constants [] env;
               array_length                                                        =  List.length (hof_call.input_arrays);
               input_arrays_info                                                   =  get_input_arrays_info hof_call.input_arrays [] env;
-              return_array_info                                                   =  get_return_array_info (Utils.idtos(hof_call.kernel_function_name)) env; 
+              return_array_info                                                   =  get_return_array_info (Utils.idtos(hof_call.kernel_function_name)) env;
+              called_functions                                                    =  [hof_call.kernel_function_name]
            }  
     | _ -> raise (Exceptions.Unknown_higher_order_function_call (Utils.idtos hof_call.hof_type))
 
@@ -700,12 +703,28 @@ let make_hof_ptx_fdecl hof_c_fdecl hof env=
       ptx_fdecl_body    = body;
     } *)
 let rec get_types args types env = 
-            match args with
-              | [] -> types
-              | hd::tl -> get_types tl (List.rev((infer_type hd env)::List.rev types)) env
+  match args with
+    | [] -> types
+    | hd::tl -> get_types tl (List.rev((infer_type hd env)::List.rev types)) env     
 
-(* Expressions *)
+let rec add_lists list_lists newlist= 
+  match list_lists with
+  | [] -> newlist
+  | hd::tl -> add_lists tl (newlist @ hd)
+
 let rec convert_to_c_expression e env = 
+  let rec flatten_array e flattened_array env = 
+    (match e with 
+      | Ast.Array_Literal(e_list) -> 
+            (match List.hd e_list with 
+              | Ast.Array_Literal(e1_list) -> 
+                  let list_of_flattened_arrays = List.map (fun x-> flatten_array x [] env) e_list in
+                  add_lists list_of_flattened_arrays []
+              | _ ->  flattened_array @ (List.map (fun x -> fst(convert_to_c_expression x env)) e_list)
+            )
+      | _ -> raise Exceptions.Not_an_array_expression
+    )
+  in
     match e with 
       | Ast.Function_Call(id,e_list) ->
         (* Check that function exists in environment *)
@@ -717,8 +736,8 @@ let rec convert_to_c_expression e env =
               List.map2 same_types expected_arg_types f_args in
         ignore(check_args f_arg_types (get_types e_list [] env));
         (* Convert *)
-        let e_list = List.map (fun x -> fst(convert_to_c_expression x env)) e_list in
-        Sast.Function_Call(id,e_list),env
+        let c_e_list = List.map (fun x -> fst(convert_to_c_expression x env)) e_list 
+        in Sast.Function_Call(id,c_e_list),env
       | Ast.String_Literal(s) -> Sast.String_Literal(s),env
       | Ast.Integer_Literal(i) -> Sast.Integer_Literal(i),env
       | Ast.Boolean_Literal(b) -> Sast.Boolean_Literal(b),env
@@ -731,7 +750,7 @@ let rec convert_to_c_expression e env =
           let arr = Ast.Array(infer_type (List.hd e_list) env ,List.length e_list) in
           let array_dim = get_array_dimensions arr [] in
           (* Convert *)
-          let c_e_list = List.map (fun x-> fst(convert_to_c_expression x env)) e_list in
+          let c_e_list = flatten_array e [] env in
           Sast.Array_Literal(c_e_list,array_dim),env
       | Ast.Identifier_Literal(id) -> 
           if(check_already_declared (Utils.idtos id) env) = false then raise (Exceptions.Variable_not_found_in_scope ( Utils.idtos id))
@@ -835,7 +854,7 @@ let rec convert_to_c_expression e env =
               else check_constants hof_call_c tl 
           in
         ignore(check_constants hof_call_constants_names hof_constants_names);
-        match Utils.idtos(hof.hof_type) with 
+        (match Utils.idtos(hof.hof_type) with 
             | "map" ->
                 (*Add the c map function to the environment*)
                 let hof_c_fdecl = make_hof_c_fdecl hof env in
@@ -845,7 +864,7 @@ let rec convert_to_c_expression e env =
                 Sast.Function_Call(hof_c_fdecl.higher_order_function_name,(List.map (fun x -> Sast.Identifier_Literal(x.host_name)) hof_c_fdecl.input_arrays_info)),env
             (* | "reduce" ->
                 in Sast.FunctionCall(c_ma) *)
-            | _ -> raise (Exceptions.Unknown_higher_order_function_call (Utils.idtos(hof.hof_type)))
+            | _ -> raise (Exceptions.Unknown_higher_order_function_call (Utils.idtos(hof.hof_type))))
 
 (* TO IMPLEMENT *)
 (* 
@@ -1003,7 +1022,7 @@ let rec convert_to_c_statement stmt env =
         let c_e,      env = convert_to_c_expression  e     env  in
         let c_stmt2,  env = convert_to_c_statement   stmt2 env  in
         let c_stmt3,  env = convert_to_c_statement   stmt3 env  in
-        let env5 = pop_scope env in
+        let env = pop_scope env in
         Sast.For(c_stmt1,c_e,c_stmt2,c_stmt3),env
     | Ast.Return(e) ->
         let c_e, env = convert_to_c_expression e env in

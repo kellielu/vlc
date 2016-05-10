@@ -196,6 +196,8 @@ type c_higher_order_fdecl = {
 	input_arrays_info						: c_kernel_variable_info list; (* type, host name, kernel name *)
     (* Return array information *)	
     return_array_info              			: c_kernel_variable_info; (* type, host name, kernel name*)    
+    (* Called functions so we can load them*)
+    called_functions 						: Ast.identifier list;
 }
 
 type c_expression =

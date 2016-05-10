@@ -82,12 +82,11 @@ rule token = parse
 	| "defg"   		{ DEFG }
 	| "consts" 		{ CONSTS }
 
-	(* Identifier and Literals *)
-	| (letter | '_')(letter | digit | '_')* as id { IDENTIFIER(id) }
+	| ("true" | "false") as booleanlit 																										{ BOOLEAN_LITERAL(bool_of_string booleanlit)}
 	| '"' (([' '-'!' '#'-'&' '('-'[' ']'-'~'] | '\\' [ '\\' '"' 'n' 'r' 't' '''])* as stringlit) '"' 										{ STRING_LITERAL(stringlit) }
 	| digit* as intlit 																														{ INTEGER_LITERAL(int_of_string intlit) }
 	| (sign? digit+ '.' digit*(exp sign? digit+)) | (exp? digit* '.' digit+ (exp sign? digit+)) | (sign? digit exp sign? digit+) as fplit 	{ FLOATING_POINT_LITERAL(float_of_string fplit) }
-	| ("true" | "false") as booleanlit 																										{ BOOLEAN_LITERAL(bool_of_string booleanlit)}
+	| (letter | '_')(letter | digit | '_')* as id { IDENTIFIER(id) }
 	| eof 																																	{ get_eof() }
 
 (* Blocks for comments *)

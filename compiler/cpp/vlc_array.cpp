@@ -62,7 +62,8 @@ class VLC_Array {
 
 		/* Element Accessors and Getters */
 		T get_element_value(size_t number_accessing_dims,...); 
-		VLC_Array<T> get_array_value(size_t number_accessing_dims,...);
+		VLC_Array<T> get_array_value_host(size_t number_accessing_dims,...);
+		T* get_array_value_kernel(size_t number_accessing_dims,...);
 		void set_element_value(T new_value,size_t number_accessing_dims, ...);
 		void set_array_value(VLC_Array<T> array,size_t number_accessing_dims, ...);
 	
@@ -157,10 +158,40 @@ T VLC_Array<T>::get_element_value(size_t number_accessing_dims,...){
 	return this->values[index];
 }
 
-// Get Array Value
+// Get Array Value In Host
 // Accesses an array of the array - must check num_accessing < num_dims in semant
 template <class T>
-VLC_Array<T> VLC_Array<T>::get_array_value(size_t number_accessing_dims,...){
+VLC_Array<T> VLC_Array<T>::get_array_value_host(size_t number_accessing_dims,...){
+	// Get where new array starts
+	size_t index = 1;
+	va_list dims;
+	va_start(dims,number_accessing_dims);
+	for(size_t i=0; i < number_accessing_dims; i++){
+		index = va_arg(dims,size_t) * index;
+	}
+	va_end(dims);
+
+	// Get all the elements in this new array
+	size_t num_elements = 1;
+	for(size_t i = this->num_dimensions - number_accessing_dims; i < this->num_dimensions;i++){
+		num_elements = num_elements * this->dimensions[i];
+	}
+
+	// Set values
+	size_t num_dimensions = this->num_dimensions - number_accessing_dims;
+	size_t *new_dimensions = this->dimensions[this->num_dimensions - number_accessing_dims];
+	size_t num_values = num_elements;
+	size_t *new_values = this->values[index];
+
+	// Return a VLC_Array
+	return VLC_Array(num_values,new_values,num_dimensions,new_dimensions);
+
+}
+
+// Get Array Value In Kernel
+// Accesses an array of the array - must check num_accessing < num_dims in semant
+template <class T>
+T* VLC_Array<T>::get_array_value_kernel(size_t number_accessing_dims,...){
 	// Get where new array starts
 	size_t index = 1;
 	va_list dims;

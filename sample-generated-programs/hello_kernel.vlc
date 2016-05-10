@@ -1,10 +1,10 @@
 int def add(int a,int b):
-	return a + b
+	return a+b
 
 int def vlc():
 	int[5] a =  {1,2,3,4,5}
 	int[5] b =  {1,2,3,4,5}
-	int[5] c = ~map(add,a,b)
+	int[5] c = ~map(add,consts(scale=4),a,b)
 	int d = 5
 	if(5):
 		print("yay")
