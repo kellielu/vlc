@@ -1004,7 +1004,7 @@ let rec convert_to_c_statement stmt env =
         let c_stmt2,  env = convert_to_c_statement   stmt2 env  in
         let c_stmt3,  env = convert_to_c_statement   stmt3 env  in
         let env5 = pop_scope env in
-        Sast.For(c_stmt1,c_e,c_stmt2,c_stmt3),env5
+        Sast.For(c_stmt1,c_e,c_stmt2,c_stmt3),env
     | Ast.Return(e) ->
         let c_e, env = convert_to_c_expression e env in
         Sast.Return(c_e),env
