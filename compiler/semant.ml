@@ -853,10 +853,10 @@ let convert_to_ptx_expression e =
   match e with 
     | Ast.Function_Call(id, exp) -> raise Exceptions.C'est_La_Vie
     | Ast.Higher_Order_Function_Call(hof) -> raise Exceptions.C'est_La_Vie
-    | Ast.String_Literal(s) -> raise Exceptions.C'est_La_Vie
-    | Ast.Integer_Literal(i) -> raise Exceptions.C'est_La_Vie
-    | Ast.Boolean_Literal(b) -> raise Exceptions.C'est_La_Vie
-    | Ast.Floating_Point_Literal(f) -> raise Exceptions.C'est_La_Vie
+    | Ast.String_Literal(s) -> raise Exceptions.NO_STRINGS_ALLOWED_IN_GDECL
+    | Ast.Integer_Literal(i) -> Sast.Ptx_expression_variable(Sast.Constant_int(i))
+    | Ast.Boolean_Literal(b) -> Sast.Ptx_expression_variable(Sast.Constant_bool(b))
+    | Ast.Floating_Point_Literal(f) -> Sast.Ptx_expression_variable(Sast.Constant_float(f))
     | Ast.Array_Literal(e_list) -> raise Exceptions.C'est_La_Vie
     | Ast.Identifier_Literal(i) -> raise Exceptions.C'est_La_Vie
     | Ast.Cast(v_type, e) -> raise Exceptions.C'est_La_Vie
