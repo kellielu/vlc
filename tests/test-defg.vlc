@@ -1,0 +1,28 @@
+void defg test():
+	int a = 1
+	int b
+	int c
+	int d
+	int e
+	int f
+	int g
+	int h
+	int j
+	int k
+	bool h1
+	bool h2
+	bool h3
+	bool h4
+	bool h5
+	float f1
+	float f2
+	float f3
+	float f4
+	float f5
+	return
+
+int def vlc():
+
+	print("success")
+
+	return 0

@@ -79,7 +79,7 @@ Check() {
     generatedfiles=""
 
     generatedfiles="$generatedfiles ./tests/${basename}.cu ./tests/${basename}.out ./tests/${basename}" &&
-    Run "$VLC" $1 ">" "./tests/${basename}.cu" &&
+    Run "$VLC" $1 "> null" &&
     Run "$NVCC" "./tests/${basename}.cu -o ./tests/${basename} && ./tests/${basename}" ">" "./tests/${basename}.out" &&
     Compare ./tests/${basename}.out ./${reffile}.out ./tests/${basename}.diff
 

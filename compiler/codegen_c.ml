@@ -402,7 +402,7 @@ let generate_fdecl f  =
 
 (* Writing out to CUDA file *)
 let write_cuda filename cuda_program_string = 
-  let file = open_out (filename ^ ".cu") in 
+  let file = open_out ((String.sub filename 0 ((String.length filename) - 4)) ^ ".cu") in 
   fprintf file "%s" cuda_program_string
 
 (* Generates the full CUDA file *)

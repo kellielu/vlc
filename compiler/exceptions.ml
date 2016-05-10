@@ -46,6 +46,7 @@ exception Invalid_accessor_value
 exception Higher_order_function_call_only_takes_defg_functions
 exception Cannot_perform_operation_on_string of string 
 exception Cannot_perform_operation_on_array of string
+exception No_Hof_Allowed
 (*-------------------------------------Codegen C-------------------------------------*)
 exception Unknown_variable_type
 exception Unknown_operator
@@ -58,3 +59,4 @@ exception Unknown_variable_statement
 exception Unknown_type_of_statement
 (*-------------------------------------Codegen PTX-------------------------------------*)
 exception PTXCREMENT_GENERATED_ERROR
+exception Value_return_ptx_test
