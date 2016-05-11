@@ -1,13 +1,13 @@
 void defg test():
 	int a = 1
-	int b
-	int c
-	int d
-	int e
-	int f
-	int g
-	int h
-	int j
+	int b = 1 + 1
+	int c = a + b
+	int d = b - c
+	int e = d + e
+	int f = e + f
+	int g = f + g
+	int h = g + h
+	int j = g + h
 	int k
 	bool h1
 	bool h2
