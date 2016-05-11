@@ -120,3 +120,7 @@ vecadd:
 .PHONY: gblur
 gblur:
 	cd ../output && vlc -c ../sample-generated-programs/gaussblur.vlc
+
+.PHONY: bloom
+bloom:
+	cd ../output && vlc -c ../sample-generated-programs/bloom.vlc

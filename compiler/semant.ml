@@ -148,9 +148,18 @@ let init_host_function_map =
       unknown_variables = [];
   }
   in
+  let random_function = {
+      function_type = Host;
+      function_name = Ast.Identifier("random");
+      function_return_type = Ast.Primitive(Ast.Integer);
+      function_args = [];
+      dependent_functions = [];
+      unknown_variables = [];
+  }
+in
  (*  let create_built_in_function = (create_function_info Host (Ast.Primitive(Ast.Void)) [] [] []) in 
   let builtin_function_info_structs = List.map create_built_in_function builtin_functions in *)
-  add_functions fmap [print_function]
+  add_functions fmap [print_function;random_function]
 
 
 (* Creates a new environment *)
@@ -254,13 +263,13 @@ let get_function_info id env =
     if env.is_gpu_env = true then
         (if(Function_Map.mem id env.kernel_function_map) then
             (Function_Map.find id env.kernel_function_map)
-        else raise (Exceptions.Function_not_defined id))
+        else raise (Exceptions.Function_not_defined (id)))
     else
         (if (Function_Map.mem id env.host_function_map) then 
             (Function_Map.find id env.host_function_map)
         else if (Function_Map.mem id env.kernel_function_map) then 
             (Function_Map.find id env.kernel_function_map)
-        else raise (Exceptions.Function_not_defined id))
+        else raise (Exceptions.Function_not_defined (id)))
 
 (* ----------------------------------- Functions for Checking Ast -----------------------------------*)
 (* Checks a variable declaration and initialization to ensure variable hasn't already been declared *)
@@ -334,7 +343,10 @@ let rec infer_type expression env=
           | Ast.Array(t,n) -> n
         in
       Ast.Array(f_info.function_return_type,length)
-    | _ -> raise (Exceptions.Cannot_infer_expression_type)
+    | Ast.Function_Call(id,e_list) -> 
+        let f_info = get_function_info (Utils.idtos id) env in
+        f_info.function_return_type
+    | _ as i-> raise (Exceptions.Cannot_infer_expression_type(Utils.expression_to_string i))
 
 
 (* Check that array has only one dimension - used for certain operations *)
