@@ -130,7 +130,7 @@ let id_string = Utils.idtos(id) in
     sprintf "%s" mem_cpy_string
 
 (* Generates CUDA statement for kernel params *)
- let generate_kernel_params arr_info = 
+ let generate_kernel_params arr_info array_length= 
     let rec get_kernel_names a_info_list name_list = 
       match a_info_list with 
         | [] -> name_list 
@@ -138,7 +138,7 @@ let id_string = Utils.idtos(id) in
     in
     let kernel_names = (get_kernel_names arr_info []) in 
     let kernel_param_string = generate_list generate_id ", &" kernel_names in 
-    sprintf "void *KernelParams[] = { &" ^ kernel_param_string ^ "};"
+    sprintf "void *KernelParams[] = { &" ^ kernel_param_string ^"," ^ string_of_int array_length ^ "};"
 
 (* Generate CUDA memory cleanup *)
 let generate_mem_cleanup arr_info = 
@@ -374,7 +374,7 @@ let generate_higher_order_function_decl hof =
                           generate_list generate_mem_cpy_host_to_device hofcall ^
                       "}\n" ^  *)
                       (* Sets Kernel params and other information needed to call cuLaunchKernel *)
-                      generate_kernel_params (List.rev (hof.return_array_info::(List.rev hof.input_arrays_info))) ^ "\n\n" ^
+                      generate_kernel_params (List.rev (hof.return_array_info::(List.rev hof.input_arrays_info))) hof.array_length ^ "\n\n" ^
                       "unsigned int blockSizeX = 16;\n" ^ 
                       "unsigned int blockSizeY = 1;\n" ^
                       "unsigned int blockSizeZ = 1;\n" ^

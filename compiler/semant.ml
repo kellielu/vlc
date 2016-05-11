@@ -411,6 +411,22 @@ let rec get_array_dimensions vtype dimensions =
     3. Convert fdecl into c_fdecl *)
 
 
+let make_ptx_id name reg num write_reg =
+  {
+    var_name    = name; (* Name as passed as a param or declared *)
+    reg_name    = reg; (* Register name it is stored in *)
+    reg_num     = num;  
+    write_reg   = write_reg;
+  }
+
+(* Simplified use case *)
+let convert_ptx_id name = 
+  {
+    var_name    = name; (* Name as passed as a param or declared *)
+    reg_name    = "";(* Register name it is stored in *)
+    reg_num     = 0 ; 
+    write_reg   = false;
+  }
 
 (* Checks statement order - nothing follows a return , break, or continue in a block*)
 let rec good_statement_order stmt_list = 
@@ -518,13 +534,13 @@ let rec convert_to_c_variable_type vtype env =
           Sast.Array(inside, n),env
 
 (* TO IMPLEMENT *)
-let convert_to_ptx_variable_type vtype env = 
+(* let convert_to_ptx_variable_type vtype env = 
   match vtype with
       | Ast.Primitive(p) -> 
           let p2,env = convert_to_ptx_data_type p env in
           Sast.Ptx_Primitive(p2),env
       | Ast.Array(t,n) -> raise Exceptions.C'est_La_Vie
-(*           (match t with 
+          (match t with 
             | Ast.Array(t,n) -> 
                 let c_t,env = convert_to_ptx_variable_type t env in
                 Sast.Array(c_t,n),env
@@ -549,7 +565,7 @@ let convert_to_c_vdecl vdecl env  =
             let c_vtype, env = convert_to_c_variable_type vtype env in
             Sast.Variable_Declaration(c_vtype,id),env
 
-let convert_to_ptx_vdecl vdecl env =
+(* let convert_to_ptx_vdecl vdecl env =
   match vdecl with
     | Ast.Variable_Declaration(vtype,id) ->
         if(check_already_declared (Utils.idtos(id)) env) = true then (raise (Exceptions.Variable_already_declared (Utils.idtos(id))))
@@ -568,7 +584,7 @@ let convert_to_ptx_vdecl vdecl env =
           }
           in
           let new_vmap = Variable_Map.add (Utils.idtos id) v_info (List.hd env.variable_scope_stack) in
-          update_scope new_vmap env 
+          update_scope new_vmap env  *)
 
 
 let same_types_list type_list = 
@@ -678,81 +694,48 @@ let make_hof_c_fdecl hof_call env =
 
 (* TO IMPLEMENT 
 Converts c_kernel_variable_info to ptx_kernel_variable_info *)
-let change_to_ptx_data_type sast_c_dtype = 
+let convert_to_register_declaration dtype id num_reg = 
+  {
+      reg_type      = dtype;
+      reg_id        = id;
+      num_registers = num_reg;  
+  }
+
+let hof_reg_counter = ref 0
+
+let change_to_ptx_vdecl ckv_info  =
+  let change_to_ptx_data_type sast_c_dtype = 
     match sast_c_dtype with 
       | Sast.Integer -> S32
       | Sast.Float   -> F32
       | Sast.Boolean -> Pred
+      | Sast.Void -> Ptx_Void
       | _ -> raise Exceptions.NO_STRINGS_ALLOWED_IN_GDECL
-
-let rec change_to_ptx_variable_type sast_c_vtype = 
-  match sast_c_vtype with 
-      | Sast.Primitive(p) -> Ptx_Primitive(change_to_ptx_data_type p)
-      | Sast.Array(t,n) -> Ptx_Array(change_to_ptx_variable_type t, n)
-
-let change_to_ptx_kernel_variable ckv_info =
-  {
-      ptx_variable_type = change_to_ptx_variable_type ckv_info.variable_type;
-      ptx_kernel_name   = ckv_info.kernel_name;
-  }
-
-let change_to_pdecl k_info  =
-  let rec get_dtype d = (match d with
-      | Sast.Primitive(p) -> change_to_ptx_data_type p
-      | Sast.Array(t,n) -> get_dtype t)
-  in 
-  let dtype = get_dtype k_info.variable_type in
-  {
-      ptx_parameter_data_type = dtype;
-(*       ptx_parameter_is_pointer:   int;  *) (* 1 if true, 0 if false*)
-      ptx_parameter_state_space = Sast.Global;
-      (*  ptx_parameter_variable_option:  ptx_variable_option; *)
-      ptx_parameter_name = k_info.kernel_name;
-  }
-
+  in
+  let rec get_vtype sast_c_vtype = 
+    (match sast_c_vtype with 
+        | Sast.Primitive(p) -> Ptx_Primitive(change_to_ptx_data_type p)
+        | Sast.Array(t,n) -> Ptx_Array(get_vtype t, n)
+    )
+  in
+  incr hof_reg_counter;(Sast.Ptx_Vdecl(Sast.Global,(get_vtype ckv_info.variable_type),(make_ptx_id ckv_info.kernel_name "rd" !hof_reg_counter false)))
 
 (* Creates a ptx_fdecl based on the hof_c_fdecl*)
 let make_hof_ptx_fdecl hof_c_fdecl hof env= 
+  let regs = [ convert_to_register_declaration (Sast.Pred) "p" 2;
+            ] in
   {
     ptx_higher_order_function_type                      = hof_c_fdecl.higher_order_function_type;
     ptx_higher_order_function_name                      = hof_c_fdecl.applied_kernel_function;
     ptx_applied_kernel_function                         = hof.kernel_function_name;
-    ptx_higher_order_function_constants                 = List.map (fun x -> change_to_ptx_kernel_variable x ) hof_c_fdecl.higher_order_function_constants;
+    ptx_higher_order_function_constants                 = List.map change_to_ptx_vdecl (hof_c_fdecl.higher_order_function_constants);
     ptx_array_length                                    = hof_c_fdecl.array_length;
-    ptx_input_arrays_info                               = List.map change_to_pdecl hof_c_fdecl.input_arrays_info;
-    ptx_return_array_info                               = change_to_pdecl hof_c_fdecl.return_array_info;
-    ptx_called_functions                                = [hof.kernel_function_name]
+    ptx_input_arrays_info                               = List.map change_to_ptx_vdecl (hof_c_fdecl.input_arrays_info);
+    ptx_return_array_info                               = change_to_ptx_vdecl hof_c_fdecl.return_array_info;
+    ptx_called_functions                                = [hof.kernel_function_name];
+    ptx_register_decls                                  = regs;
   }
 
-
-(* TO IMPLEMENT  let convert_to_ptx_pdecl e = 
-    match e with 
-      |  *)
-  
-
-(* In CUDA, is just 
-        int tid = blockDim.x * blockIdx.x + threadIdx.x;
-        if (tid < n_el) 
-          C[tid] = function(A[tid], B[tid] ...)
-      *)
-      (*  Second to last param is result array
-          Last param is array length*)
-(*  let make_map_ptx_fdecl c_map_fdecl = 
-    let input_params = List.map convert_to_ptx_pdecl c_map_fdecl.input_arrays_info in
-    let result_param = convert_to_ptx_pdecl c_map_fdecl return_type_array_info in
-    let length = Sast.Constant_Int(c_map_fdecl.array_length) in
-    let params = input_params@[result_param;length] in 
-      let make_global_map_body params = 
-          
-      in
-    let body = make_global_map_body params 
-    in
-    {
-      ptx_fdecl_type    = Sast.Global;
-      ptx_fdecl_name    = generate_map_ptx_function_name;
-      ptx_fdecl_params  = params;
-      ptx_fdecl_body    = body;
-    } *)
 let rec get_types args types env = 
   match args with
     | [] -> types
@@ -921,7 +904,7 @@ let rec convert_to_c_expression e env =
             | _ -> raise (Exceptions.Unknown_higher_order_function_call (Utils.idtos(hof.hof_type))))
 
 (* TO IMPLEMENT *)
-let convert_to_ptx_expression e env = 
+(* let convert_to_ptx_expression e env = 
   match e with 
     | Ast.Function_Call(id, exp) -> raise Exceptions.C'est_La_Vie
     | Ast.Higher_Order_Function_Call(hof) -> raise Exceptions.No_Hof_Allowed
@@ -942,7 +925,7 @@ let convert_to_ptx_expression e env =
       in
       Sast.Ptx_expression_variable(Sast.Ptx_Variable(Ast.Identifier(regStr))), env
     | Ast.Cast(v_type, e) -> raise Exceptions.C'est_La_Vie
-    | Ast.Binop(e1,o,e2) -> Sast.Ptx_empty, env
+    | Ast.Binop(e1,o,e2) -> Sast.Ptx_empty, env *)
 (*       if((same_types (infer_type e1 env) (infer_type e2 env)) = false) then raise (Exceptions.Type_mismatch "Binop doesn't match")
       else
       let val1 = match infer_type(e1,env) with
@@ -971,9 +954,9 @@ let convert_to_ptx_expression e env =
  convert_to_ptx_expression(e1) ^ 
       convert_to_ptx_expression(e2) ^ 
       convert_to_ptx_binop(o) *)
-    | Ast.Unop(e, u) -> raise Exceptions.C'est_La_Vie
+(*     | Ast.Unop(e, u) -> raise Exceptions.C'est_La_Vie
     | Ast.Array_Accessor(e, e_list,is_lvalue) -> raise Exceptions.C'est_La_Vie
-    | Ast.Ternary(e1, e2, e3) -> raise Exceptions.C'est_La_Vie
+    | Ast.Ternary(e1, e2, e3) -> raise Exceptions.C'est_La_Vie *)
 
 let rec get_array_el_type arr num_dim =
   match num_dim with 
@@ -1033,7 +1016,7 @@ let convert_to_c_variable_statement vstmt env =
               | _ -> raise Exceptions.Cannot_assign_expression
 
 (* TO IMPLEMENT *)
-let convert_to_ptx_variable_statement vstmt env =
+(* let convert_to_ptx_variable_statement vstmt env =
     match vstmt with
       | Ast.Declaration(vdecl) -> 
           let new_env = convert_to_ptx_vdecl vdecl env in
@@ -1078,7 +1061,7 @@ let convert_to_ptx_variable_statement vstmt env =
             ), env
             | _ -> raise Exceptions.Not_an_array_expression
           in res
-      | Ast.Assignment(e1, e2) -> raise Exceptions.C'est_La_Vie
+      | Ast.Assignment(e1, e2) -> raise Exceptions.C'est_La_Vie *)
 (*       | Ast.Initialization(vdecl, expression) ->
         let 
           | Ast.Primitive(Integer) -> incr signed_int_counter ; !signed_int_counter
@@ -1165,7 +1148,7 @@ let rec convert_to_c_statement stmt env =
         let c_stmt_list,env = convert_list convert_to_c_statement stmt_list [] env in
          Sast.Block(c_stmt_list),env
 
-let convert_to_ptx_statement stmt env =
+(* let convert_to_ptx_statement stmt env =
   match stmt with 
     | Ast.Variable_Statement(v) -> 
       let ptx_vstmt,env = convert_to_ptx_variable_statement v env in
@@ -1174,21 +1157,23 @@ let convert_to_ptx_statement stmt env =
       Ptx_expression(e1),env
     | Ast.Return_Void -> Ptx_expression(Sast.Ptx_Return_void), env
     | Ast.Block(stmt_list) -> raise Exceptions.C'est_La_Vie       
-(*         if (good_statement_order stmt_list) = false then raise Exceptions.Have_statements_after_return_break_continue
+        if (good_statement_order stmt_list) = false then raise Exceptions.Have_statements_after_return_break_continue
         else
         let ptx_stmt_list,env = convert_list convert_to_ptx_statement stmt_list [] env in
           let subroutine = {
             routine_name : Ast.identifier;
             routine_expressions             : ptx_expression list;
-          } *)
+          }
 
     | Ast.If(e, s1, s2) -> raise Exceptions.C'est_La_Vie
     | Ast.While(e, s) -> raise Exceptions.C'est_La_Vie
     | Ast.For(s1, e, s2, s3) -> raise Exceptions.C'est_La_Vie
     | Ast.Return(e) -> raise Exceptions.C'est_La_Vie
     | Ast.Continue -> raise Exceptions.C'est_La_Vie
-    | Ast.Break -> raise Exceptions.C'est_La_Vie
+    | Ast.Break -> raise Exceptions.C'est_La_Vie *)
     
+
+
 let convert_to_c_param vdecl env  = 
     match vdecl with 
       | Ast.Variable_Declaration(vtype,id) ->
@@ -1204,7 +1189,7 @@ let convert_to_c_param vdecl env  =
             let c_vtype, env = convert_to_c_variable_type vtype env in
             Sast.Variable_Declaration(c_vtype,id),env
 
-let convert_to_ptx_param vdecl env =
+(* let convert_to_ptx_param vdecl env =
   match vdecl with
     | Ast.Variable_Declaration(vtype,id) -> 
           if(check_already_declared (Utils.idtos id) env) = true then raise (raise (Exceptions.Variable_already_declared (Utils.idtos(id))))
@@ -1225,7 +1210,7 @@ let convert_to_ptx_param vdecl env =
                     ptx_parameter_name = id;
                   },env
                 | Ast.Array(t,n) -> raise (Exceptions.Exception("Array not a valid ptx param"))
-            )
+            ) *)
 
 (* Converts from fdecl to c_fdecl *)
 let convert_to_c_fdecl fdecl env =
@@ -1263,8 +1248,9 @@ let convert_to_c_fdecl fdecl env =
       let env = pop_scope env in
       c_fdecl, env)
 
-let convert_to_ptx_fdecl fdecl env =
-    if (is_function_in_scope (Utils.idtos fdecl.name) env) = true then (raise Exceptions.Function_already_declared)
+
+(*let convert_to_ptx_fdecl fdecl env =
+     if (is_function_in_scope (Utils.idtos fdecl.name) env) = true then (raise Exceptions.Function_already_declared)
     else
       let vdecl_to_param vdecl = 
         match vdecl with 
@@ -1291,24 +1277,25 @@ let convert_to_ptx_fdecl fdecl env =
         ptx_kernel_name = fdecl.name;
       }, env in
       let params,env           = convert_list convert_to_ptx_param (List.rev fdecl.params) [] env in
+      let output, env          = convert_to_ptx_vdecl (Ast.Variable_Declaration (fdecl.return_type,generate_ptx_return_name())) in
       let body,         env    = convert_list convert_to_ptx_statement     fdecl.body    [] env in
       let registers,    env    =  [
-        Ptx_Vdecl(Register_state, Sast.Ptx_Primitive(S32), Parameterized_variable_register(Ast.Identifier("si"), !signed_int_counter));
-        Ptx_Vdecl(Register_state, Sast.Ptx_Primitive(F32), Parameterized_variable_register(Ast.Identifier("fl"), !signed_float_counter));
-        Ptx_Vdecl(Register_state, Sast.Ptx_Primitive(Pred), Parameterized_variable_register(Ast.Identifier("pr"), !predicate_counter));
+        convert_to_register_declaration (Sast.Ptx_Primitive S32) (Ast.Identifier "si") !signed_int_counter;
+        convert_to_register_declaration (Sast.Ptx_Primitive F32) (Ast.Identifier "fl") !signed_float_counter;
+        convert_to_register_declaration (Sast.Ptx_Primitive Pred), (Ast.Identifier "pr"), !predicate_counter;
       ],  env in
       let ptx_fdecl = {
-        ptx_fdecl_type = Sast.Device_func;
+        ptx_fdecl_type = Sast.Device_Function;
         ptx_fdecl_name = fdecl.name;
         ptx_fdecl_params = params;
-        ptx_fdecl_return_type = fst(convert_to_ptx_param (Ast.Variable_Declaration (fdecl.return_type, (Ast.Identifier (generate_ptx_return_name()) ) )) env);
+        ptx_fdecl_return_param = output;
         register_decls = registers;
         ptx_fdecl_body = body;
       }
       in
       (* Pop the variable scope for the function *)
       let env = pop_scope env in
-      ptx_fdecl, env) 
+      ptx_fdecl, env)  *)
 
 (* Converts a list of function declarations to ptx and c functions *)
 let rec convert_fdecl_list fdecl_list ptx_fdecl_list c_fdecl_list env = 
@@ -1319,9 +1306,9 @@ let rec convert_fdecl_list fdecl_list ptx_fdecl_list c_fdecl_list env =
           | false ->
               let c_fdecl, env = convert_to_c_fdecl hd env in 
               convert_fdecl_list tl ptx_fdecl_list (List.rev(c_fdecl::List.rev(c_fdecl_list))) env
-          | true -> 
+          (* | true -> 
               let ptx_fdecl, env = convert_to_ptx_fdecl hd env in
-              convert_fdecl_list tl (List.rev(ptx_fdecl::List.rev(ptx_fdecl_list))) c_fdecl_list env
+              convert_fdecl_list tl (List.rev(ptx_fdecl::List.rev(ptx_fdecl_list))) c_fdecl_list env *)
         )
 
 (* Main function for converting ast to sast *)

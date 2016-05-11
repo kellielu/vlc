@@ -1,9 +1,4 @@
 int defg add(int a,int b):
-	int g = 5
-	bool a = true
-	float f = 2.3
-	float q = .1
-	float t = 1.
 	return
 
 int def vlc():
