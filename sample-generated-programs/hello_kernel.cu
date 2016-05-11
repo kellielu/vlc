@@ -9,7 +9,7 @@ CUdevice    device;
 CUmodule    cudaModule;
 CUcontext   context;
 CUfunction  function;
-VLC_Array <VLC_Array<int>>map_c0(...){
+VLC_Array<int>map_c0(...){
 
 checkCudaErrors(cuCtxCreate(&context, 0, device));
 
@@ -51,6 +51,18 @@ if(i ==0){
 }
 va_end(constants);
 
+for(int i =0;i < num_input_arrays; i++){
+
+if(i ==0){
+	VLC_Array<int> tmp = va_args(constants,VLC_Array<int>);
+	host_ptr1 = tmp.get_values();
+}
+else{
+	VLC_Array<int> tmp = va_args(constants,VLC_Array<int>);
+	host_ptr2 = tmp.get_values();
+}
+
+}
 checkCudaErrors(cuMemAlloc(&dev_ptr1, sizeof(int)*5));
 checkCudaErrors(cuMemAlloc(&dev_ptr2, sizeof(int)*5));
 checkCudaErrors(cuMemcpyHtoD(dev_ptr1, host_ptr1, sizeof(int)*5));
@@ -85,24 +97,11 @@ checkCudaErrors(cuCtxDestroy(context));
 }
 
 
-int add(int b,int a){
-
-return a + b;
-
-}
-
-
-
-
 int vlc(){
-
 VLC_Array<int> a=VLC_Array(5,1,5,1,2,3,4,5);
 VLC_Array<int> b=VLC_Array(5,1,5,1,2,3,4,5);
 VLC_Array<int> c=map_c0(a,b);
 int d=a.get_element_value(1,2);
-a.set_array_value(5,1);a=b;
-return 0;
-
 }
 
 

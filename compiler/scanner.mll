@@ -43,12 +43,14 @@ rule token = parse
 	| "<<"		{ BITSHIFT_LEFT }
 	| "++"		{ PLUS_PLUS }
 	| "--"		{ MINUS_MINUS }
+	| "&"		{ BITWISE_AND}
+	| "|" 		{ BITWISE_OR}
 
 	(* Logic Operators *)
 	| "and"  	{ AND }
 	| "or"	 	{ OR }
 	| "not" 	{ NOT }
-	| "xor" 	{ XOR }
+	| "xor"	 	{ XOR }
 
 	(* Comparison Operators *)
 	| "==" 		{ EQUAL }
@@ -82,12 +84,12 @@ rule token = parse
 	| "defg"   		{ DEFG }
 	| "consts" 		{ CONSTS }
 
-	| ("true" | "false") as booleanlit 																										{ BOOLEAN_LITERAL(bool_of_string booleanlit)}
-	| '"' (([' '-'!' '#'-'&' '('-'[' ']'-'~'] | '\\' [ '\\' '"' 'n' 'r' 't' '''])* as stringlit) '"' 										{ STRING_LITERAL(stringlit) }
-	| digit* as intlit 																														{ INTEGER_LITERAL(int_of_string intlit) }
-	| (sign? digit+ '.' digit*(exp sign? digit+)) | (exp? digit* '.' digit+ (exp sign? digit+)) | (sign? digit exp sign? digit+) as fplit 	{ FLOATING_POINT_LITERAL(float_of_string fplit) }
+	| ("true" | "false") as booleanlit 																											{ BOOLEAN_LITERAL(bool_of_string booleanlit)}
+	| '"' (([' '-'!' '#'-'&' '('-'[' ']'-'~'] | '\\' [ '\\' '"' 'n' 'r' 't' '''])* as stringlit) '"' 											{ STRING_LITERAL(stringlit) }
+	| digit+ as intlit 																															{ INTEGER_LITERAL(int_of_string intlit) }
+	| (digit+ '.' digit* | '.' digit+ | digit+ ('.' digit*)? 'e' '-'? digit+ | '.' digit+ 'e' '-'? digit+) as fplit 							{ FLOATING_POINT_LITERAL(float_of_string fplit) }
 	| (letter | '_')(letter | digit | '_')* as id { IDENTIFIER(id) }
-	| eof 																																	{ get_eof() }
+	| eof 																																		{ get_eof() }
 
 (* Blocks for comments *)
 and single_line_comment = parse

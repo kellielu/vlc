@@ -13,7 +13,7 @@ exception Missing_eof
 (*-------------------------------------Utils-------------------------------------*)
 exception Not_implemented_yet
 (*-------------------------------------Semantic Analyzer-------------------------------------*)
-exception Cannot_infer_expression_type
+exception Cannot_infer_expression_type of string
 exception Exception of string
 exception Already_declared
 exception Name_not_found of string

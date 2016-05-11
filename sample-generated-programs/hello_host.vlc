@@ -1,6 +1,52 @@
-string helloworld
+int BLOOM_SIZE = 32
+int KILO = 1024
+int PASSES = 50
+
+int[32] bloom_filt_seq
+int[32] bloom_filt_gpu
+int[10240] test_vals
+int MAX = 10000
+
+void def random_fill(int[32] filt, int size, int max):
+	int i
+	for(i = 0, i < size, i=i+1):
+       filt[i] = random()
+
+int def hash(int in):
+	int shifted = in >> 22
+	return (in xor shifted)
+
+void def set_index(int[32] filt, int i):
+   filt[i/32] = (1 << (i % 32)) | (filt[i/32])
+
+int def test_index(int[32] filt, int i):
+   return ( (filt[i/32] & (1 << (i % 32))) != 0 )
 
 int def vlc():
-	helloworld = "Hello world!"
-	print(helloworld)
-	return 0
+   int test_size = PASSES * KILO * 2
+   random_fill(test_vals, test_size, MAX)
+
+   int index
+   int seq_counter
+   int seq_def_not
+   int result
+   int i
+
+   print("Starting sequential...")
+   for(i = 0, i < test_size, i=i+1):
+       bool divis = i % 2
+       if(divis == true):
+           index = hash( test_vals[i] )
+           set_index(bloom_filt_seq, index)
+           seq_counter++
+       else:
+           index = hash( test_vals[i] )
+           result = test_index(bloom_filt_seq, index)
+
+           if( result == 0):
+               seq_def_not++
+
+   print(seq_counter)
+   print(seq_def_not)
+
+   return 0

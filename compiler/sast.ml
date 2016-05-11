@@ -13,6 +13,8 @@ type ptx_binary_operator =
  	| Ptx_Bitshift_Right | Ptx_Bitshift_Left 
     | Ptx_Equal | Ptx_Not_Equal | Ptx_Greater_Than | Ptx_Less_Than | Ptx_Greater_Than_Equal 
     | Ptx_Less_Than_Equal
+    | Ptx_Bitwise_Or
+    | Ptx_Bitwise_And
 (*     Ptx_Greater_Than_Unsigned | Ptx_Less_Than_unsigned | Ptx_Greater_Than_Equal_Unsigned 
     | Ptx_Less_Than_Equal_Unsigned  *)
 
@@ -149,9 +151,9 @@ type ptx_higher_order_fdecl = {
 	ptx_array_length 							: int;
 	(* Input array information 
 		--If an array has no name (just simply passed in as something like {1,2,3}) then it is given a temporary generated name *)
-	ptx_input_arrays_info						: ptx_kernel_variable_info list; (* type, host name, kernel name *)
+	ptx_input_arrays_info						: ptx_pdecl list; (* type, host name, kernel name *)
     (* Return array information *)	
-    ptx_return_array_info              			: ptx_kernel_variable_info; (* type, host name, kernel name*) 
+    ptx_return_array_info              			: ptx_pdecl; (* type, host name, kernel name*) 
     (* Dependent functions*)
     ptx_called_functions 						: Ast.identifier list;   
 }
@@ -163,6 +165,8 @@ type c_binary_operator =
     | And | Or | Xor
     | Equal | Not_Equal | Greater_Than | Less_Than | Greater_Than_Equal | Less_Than_Equal
     | Bitshift_Right | Bitshift_Left 
+    | Bitwise_Or | Bitwise_And
+
 type c_unary_operator = 
     | Not | Negate
     | Plus_Plus | Minus_Minus

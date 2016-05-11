@@ -117,4 +117,10 @@ hpc: clean install
 vecadd:
 	nvcc -lcuda -o ../sample-generated-programs/hello_ptx ../sample-generated-programs/hello_ptx_test.cu 
 
+.PHONY: gblur
+gblur:
+	cd ../output && vlc -c ../sample-generated-programs/gaussblur.vlc
 
+.PHONY: bloom
+bloom:
+	cd ../output && vlc -c ../sample-generated-programs/bloom.vlc
