@@ -346,7 +346,6 @@ let rec infer_type expression env=
     | Ast.Function_Call(id,e_list) -> 
         let f_info = get_function_info (Utils.idtos id) env in
         f_info.function_return_type
-    | _ as i-> raise (Exceptions.Cannot_infer_expression_type(Utils.expression_to_string i))
 
 
 (* Check that array has only one dimension - used for certain operations *)
@@ -538,7 +537,7 @@ let convert_to_ptx_variable_type vtype env =
 let convert_to_c_vdecl vdecl env  = 
     match vdecl with 
       | Ast.Variable_Declaration(vtype,id) ->
-          if(check_already_declared (Utils.idtos(id)) env) = true then raise Exceptions.Variable_already_declared
+          if(check_already_declared (Utils.idtos(id)) env) = true then (raise (Exceptions.Variable_already_declared (Utils.idtos(id))))
           else
             let v_info = {
               vtype = vtype;
@@ -553,7 +552,7 @@ let convert_to_c_vdecl vdecl env  =
 let convert_to_ptx_vdecl vdecl env =
   match vdecl with
     | Ast.Variable_Declaration(vtype,id) ->
-        if(check_already_declared (Utils.idtos(id)) env) = true then raise Exceptions.Variable_already_declared
+        if(check_already_declared (Utils.idtos(id)) env) = true then (raise (Exceptions.Variable_already_declared (Utils.idtos(id))))
         else
           let regNum = match vtype with
             | Ast.Primitive(Ast.Integer) -> let num = !signed_int_counter in (incr signed_int_counter ; num)
@@ -1141,11 +1140,12 @@ let rec convert_to_c_statement stmt env =
                 | Ast.Initialization(vdecl,e) -> ()
                 | _ -> raise Exceptions.Invalid_statement_in_for)
             | _ -> raise Exceptions.Invalid_statement_in_for);
-        (* Check that e is a boolean expression *)
-        ignore(same_types (infer_type e env) (Ast.Primitive(Ast.Boolean)));
+        
         (* Convert *)
         let env = push_scope env in
-        let c_stmt1,  env = convert_to_c_statement   stmt1 env   in
+        let c_stmt1,  env = convert_to_c_statement   stmt1 env  in
+        (* Check that e is a boolean expression *)
+        ignore(same_types (infer_type e env) (Ast.Primitive(Ast.Boolean)));
         let c_e,      env = convert_to_c_expression  e     env  in
         let c_stmt2,  env = convert_to_c_statement   stmt2 env  in
         let c_stmt3,  env = convert_to_c_statement   stmt3 env  in
@@ -1192,7 +1192,7 @@ let convert_to_ptx_statement stmt env =
 let convert_to_c_param vdecl env  = 
     match vdecl with 
       | Ast.Variable_Declaration(vtype,id) ->
-          if(check_already_declared (Utils.idtos id) env) = true then raise Exceptions.Variable_already_declared
+          if(check_already_declared (Utils.idtos id) env) = true then raise (raise (Exceptions.Variable_already_declared (Utils.idtos(id))))
           else
             let v_info = {
               vtype = vtype;
@@ -1207,14 +1207,25 @@ let convert_to_c_param vdecl env  =
 let convert_to_ptx_param vdecl env =
   match vdecl with
     | Ast.Variable_Declaration(vtype,id) -> 
-      match vtype with
-      | Ast.Primitive(p) ->
-        {
-          ptx_parameter_data_type = fst(convert_to_ptx_data_type p env);
-          ptx_parameter_state_space = Sast.State_undefined;
-          ptx_parameter_name = id;
-        },env
-      | Ast.Array(t,n) -> raise (Exceptions.Exception("Array not a valid ptx param"))
+          if(check_already_declared (Utils.idtos id) env) = true then raise (raise (Exceptions.Variable_already_declared (Utils.idtos(id))))
+          else
+            let v_info = {
+              vtype = vtype;
+              register_number = 0;
+            } 
+            in
+            let updated_scope = Variable_Map.add (Utils.idtos id) v_info (List.hd env.variable_scope_stack) in
+            let env = update_scope updated_scope env in
+            (match vtype with
+                | Ast.Primitive(p) ->
+                  (* Add param to scope *)
+                  {
+                    ptx_parameter_data_type = fst(convert_to_ptx_data_type p env);
+                    ptx_parameter_state_space = Sast.State_undefined;
+                    ptx_parameter_name = id;
+                  },env
+                | Ast.Array(t,n) -> raise (Exceptions.Exception("Array not a valid ptx param"))
+            )
 
 (* Converts from fdecl to c_fdecl *)
 let convert_to_c_fdecl fdecl env =
@@ -1239,7 +1250,7 @@ let convert_to_c_fdecl fdecl env =
       let env = push_scope env in
       (* Do conversion while passing enviroment *)
       let return_type,  env    = convert_to_c_variable_type fdecl.return_type env in
-      let params,       env    = convert_list convert_to_c_param         fdecl.params  [] env in
+      let params,       env    = convert_list convert_to_c_param          (List.rev fdecl.params)  [] env in
       let body,         env    = convert_list convert_to_c_statement     fdecl.body    [] env in
       let c_fdecl = {
         c_fdecl_return_type = return_type;
@@ -1260,8 +1271,8 @@ let convert_to_ptx_fdecl fdecl env =
           | Ast.Variable_Declaration(vtype,id) -> vtype
       in
       (* Add to function map*)
-      (let host_func_info = {
-          function_type = Kernel_Global;
+      (let kernel_func_info = {
+          function_type = Kernel_Device;
           function_name = fdecl.name;
           function_return_type = fdecl.return_type;
           function_args = List.map vdecl_to_param fdecl.params;
@@ -1269,7 +1280,7 @@ let convert_to_ptx_fdecl fdecl env =
           unknown_variables = [];
       } 
       in
-      let env = update_host_fmap host_func_info env in
+      let env = update_kernel_fmap kernel_func_info env in
       (* Push new scope for function *)
       let env = push_scope env in
       (* Do conversion while passing enviroment *)
@@ -1279,7 +1290,7 @@ let convert_to_ptx_fdecl fdecl env =
         ptx_variable_type = return_type;
         ptx_kernel_name = fdecl.name;
       }, env in
-      let params,env           = convert_list convert_to_ptx_param fdecl.params [] env in
+      let params,env           = convert_list convert_to_ptx_param (List.rev fdecl.params) [] env in
       let body,         env    = convert_list convert_to_ptx_statement     fdecl.body    [] env in
       let registers,    env    =  [
         Ptx_Vdecl(Register_state, Sast.Ptx_Primitive(S32), Parameterized_variable_register(Ast.Identifier("si"), !signed_int_counter));

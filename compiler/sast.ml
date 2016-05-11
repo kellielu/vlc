@@ -1,6 +1,12 @@
 (* Contains sast type definitions for conversions during semantic analysis *)
 
 (* -----------------------------------------PTX types -----------------------------------------*)
+type ptx_identifier = {
+	device_name  : string;
+	register_name: string;
+	register_number: int;
+}
+
 type ptx_literal = 
 	| Ptx_signed_int of int
 	| Ptx_signed_float of float

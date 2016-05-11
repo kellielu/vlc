@@ -11,4 +11,6 @@ int def vlc():
 	int[5] b =  {1,2,3,4,5}
 	int[5] c = ~map(add,consts(scale=4),a,b)
 	int d = a[2]
+	for(int i = 0, i < 2, i = i +1):
+		print(i)
 
