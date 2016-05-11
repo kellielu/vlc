@@ -2,35 +2,6 @@ open Sast
 (* For sprintf *)
 open Printf
 (*------------------------------------------------------------ KERNEL CODE GENERATION ------------------------------------------------------------*)
-(* 
-let generate_kernel_fdecl kernel_f  =
-  Environment.combine  [
-    Generator(generate_variable_type kernel_f.kernel_r_type);
-    Verbatim(" ");
-    Generator(generate_id kernel_f.kernel_name);
-    Verbatim("(");
-    Generator(generate_parameter_list kernel_f.kernel_params);
-    Verbatim("){\n");
-    Generator(generate_statement_list kernel_f.kernel_body);
-    Verbatim("}\n");
-  ]
-
-let rec generate_nonempty_kernel_fdecl_list kernel_fdecl_list  =
-  match kernel_fdecl_list with
-    | kernel_fdecl :: [] -> Environment.combine  [Generator(generate_kernel_fdecl kernel_fdecl)]
-    | kernel_fdecl :: tail ->
-      Environment.combine  [
-        Generator(generate_kernel_fdecl kernel_fdecl);
-        Verbatim("\n\n");
-        Generator(generate_nonempty_kernel_fdecl_list tail)
-      ]
-    | [] -> raise (Empty_kernel_fdecl_list)
-and generate_kernel_fdecl_list kernel_fdecl_list  =
-  match kernel_fdecl_list with
-    | [] -> Environment.combine  [Verbatim("")]
-    | decl :: tail -> Environment.combine  [Generator(generate_nonempty_kernel_fdecl_list kernel_fdecl_list)]
-
- *)
 
 (* Calls generate_func for every element of the list and concatenates results with specified concat symbol
    Used if you need to generate a list of something - e.x. list of statements, list of params *)
@@ -257,48 +228,65 @@ let generate_ld_statement vdecl =
 
 let rec range i j = if i > j then [] else i :: (range (i+1) j)
 
-let generate_array_load vdecl a_start nr_start num_arr_param= 
+let generate_array_load vdecl a_start nr_start type_start num_arr_param = 
       let cvt_string = 
         match vdecl with 
         | Ptx_Vdecl(ss,vtype,id) -> 
-            "cvta.to.global.64 %rd" ^ string_of_int nr_start ^  ",%rd" ^ string_of_int a_start ^ ";\n" ^ 
-            "add.s64 %rd" ^ string_of_int (nr_start +1) ^ ",%rd" ^ string_of_int nr_start ^ ", %rd" ^ string_of_int (num_arr_param+1) ^ ";\n"
+            "cvta.to.global.64    %ptr" ^ string_of_int nr_start ^  ",%ptr" ^ string_of_int a_start ^ ";\n" ^ 
+            "add.s64              %ptr" ^ string_of_int (nr_start +1) ^ ",%ptr" ^ string_of_int nr_start ^ ", %ptr" ^ string_of_int (num_arr_param+1) ^ ";\n" ^ 
+            "ld.global" ^ (generate_ptx_variable_type vtype) ^ "        %vlc" ^ string_of_int type_start ^ ",[%ptr"^ string_of_int nr_start^ "];\n\n"
       in sprintf "%s" cvt_string
 
-let rec generate_load_and_access_elements vdecl_list array_start nex_reg_start num_arr_param final_string= 
+let generate_array_rtype vdecl a_start nr_start type_start num_arr_param = 
+  let cvt_string = 
+        match vdecl with 
+        | Ptx_Vdecl(ss,vtype,id) -> 
+            "cvta.to.global.64    %ptr" ^ string_of_int nr_start ^  ",%ptr" ^ string_of_int a_start ^ ";\n" ^ 
+            "add.s64              %ptr" ^ string_of_int (nr_start +1) ^ ",%ptr" ^ string_of_int nr_start ^ ", %ptr" ^ string_of_int (num_arr_param+1) ^ ";\n" ^ 
+            "ld.global" ^ (generate_ptx_variable_type vtype) ^ "        %rtype" ^ string_of_int type_start ^ ",[%ptr"^ string_of_int nr_start^ "];\n\n"
+      in sprintf "%s" cvt_string
+
+let rec generate_load_and_access_elements vdecl_list array_start nex_reg_start type_start num_arr_param final_string= 
    let s =  match vdecl_list with 
-      |[]  ->  final_string 
+      | [] -> final_string 
       | hd::tl -> 
-        let statement = generate_array_load hd array_start nex_reg_start num_arr_param in
-        generate_load_and_access_elements tl (array_start+1) (nex_reg_start+2) num_arr_param (final_string ^ statement)
+        let statement = generate_array_load hd array_start nex_reg_start type_start num_arr_param in
+        generate_load_and_access_elements tl (array_start+1) (nex_reg_start+3) (type_start + 1) num_arr_param (final_string ^ statement)
     in sprintf "%s" s
 
-let rec generate_array_access vdecl array_start nex_reg_start = 
+let rec generate_call_params num_arr_param final_string= 
+    let generate_call_param num = ("%vlc" ^ string_of_int num) in 
+    (match num_arr_param with
+      | 1 -> final_string ^ (generate_call_param num_arr_param)
+      | _ -> generate_call_params (num_arr_param -1) (final_string ^ (generate_call_param num_arr_param ^ ",")))
 
 (* Generates global ptx functions *)
 let generate_ptx_hof_function hof = 
   let num_arr_param = (List.length hof.ptx_input_arrays_info) + 1 in 
+  let type_start = 1 in
   let return_vtype = match hof.ptx_return_array_info with Ptx_Vdecl(ss,vtype,id) -> vtype in
   (match Utils.idtos hof.ptx_higher_order_function_type with 
       | "map" -> 
           (let ptx_function_string = 
               ".visible .entry " ^ Utils.idtos(hof.ptx_higher_order_function_name)^ " ( \n" ^ 
-                  generate_list generate_ptx_param ",\n" hof.ptx_input_arrays_info ^"," ^"\n" ^  
-                  generate_ptx_param hof.ptx_return_array_info ^ "," ^ "\n" ^ 
+                  generate_list generate_ptx_param ",\n" hof.ptx_input_arrays_info ^"," ^"\n\n" ^  
+                  generate_ptx_param hof.ptx_return_array_info ^ "," ^ "\n\n" ^ 
                   ".param .u32 ARRAY_LENGTH" ^ 
                   ") {\n" ^ 
                   (* Load register declarations *)
-                  generate_list generate_ptx_register_declaration "\n" hof.ptx_register_decls ^ "\n" ^ 
-                  generate_list generate_ld_statement "\n" (List.rev (hof.ptx_return_array_info::(List.rev hof.ptx_input_arrays_info))) ^ "\n" ^ 
-                  "ld.param.u32 %si1, [ARRAY_LENGTH];\n" ^ 
+                  generate_list generate_ptx_register_declaration "\n" hof.ptx_register_decls ^ "\n\n" ^ 
+                  generate_list generate_ld_statement "\n" (List.rev (hof.ptx_return_array_info::(List.rev hof.ptx_input_arrays_info))) ^ "\n\n" ^ 
+                  "ld.param.u32 %asize1, [ARRAY_LENGTH];\n" ^ 
                   (* Move tid *)
-                  "mov.u32 %r1, %tid.x;\n" ^ 
-                  "setp.ge.s32 %p1, %r1, ARRAY_LENGTH;\n" ^ 
-                  "@%p1 bra RETURN;\n" ^ 
-                  "mul.wide.s32 %rd" ^ string_of_int (num_arr_param+1) ^ ",%r1, 4;\n\n" ^ 
+                  "mov.u32 %mytid1, %tid.x;\n" ^ 
+                  "setp.ge.s32 %pred1, %mytid1, %asize1\n" ^ 
+                  "@%pred1 bra RETURN;\n" ^ 
+                  "mul.wide.s32 %ptr" ^ string_of_int (num_arr_param+1) ^ ",%mytid1, 4;\n\n" ^ 
                   (* Load input arrays *)
-                  generate_load_and_access_elements hof.ptx_input_arrays_info  (1)  (num_arr_param+2)  num_arr_param "" ^ "\n" ^ 
-                  "st.global" ^ (generate_ptx_variable_type return_vtype) ^ "[%rd" ^"],%r" ^ ";\n\n" ^ 
+                  generate_array_rtype hof.ptx_return_array_info 1 (num_arr_param +2) 1 num_arr_param ^"\n"^
+                  generate_load_and_access_elements hof.ptx_input_arrays_info (2)  (num_arr_param+5) type_start num_arr_param "" ^ "\n" ^ 
+                  "call " ^ "(%rtype1)," ^ (Utils.idtos hof.ptx_applied_kernel_function) ^ ",(" ^ generate_call_params (num_arr_param-1) "" ^ ");\n" ^ 
+                  "st.global" ^ (generate_ptx_variable_type return_vtype) ^ "  [%ptr"^ string_of_int (num_arr_param+3) ^"],  %rtype1" ^ ";\n\n" ^ 
                   "RETURN:\n" ^ 
                   "\t ret;\n" ^  
                   "}\n\n\n"    
