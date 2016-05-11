@@ -701,7 +701,7 @@ let convert_to_register_declaration dtype id num_reg =
       num_registers = num_reg;  
   }
 
-let hof_reg_counter = ref 0
+let hof_param_reg_counter = ref 0
 
 let change_to_ptx_vdecl ckv_info  =
   let change_to_ptx_data_type sast_c_dtype = 
@@ -718,12 +718,13 @@ let change_to_ptx_vdecl ckv_info  =
         | Sast.Array(t,n) -> Ptx_Array(get_vtype t, n)
     )
   in
-  incr hof_reg_counter;(Sast.Ptx_Vdecl(Sast.Global,(get_vtype ckv_info.variable_type),(make_ptx_id ckv_info.kernel_name "rd" !hof_reg_counter false)))
+  incr hof_param_reg_counter;(Sast.Ptx_Vdecl(Sast.Global,(get_vtype ckv_info.variable_type),(make_ptx_id ckv_info.kernel_name "rd" !hof_param_reg_counter false)))
 
 (* Creates a ptx_fdecl based on the hof_c_fdecl*)
 let make_hof_ptx_fdecl hof_c_fdecl hof env= 
   let regs = [ convert_to_register_declaration (Sast.Pred) "p" 2;
-            ] in
+                convert_to_register_declaration (Sast.U64) "rd" !hof_param_reg_counter;
+  ] in
   {
     ptx_higher_order_function_type                      = hof_c_fdecl.higher_order_function_type;
     ptx_higher_order_function_name                      = hof_c_fdecl.applied_kernel_function;
