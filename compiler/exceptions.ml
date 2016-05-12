@@ -47,6 +47,10 @@ exception Higher_order_function_call_only_takes_defg_functions
 exception Cannot_perform_operation_on_string of string 
 exception Cannot_perform_operation_on_array of string
 exception No_Hof_Allowed
+exception Cannot_pop_empty_expression_stack
+exception Cannot_access_empty_expression_stack
+exception Invalid_expression_stack_access
+exception Defg_arrays_must_be_defined_with_constants
 (*-------------------------------------Codegen C-------------------------------------*)
 exception Unknown_variable_type
 exception Unknown_operator

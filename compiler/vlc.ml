@@ -1,4 +1,4 @@
-type action = Tokens | Ast | Compile | Sast 
+type action = Tokens | Ast | Compile | Sast | Run
 
 let _ = 
 	if Array.length Sys.argv < 2 then
@@ -12,7 +12,8 @@ let _ =
     let action = List.assoc Sys.argv.(1) [ ("-t", Tokens);
                                            ("-a", Ast);
                                            ("-s", Sast);
-                                           ("-c", Compile);] and
+                                           ("-c", Compile);
+                                           ("-r", Run)] and
 filename = Sys.argv.(2) in
 print_endline filename;
 (* let base_filename = List.hd (Str.split (Str.regexp ".vlc") (List.hd (List.rev (Str.split (Str.regexp "/") filename)))) in
@@ -29,4 +30,8 @@ print_endline filename;
         | Sast -> 
             print_string (Utils.sast_to_string sast)
         | Compile ->
-            ignore(Codegen_c.generate_program filename sast)
+            Codegen_c.generate_program filename sast
+        | Run -> 
+            Codegen_c.generate_program filename sast
+(*             Sys.command ("nvcc -" ^ filename ^ " " ^ filename ^ ".cu");
+            Sys.command ("./" ^ filename); *)
