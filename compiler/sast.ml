@@ -16,8 +16,6 @@ type ptx_data_type =
 type ptx_variable_type = 
 	| Ptx_Primitive of ptx_data_type
 	| Ptx_Array of ptx_variable_type * int					(* Type array stores, Size of array*)
-	| Ptx_Pointer of ptx_variable_type						(* All pointer are s64, variable_type is the type that the pointer stores*)
-
 (* type ptx_variable_option = 
 	| Ptx_empty_option (* codegen will generate nothing for this*)
 	| Ptx_Vector of int (* int refers to length of vector*)

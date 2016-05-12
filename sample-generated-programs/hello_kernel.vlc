@@ -1,5 +1,5 @@
 int defg add(int a,int b):
-	a+b
+	a+b+10*2
 	return
 
 int def vlc():

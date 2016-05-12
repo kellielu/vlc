@@ -601,11 +601,11 @@ let convert_to_ptx_param vdecl env =
           let env = update_scope new_vmap env in
           (* Generates a PTX identifier that we want to use *)
           let is_array = match vtype with Ast.Primitive(p) -> false | Ast.Array(t,n) -> true in 
-          let ptx_id = make_ptx_id id reg_name reg_num true is_array in
+          let ptx_id = make_ptx_id id reg_name reg_num false is_array in
           (match vtype with
               (* Convert these types to have state space param*)
               | Ast.Primitive(p) -> Sast.Ptx_Vdecl(Sast.Param, fst(convert_to_ptx_variable_type vtype env),ptx_id),env
-              | Ast.Array(t,n) -> Sast.Ptx_Vdecl(Sast.Param, Sast.Ptx_Pointer(fst(convert_to_ptx_variable_type vtype env)),ptx_id),env
+              | Ast.Array(t,n) -> Sast.Ptx_Vdecl(Sast.Param, fst(convert_to_ptx_variable_type vtype env),ptx_id),env
           )
           
 
