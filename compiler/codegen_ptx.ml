@@ -128,10 +128,9 @@ let generate_ptx_vdecl vdecl =
         (match vtype with 
             | Ptx_Primitive(p) -> generate_ptx_state_space ss ^ " " ^ generate_ptx_data_type p ^ generate_id id 
             | Ptx_Array(dtype,size) -> 
-                let array_dims = get_array_dimensions vtype [] in
                     generate_ptx_state_space ss ^ " " ^ 
                     generate_ptx_variable_type dtype ^ " " ^ 
-                    "[" ^ generate_list string_of_int "][" array_dims ^ "] " ^  
+                    "[" ^ generate_list string_of_int "][" size ^ "] " ^  
                     generate_id id 
         )
       in sprintf "%s" vdecl_string

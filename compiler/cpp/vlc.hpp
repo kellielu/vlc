@@ -47,7 +47,8 @@ class VLC_Array {
 	public:
 		// Constructors and Destructors
 		VLC_Array();
-		VLC_Array(size_t num_values, T*values, size_t num_dimensions, size_t *dimensions);
+		VLC_Array(size_t num_values, size_t num_dimensions,...); 
+		VLC_Array(size_t num_values, T*values, size_t num_dimensions, size_t *dimensions);																		// For declarations
 		VLC_Array(size_t num_values, size_t num_dimensions,size_t total_args...); 			// For declarations and initializations like size_t a[5] = {1,2,3,4,5}
 		VLC_Array(const VLC_Array<T> &vlcarray); 	// For assignments like size_t a[1] = {5}, size_t b[1]={7},  a=b
 		~VLC_Array();
@@ -96,6 +97,24 @@ VLC_Array<T>::VLC_Array(size_t num_values, T*values, size_t num_dimensions, size
 
 	this->values = values_copy;
 	this->dimensions = dims_copy;
+}
+
+//Declarations
+template <class T>
+VLC_Array<T>::VLC_Array(size_t num_values, size_t num_dimensions,...){ 
+	/* Assign the dimensions and values */
+	this->num_dimensions = num_dimensions;
+	this->num_values = num_values;
+
+	this->dimensions = (size_t *)malloc(sizeof(size_t) * num_dimensions);
+	this->values = (T*)malloc(sizeof(T) * num_values);
+
+	/* Now access the values that are passed in */
+	std::cout<<num_dimensions<<std::endl;
+	va_list args;
+	va_start(args,num_dimensions);
+	for(size_t i = 0; i < num_dimensions; 	i++)	{ 	this->dimensions[i] = va_arg(args,size_t); 	}
+	va_end(args);
 }
 
 // Declarations, Assignments by value

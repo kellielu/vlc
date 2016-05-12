@@ -15,7 +15,7 @@ type ptx_data_type =
 
 type ptx_variable_type = 
 	| Ptx_Primitive of ptx_data_type
-	| Ptx_Array of ptx_variable_type * int					(* Type array stores, Size of array*)
+	| Ptx_Array of ptx_variable_type * int list					(* Type array stores, Size of array*)
 (* type ptx_variable_option = 
 	| Ptx_empty_option (* codegen will generate nothing for this*)
 	| Ptx_Vector of int (* int refers to length of vector*)
@@ -141,7 +141,7 @@ type c_data_type =
 
 type c_variable_type = 
 	| Primitive of c_data_type
-	| Array of c_variable_type * int
+	| Array of c_variable_type * int list
 
 type c_vdecl = 
     Variable_Declaration of c_variable_type * Ast.identifier
