@@ -46,6 +46,7 @@ let rec generate_ptx_literal literal =
   let l = match literal with
     | Ptx_Signed_Integer(i) -> string_of_int(i)
     | Ptx_Signed_Float(f) -> string_of_float(f)
+    | Ptx_Predicate(p) -> string_of_int p
     | Ptx_Identifier_Literal(id) -> generate_id id
     | Ptx_Array_Literal(l_list) -> "{" ^ generate_list generate_ptx_literal "," l_list ^ "}"
     | Ptx_Array_Access(l,l_list) -> generate_ptx_literal l ^ "[" ^ generate_list generate_ptx_literal "][" l_list ^ "]"
@@ -321,7 +322,7 @@ let generate_ptx_function_files program =
   		| hd::tl ->
         let ptx_function_string = (generate_ptx_function hd) in
   			write_ptx (Utils.idtos(hd.ptx_fdecl_name)) ptx_function_string;
-(*         print_endline ptx_function_string; *)
+        print_endline ptx_function_string;
   			generate_ptx_files tl
   in generate_ptx_files ptx_function_list
 

@@ -25,6 +25,7 @@ type ptx_variable_type =
 type ptx_literal = 
 	| Ptx_Signed_Integer of int
 	| Ptx_Signed_Float of float 
+	| Ptx_Predicate of int
 	| Ptx_Identifier_Literal of ptx_identifier
 	| Ptx_Array_Literal of ptx_literal list
 	| Ptx_Array_Access of ptx_literal * ptx_literal list
