@@ -300,11 +300,11 @@ let get_variable_info id env =
             check_scopes larger_scopes
   in check_scopes env.variable_scope_stack
 
-(* let update_variable_register id reg_num env = 
+let update_variable_register id reg_num env = 
   let old_info = get_variable_info id env in 
   let new_info = { vtype = old_info.vtype; register_number = reg_num;} in
-  let new_vmap = Variable_Map.add (Utils.idtos id) new_info (List.hd env.variable_scope_stack) in 
-  update_scope new_vmap env  *)
+  let new_vmap = Variable_Map.add id new_info (List.hd env.variable_scope_stack) in 
+  update_scope new_vmap env 
 
 (* Helper function that returns checks types are the same *)
 let same_types t1 t2 = (t1 = t2)
@@ -1183,33 +1183,30 @@ let convert_to_ptx_variable_statement vstmt env =
                     let env = pop_expression_stack env in 
                     let expr_block = [vdecl_expr;ptx_e;resolve] in
             Sast.Ptx_Block(expr_block),env
-      | Ast.Assignment(e1, e2) -> raise Exceptions.C'est_La_Vie
-         (*  match e1 with 
+      | Ast.Assignment(e1, e2) ->
+          match e1 with 
             | Ast.Identifier_Literal(id) -> 
                 (* Ast checking...*)
                 if (check_already_declared (Utils.idtos(id)) env) = false then raise (Exceptions.Name_not_found (Utils.idtos id))
                 else
                   ignore(same_types (get_variable_type (Utils.idtos id) env) (infer_type e2 env));
-                  (* Get the variable info, since we know its already in the environment *)
-                  let v_info = get_variable_info id env in
-                  let is_array = match v_info.vtype with Ast.Array(t,n) -> true | Ast.Primitive(p) -> false in 
-                  (* This case is weird becuase we know e1 is an identifier literal, so we can gets its information to make a ptx_id from get_variable_info *)
-                  (* Don't need to push pop  - special case for assign *)
-                      let reg_name, reg_num = generate_reg vtype in let new_v_info = { vtype = v_info.vtype; register_number = reg_num;} in
-                      let new_vmap = Variable_Map.add (Utils.idtos id) new_v_info (List.hd env.variable_scope_stack) in
-                      let env = update_scope new_vmap env in
-                      let ptx_e1 = make_ptx_id id reg_name reg_num true is_array in 
-                  (* Push on an expression stack for resolve e2*) 
-                    let env = push_expression_stack env in 
-                    let e2_stmt_block, env = convert_to_ptx_expression e2 env in
-                  (* Resolve by fetching from the value that was pushed onto the expression stack *)
-                    let resolve_stmt = Sast.Mov(fst(convert_to_ptx_variable_type vtype env),ptx_e1,get_from_expression_stack 1) in 
-                  (* Pop the expression stack *)
+                   let env = push_expression_stack env in
+              (* Must save ptx value for vdecl on the stack *)
+                    let v_info = get_variable_info (Utils.idtos id) env in
+                    (* Update vmap *)
+                    let ptx_id = make_ptx_id id (get_reg_type v_info.vtype) v_info.register_number true false in
+                    let env = update_variable_register (Utils.idtos id) ptx_id.reg_num env in
+                    let ptx_lit = Sast.Ptx_Identifier_Literal(ptx_id) in 
+                    let env = update_expression_stack ptx_lit env in 
+              let ptx_e,env = convert_to_ptx_expression e2 env in
+              (* convert_to_ptx_expression has saved a value in the stack. Let us fetch it and resolve*)
+              let resolve = Sast.Ptx_Move(fst(convert_to_ptx_variable_type v_info.vtype env),get_from_expression_stack 1 env, get_from_expression_stack 0 env) in
+              (* Pop the stack *)
                     let env = pop_expression_stack env in 
-                  (* Push new variable in current expression stack *)
-                  Sast.Block(List.rev(resolve_stmt::List.rev(e2_stmt_block))),env *)
-            (*| Ast.Array_Accessor(e,e_list,is_lvalue)-> raise Exceptions.Not_implemented
-                    (match e with 
+                    let expr_block = [ptx_e;resolve] in
+            Sast.Ptx_Block(expr_block),env
+            | Ast.Array_Accessor(e,e_list,is_lvalue)-> raise Exceptions.C'est_La_Vie
+                    (* (match e with 
                     | Ast.Identifier_Literal(id) -> 
                         if (check_already_declared (Utils.idtos id) env )= false then raise (Exceptions.Name_not_found (Utils.idtos id))
                         else
@@ -1237,8 +1234,8 @@ let convert_to_ptx_variable_statement vstmt env =
                             let env = pop_expression_stack env in 
                             Sast.Block(),env 
                     | _ -> (raise Exceptions.Cannot_assign_expression)
-                  ) 
-            | _ -> raise Exceptions.Cannot_assign_expression *)
+                  )  *)
+            | _ -> raise Exceptions.Cannot_assign_expression 
           
             
         
