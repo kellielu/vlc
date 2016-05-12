@@ -1,5 +1,6 @@
 int defg add(int a,int b):
-	return a + b
+	a+b
+	return
 
 int def vlc():
 	int[5] a =  {1,2,3,4,5}

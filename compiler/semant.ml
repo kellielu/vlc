@@ -201,7 +201,7 @@ let init_env = {
   (* Two lists that stores the new higher order functions we need to add*)
   hof_c_function_list         = [];
   hof_ptx_function_list       = [];
-  expression_stack            = [];
+  expression_stack            = [[]];
 }
 
 
@@ -976,18 +976,22 @@ let rec is_constant expr =
 
 let rec convert_to_ptx_expression e env = 
   match e with 
-    | Ast.String_Literal(s) -> raise Exceptions.NO_STRINGS_ALLOWED_IN_GDECL
+    | Ast.String_Literal(s) -> raise Exceptions.NO_STRINGS_ALLOWED_IN_GDECL;
     | Ast.Higher_Order_Function_Call(hof) -> raise Exceptions.No_Hof_Allowed
     | Ast.Integer_Literal(i) -> 
+          print_endline "INT LIT";
           let env = update_expression_stack (Sast.Ptx_Signed_Integer(i)) env in 
           Sast.Ptx_Block([Ptx_Empty]), env
     | Ast.Boolean_Literal(b) -> 
+          print_endline "BOOL_LIT";
           let env = update_expression_stack (Sast.Ptx_Predicate(if b = true then 1 else 0)) env in
           Sast.Ptx_Block([Ptx_Empty]),env
     | Ast.Floating_Point_Literal(f) -> 
+        print_endline "FLOAT_LIT";
           let env = update_expression_stack (Sast.Ptx_Signed_Float f) env in 
           Sast.Ptx_Block([Ptx_Empty]),env
     | Ast.Identifier_Literal(i) -> 
+          print_endline "ID_LIT";
           (* DO SEMANTIC CHECKING *)
           let v_info = get_variable_info (Utils.idtos i) env in
           let is_array = match v_info.vtype with | Ast.Primitive(p) -> false | Ast.Array(t,n) -> true in 
@@ -995,6 +999,7 @@ let rec convert_to_ptx_expression e env =
           let env = update_expression_stack ptx_lit env in
           Sast.Ptx_Block([Ptx_Empty]),env  
     | Ast.Binop(e1,o,e2) -> 
+          print_endline "BINOP";
           (* FILL IN WITH SEMANTIC CHECKING *)
           let vtype = infer_type e1 env in 
           (* Push stack *)
@@ -1012,9 +1017,11 @@ let rec convert_to_ptx_expression e env =
             let env = pop_expression_stack env in 
             (* Push the ptx_lit on current stack *)
             let env = update_expression_stack ptx_lit env in
+
             let ptx_expr_block = [ptx_e1;ptx_e2;resolve] in
         Sast.Ptx_Block(ptx_expr_block),env 
     | Ast.Unop(e,o) -> 
+          print_endline "UNOP";
           (* DO SEMANTIC CHECKING *)
               let vtype = infer_type e env in 
               (* Push stack *)
@@ -1034,6 +1041,7 @@ let rec convert_to_ptx_expression e env =
             let ptx_expr_block = [ptx_e;resolve] in
         Sast.Ptx_Block(ptx_expr_block),env 
     | Ast.Array_Literal(e_list) -> 
+        print_endline "ARR_LIT";
           (* SEMANTIC CHECKING ALREADY ADDED*)
           (* Check all elements of the array are the same type *)
           let type_list = List.map (fun x -> infer_type x env) e_list in 
@@ -1282,6 +1290,7 @@ let rec convert_to_c_statement stmt env =
          Sast.Block(c_stmt_list),env
 
 let convert_to_ptx_statement stmt env =
+  print_endline "IN PTX STMT";
   match stmt with 
     | Ast.Variable_Statement(v) -> raise Exceptions.C'est_La_Vie
     | Ast.Expression(e) -> convert_to_ptx_expression e env
