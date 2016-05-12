@@ -1,4 +1,4 @@
-#Different types in array declaration
+/*Different types in array declaration*/
 int[2] wrong_array = [1.0, 1]
 
 int def vlc():

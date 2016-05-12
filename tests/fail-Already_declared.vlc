@@ -1,0 +1,5 @@
+int a = 5
+int a = 6
+
+int def main():
+  return 1

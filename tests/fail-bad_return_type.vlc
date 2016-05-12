@@ -1,4 +1,4 @@
-#Return statement doesn't match type
+/*Return statement doesn't match type*/
 int defg add(int x, int y):
     float index = 1.0
     return index

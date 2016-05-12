@@ -1,2 +1,2 @@
-#Uninitialized variable
+/*Uninitialized variable*/
 helloworld = "Hello world!"

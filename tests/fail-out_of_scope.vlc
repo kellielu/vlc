@@ -1,5 +1,5 @@
-#Test scope
+/*Scope fails*/
 int def vlc():
     for (int i = 0, i < 2, i = i + 1):
-        print(i)
-    i = 8
+	int k = 1
+    k = 8

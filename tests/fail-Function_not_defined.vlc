@@ -1,0 +1,5 @@
+int def main():
+  int b = 5
+  float c = 5.0
+  b = c
+  return 1

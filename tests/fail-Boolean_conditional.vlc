@@ -1,0 +1,5 @@
+int def main():
+  float a = 1.0
+  if(a):
+    print("hi")
+  return 1

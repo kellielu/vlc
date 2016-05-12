@@ -1,0 +1,6 @@
+int def main():
+  int i
+  for (i = 0, i < 6, i++):
+    break
+    int a = 5
+  return 1

@@ -292,28 +292,28 @@ let rec generate_if_statements_input_arrays input_arrays str index =
     | [] -> ""
     | hd::[] ->
     let statement_string = 
-      if index = 0 then
+         if index = 0 then
         "if(i ==" ^ string_of_int index ^ "){\n" ^ 
-          "\t"^ generate_variable_type hd.variable_type ^ " tmp = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^
-          "\t" ^ Utils.idtos hd.host_name  ^ " = tmp.get_values();\n" ^ 
+         "\t" ^ generate_variable_type hd.variable_type ^ " tmp"^ string_of_int index ^ " = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^
+          "\t" ^ Utils.idtos hd.host_name  ^ " = tmp" ^ string_of_int index ^ ".get_values();\n" ^  
         "}\n"
         else
-        "else{\n" ^ 
-          "\t" ^ generate_variable_type hd.variable_type ^ " tmp = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^
-          "\t" ^ Utils.idtos hd.host_name  ^ " = tmp.get_values();\n" ^ 
+       "else(i ==" ^ string_of_int index ^ "){\n" ^ 
+          "\t" ^ generate_variable_type hd.variable_type ^ " tmp" ^ string_of_int index ^ " = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^
+          "\t" ^ Utils.idtos hd.host_name  ^ " = tmp" ^ string_of_int index ^ ".get_values();\n" ^ 
         "}\n"
       in str ^ statement_string
     | hd::tl ->
     let statement_string = 
       if index = 0 then
         "if(i ==" ^ string_of_int index ^ "){\n" ^ 
-         "\t" ^ generate_variable_type hd.variable_type ^ " tmp = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^
-          "\t" ^ Utils.idtos hd.host_name  ^ " = tmp.get_values();\n" ^ 
+         "\t" ^ generate_variable_type hd.variable_type ^ " tmp"^ string_of_int index ^ " = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^
+          "\t" ^ Utils.idtos hd.host_name  ^ " = tmp" ^ string_of_int index ^ ".get_values();\n" ^ 
         "}\n"
       else
         "else if(i ==" ^ string_of_int index ^ "){\n" ^ 
-          "\t" ^ generate_variable_type hd.variable_type ^ " tmp = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^
-          "\t" ^ Utils.idtos hd.host_name  ^ " = tmp.get_values();\n" ^ 
+          "\t" ^ generate_variable_type hd.variable_type ^ " tmp" ^ string_of_int index ^ " = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^
+          "\t" ^ Utils.idtos hd.host_name  ^ " = tmp" ^ string_of_int index ^ ".get_values();\n" ^ 
         "}\n"
     in generate_if_statements_input_arrays tl (str ^ statement_string) (index+1)
 
@@ -332,9 +332,9 @@ let generate_higher_order_function_decl hof =
                       generate_list generate_function_string_read "\n" hof.called_functions ^ "\n" ^ 
                       generate_function_string_read hof.applied_kernel_function ^ "\n\n" ^ 
                       (* Concatenates them all in one string *)
-                      (Utils.idtos hof.applied_kernel_function) ^ "_str" ^ " = " ^ generate_list (fun x-> (Utils.idtos x) ^ "_str") " +\"\\n\" + " (List.rev(hof.applied_kernel_function::List.rev(hof.called_functions))) ^ "\n\n" ^ 
+                      (Utils.idtos hof.applied_kernel_function) ^ "_str" ^ " = " ^ generate_list (fun x-> (Utils.idtos x) ^ "_str") " +\"\\n\" + " (List.rev(hof.applied_kernel_function::List.rev(hof.called_functions))) ^ ";\n\n" ^ 
                       
-                      "checkCudaErrors(cuModuleLoadDataEx(&cudaModule," ^ (Utils.idtos hof.applied_kernel_function) ^ "_str" ^ ", 0, 0, 0));\n" ^ 
+                      "checkCudaErrors(cuModuleLoadDataEx(&cudaModule," ^ (Utils.idtos hof.applied_kernel_function) ^ "_str.c_str()" ^ ", 0, 0, 0));\n" ^ 
                       "checkCudaErrors(cuModuleGetFunction(&function, cudaModule, \"" ^ (Utils.idtos hof.applied_kernel_function) ^ "\"));\n\n" ^ 
                       "size_t num_constants = " ^ string_of_int (List.length hof.higher_order_function_constants) ^ ";\n" ^
                       "size_t num_input_arrays = " ^ string_of_int (List.length hof.input_arrays_info) ^ ";\n\n" ^ 
@@ -384,7 +384,7 @@ let generate_higher_order_function_decl hof =
                       (* Launches kernel *)
                       "checkCudaErrors(cuLaunchKernel(function, gridSizeX, gridSizeY, gridSizeZ, blockSizeX, blockSizeY, blockSizeZ,0, NULL, KernelParams, NULL));\n\n" ^
                       (* Copies result array back to host *)
-                      "checkCudaErrors(cuMemcpyDtoH(" ^ Utils.idtos((hof.return_array_info).host_name) ^ "," ^ Utils.idtos ((hof.return_array_info).kernel_name) ^ ", sizeof(" ^ generate_variable_type ((hof.return_array_info).variable_type) ^ ")*" ^ string_of_int hof.array_length ^ "));\n\n" ^ 
+                      "checkCudaErrors(cuMemcpyDtoH(" ^ Utils.idtos((hof.return_array_info).host_name) ^ "," ^ Utils.idtos ((hof.return_array_info).kernel_name) ^ ", sizeof(" ^ generate_pure_data_type ((hof.return_array_info).variable_type) ^ ")*" ^ string_of_int hof.array_length ^ "));\n\n" ^ 
                       (* Cleanup *)
                       generate_list generate_mem_cleanup "\n" hof.input_arrays_info ^ "\n" ^ 
                       generate_mem_cleanup hof.return_array_info ^ "\n" ^ 

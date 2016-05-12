@@ -1,4 +1,4 @@
-#Unsupported PTX argument
+/*Unsupported PTX type as argument*/
 string defg add(string x, string y):
     return x
 

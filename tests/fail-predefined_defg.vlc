@@ -1,4 +1,4 @@
-#No pre-defined functions in defg
+/*Print function in defg*/
 int defg vector_add(int a, int b):
     print(a)
     return a
