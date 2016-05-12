@@ -126,7 +126,7 @@ let generate_ptx_vdecl vdecl =
     match vdecl with 
       | Ptx_Vdecl (ss, vtype, id) -> 
         (match vtype with 
-            | Ptx_Primitive(p) -> generate_ptx_state_space ss ^ " " ^ generate_ptx_data_type p ^ generate_id id 
+            | Ptx_Primitive(p) -> generate_ptx_state_space ss ^ "      " ^ generate_ptx_data_type p ^ " " ^ generate_id id 
             | Ptx_Array(dtype,size) -> 
                     generate_ptx_state_space ss ^ " " ^ 
                     generate_ptx_variable_type dtype ^ " " ^ 
