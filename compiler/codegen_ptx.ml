@@ -110,8 +110,7 @@ let generate_ptx_param vdecl =
             | Ptx_Primitive(p) -> ".param" ^ generate_ptx_variable_type vtype ^ " " ^
                                   generate_ptx_state_space ss ^ " " ^
                                   generate_id id
-            | Ptx_Array(vtype,size) -> ".param .u64 " ^ generate_id id 
-            | Ptx_Pointer(vtype) -> ".param .u64 " ^ generate_id id 
+            | Ptx_Array(vtype,size) -> ".param .u64 " ^ generate_id id  
           )
     in sprintf "%s" param_string
 
@@ -134,7 +133,6 @@ let generate_ptx_vdecl vdecl =
                     generate_ptx_variable_type dtype ^ " " ^ 
                     "[" ^ generate_list string_of_int "][" array_dims ^ "] " ^  
                     generate_id id 
-            | Ptx_Pointer(p) ->generate_ptx_state_space ss ^ " " ^ generate_ptx_variable_type vtype ^ generate_id id 
         )
       in sprintf "%s" vdecl_string
 
@@ -188,11 +186,31 @@ let generate_ptx_function_type fun_type =
   in
   sprintf "%s" t
 
+let generate_ld_statement vdecl =
+  let ld_string =  
+    match vdecl with 
+      | Ptx_Vdecl(ss,vtype,id) -> "ld" ^ (generate_ptx_state_space ss) ^ (generate_ptx_variable_type vtype) ^ 
+                                  " %" ^ id.reg_name ^  string_of_int id.reg_num^ "," ^ 
+                                  "[" ^ Utils.idtos id.var_name ^ "];"
+  in sprintf "%s" ld_string                            
+
 
 (* Writing out to PTX file *)
 let write_ptx filename ptx_string = 
   let file = open_out (filename ^ ".ptx") in 
   fprintf file "%s" ptx_string
+
+let generate_load_statement vdecl = 
+    (match vdecl with 
+      | Sast.Ptx_Vdecl(ss,vtype,id) -> 
+        (match vtype with 
+          | Sast.Ptx_Primitive(p) -> "ld" ^ (generate_ptx_state_space ss) ^ (generate_ptx_data_type p ) ^ 
+                                  " " ^ id.reg_name ^ string_of_int id.reg_num ^ "," ^ Utils.idtos id.var_name 
+          | Sast.Ptx_Array(t,n) -> "ld" ^ (generate_ptx_state_space ss) ^ (generate_ptx_variable_type vtype) ^ 
+                                  " %" ^ id.reg_name ^  string_of_int id.reg_num^ "," ^ 
+                                  "[" ^ Utils.idtos id.var_name ^ "];"
+        )
+    )
 
 (* Generates the ptx function string *)
 let generate_ptx_function f =
@@ -202,6 +220,7 @@ let generate_ptx_function f =
     "(" ^ (generate_list generate_ptx_param "," f.ptx_fdecl_input_params) ^ ")\n\n" ^ 
     "{\n" ^ 
       (generate_list generate_ptx_register_declaration "\n" f.register_decls ) ^ "\n\n\n" ^ 
+      (generate_list generate_load_statement           "\n" (f.ptx_fdecl_return_param::f.ptx_fdecl_input_params)) ^ "\n\n" ^
       (generate_list generate_ptx_statement "" f.ptx_fdecl_body) ^ 
     "}\n\n"
   in
@@ -214,13 +233,6 @@ let generate_ptx_function f =
   in 
   sprintf "%s" ptx_function_string
 
-let generate_ld_statement vdecl =
-  let ld_string =  
-    match vdecl with 
-      | Ptx_Vdecl(ss,vtype,id) -> "ld" ^ (generate_ptx_state_space ss) ^ (generate_ptx_variable_type vtype) ^ 
-                                  " %" ^ id.reg_name ^  string_of_int id.reg_num^ "," ^ 
-                                  "[" ^ Utils.idtos id.var_name ^ "];"
-  in sprintf "%s" ld_string                            
 
 let rec range i j = if i > j then [] else i :: (range (i+1) j)
 
