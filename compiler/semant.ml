@@ -7,7 +7,6 @@ open Exceptions
 module Variable_Map = Map.Make(String);;
 (* Maps function name to return type *)
 module Function_Map = Map.Make(String);;
-
 (* For generating names for the device pointers *)
 let dev_name_counter = ref 0
 (* For generating names for the host pointers *)
@@ -723,7 +722,6 @@ let convert_to_register_declaration dtype id num_reg =
   }
 
 let hof_param_reg_counter = ref 0
-
 
 let change_to_ptx_vdecl ckv_info  =
   let change_to_ptx_data_type sast_c_dtype = 

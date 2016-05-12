@@ -28,7 +28,7 @@ type ptx_literal =
 	| Ptx_Predicate of int
 	| Ptx_Identifier_Literal of ptx_identifier
 	| Ptx_Array_Literal of ptx_literal list
-	| Ptx_Array_Access of ptx_literal * ptx_literal list
+	| Ptx_Array_Access of ptx_literal * ptx_literal list (* RHS and LHS array access*)
 
 type ptx_unary_operator = 
     | Ptx_Not  | Ptx_Negate
@@ -54,12 +54,6 @@ type ptx_state_space =
 	| Shared
 	| Param
 	| State_Undefined
-
-(* Storage type of variable for constants *)
-type ptx_var_info = {
-	ptx_variable_type 			: ptx_variable_type;
-	ptx_id 						: ptx_identifier;
-}
 
 type ptx_register_declaration = {
 	reg_type 			: ptx_data_type;
