@@ -1,0 +1,4 @@
+int def main():
+  int[1] a = [0]
+  a[2]
+  return 1

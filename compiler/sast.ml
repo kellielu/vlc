@@ -1,9 +1,38 @@
 (* Contains sast type definitions for conversions during semantic analysis *)
 
 (* -----------------------------------------PTX types -----------------------------------------*)
+type ptx_identifier = {
+	var_name 	: Ast.identifier;
+	reg_name	: string; (* Register name it is stored in *)
+	reg_num		: int; 	  (* Register number it is stored in *)
+	write_reg 	: bool;   (* Boolean used for codegen to indicate whether we should use the variable name or the register name*)
+}
+
+type ptx_data_type =
+	S32 | F32 | Pred | Ptx_Void | U64
+(* 	U8 | U16 | U32 | U64 | S8 | S16 | S32 | S64 | F32 *)
+
+type ptx_variable_type = 
+	| Ptx_Primitive of ptx_data_type
+	| Ptx_Array of ptx_variable_type * int					(* Type array stores, Size of array*)
+	| Ptx_Pointer of ptx_variable_type						(* All pointer are s64, variable_type is the type that the pointer stores*)
+
+(* type ptx_variable_option = 
+	| Ptx_empty_option (* codegen will generate nothing for this*)
+	| Ptx_Vector of int (* int refers to length of vector*)
+	| Ptx_Alignment of int (* int refers to address alignment*)
+ *)
 type ptx_literal = 
-	| Ptx_signed_int of int
-	| Ptx_signed_float of float
+	| Ptx_Signed_Integer of int
+	| Ptx_Signed_Float of float 
+	| Ptx_Predicate of int
+	| Ptx_Identifier_Literal of ptx_identifier
+	| Ptx_Array_Literal of ptx_literal list
+	| Ptx_Array_Access of ptx_literal * ptx_literal list
+
+type ptx_unary_operator = 
+    | Ptx_Not  | Ptx_Negate
+    | Ptx_Plus_Plus | Ptx_Minus_Minus
 
 type ptx_binary_operator =
     | Ptx_Add | Ptx_Subtract | Ptx_Multiply | Ptx_Divide | Ptx_Modulo
@@ -18,144 +47,74 @@ type ptx_binary_operator =
 (*     Ptx_Greater_Than_Unsigned | Ptx_Less_Than_unsigned | Ptx_Greater_Than_Equal_Unsigned 
     | Ptx_Less_Than_Equal_Unsigned  *)
 
-type ptx_unary_operator = 
-    | Ptx_Not  | Ptx_Negate
-    | Ptx_Plus_Plus | Ptx_Minus_Minus
-
-type ptx_data_type =
-	S32 | F32 | Pred | Ptx_Void
-(* 	U8 | U16 | U32 | U64 | S8 | S16 | S32 | S64 | F32 *)
-
 type ptx_state_space = 
-	| Register_state
 	| Constant
 	| Global 
 	| Local 
 	| Shared
 	| Param
-	| State_undefined
+	| State_Undefined
 
-type ptx_variable_type = 
-	| Ptx_Primitive of ptx_data_type
-	| Ptx_Array of ptx_variable_type * int 					(* 'int' refers to the length of the array *)
-	| Ptx_Pointer of ptx_variable_type * int 				(* 'int' refers to size of memory pointed by the pointer *)
-
-type ptx_kernel_variable_info = {
+(* Storage type of variable for constants *)
+type ptx_var_info = {
 	ptx_variable_type 			: ptx_variable_type;
-	ptx_kernel_name 			: Ast.identifier;
+	ptx_id 						: ptx_identifier;
 }
 
-type ptx_variable = 
-	| Parameterized_variable_register of Ast.identifier * int (* register name, number of registers*)
-	| Variable_register of Ast.identifier * int (*register name, register number*)
-	| Constant_int of int 
-	| Constant_float of float
-	| Constant_bool of bool
-	| Variable_array of Ast.identifier * int (* array name, si+ze of array *)
-	| Variable_array_initialized of Ast.identifier * ptx_literal list
-	| Ptx_Variable of Ast.identifier
-	| Ptx_Variable_initialized of Ast.identifier * ptx_literal
-
-(* type ptx_variable_option = 
-	| Ptx_empty_option (* codegen will generate nothing for this*)
-	| Ptx_Vector of int (* int refers to length of vector*)
-	| Ptx_Alignment of int (* int refers to address alignment*)
- *)
-type ptx_pdecl = {
-	ptx_parameter_data_type: 		ptx_data_type;
-(* 	ptx_parameter_is_pointer:		int; 	(* 1 if true, 0 if false*) *)
-	ptx_parameter_state_space:		ptx_state_space;
-(* 	ptx_parameter_variable_option:	ptx_variable_option; *)
-	ptx_parameter_name:				Ast.identifier;
+type ptx_register_declaration = {
+	reg_type 			: ptx_data_type;
+	reg_id				: string;
+	num_registers		: int;	
 }
-
+(* Is included when we talk about parameters *)
 type ptx_vdecl = 
 (* * ptx_variable_option  *)
-    | Ptx_Vdecl of ptx_state_space *  ptx_variable_type *  ptx_variable
+    | Ptx_Vdecl of ptx_state_space *  ptx_variable_type *  ptx_identifier
 
-type ptx_expression =
-(*convert may require some options prior to first data type*)
-	| Ptx_Binop of ptx_binary_operator * ptx_variable_type * ptx_expression * ptx_expression * ptx_expression
-	| Ptx_triple of ptx_expression * ptx_expression * ptx_expression
-	| Ptx_Unop of ptx_unary_operator * ptx_variable_type * ptx_expression * ptx_expression
-	| Ptx_Load of ptx_state_space * ptx_variable_type * ptx_expression * ptx_expression
-	| Ptx_Store of ptx_state_space * ptx_variable_type * ptx_expression * ptx_expression
-	| Ptx_vdecl of ptx_vdecl
-	| Ptx_Move of ptx_variable_type * ptx_expression * ptx_expression
-	| Ptx_Branch of Ast.identifier
-	| Ptx_Call of ptx_expression * Ast.identifier * ptx_expression list
-	| Ptx_Empty_Call of Ast.identifier * ptx_expression list
-	| Predicated_statement of ptx_expression * ptx_expression
-	| Ptx_Convert of ptx_variable_type * ptx_variable_type * ptx_expression * ptx_expression
-	| Ptx_value_return of ptx_kernel_variable_info
-	| Ptx_expression_variable of ptx_variable
-	| Ptx_empty
-	| Ptx_Return_void
-
-type ptx_subroutine = {
-	routine_name								: Ast.identifier;
-	routine_expressions							: ptx_expression list;
-}
-
-type ptx_statement = 
-    | Ptx_expression of ptx_expression
-    | Ptx_subroutine of ptx_subroutine
-    | Ptx_statement_block of ptx_statement list
-
+type ptx_statement =
+(* Load,store,move*)
+	| Ptx_Load of ptx_state_space * ptx_variable_type * ptx_literal * ptx_literal
+	| Ptx_Store of ptx_state_space * ptx_variable_type * ptx_literal * ptx_literal
+	| Ptx_Move of ptx_variable_type * ptx_literal * ptx_literal
+(* Expressions*)
+	| Ptx_Binop of ptx_binary_operator * ptx_variable_type * ptx_literal * ptx_literal * ptx_literal
+	| Ptx_Unop of ptx_unary_operator * ptx_variable_type * ptx_literal * ptx_literal 
+	| Ptx_Call of ptx_literal * Ast.identifier * ptx_literal list
+	| Ptx_Empty_Call of Ast.identifier * ptx_literal list
+(* Statements and Conditionsals*)
+	| Ptx_Variable_Declaration of ptx_vdecl
+	| Ptx_Branch of ptx_identifier * Ast.identifier
+	| Ptx_Block of ptx_statement list
+	| Ptx_Subroutine of Ast.identifier * ptx_statement list
+	| Ptx_Return_Void
+	| Ptx_Cast of ptx_variable_type * ptx_variable_type * ptx_identifier * ptx_identifier
+	| Ptx_Empty
+	
 type ptx_function_type = 
-	| Global_func 
-	| Device_func
-
-
-(* ptx fdecl is the entire file
-	it seems it really only needs to be composed of a few parts - a name, a variable declaration list
-	and a statement list
-
-	register_decl list should go inside body generated from semantic analyzer
-*)
-
+	| Global_Function
+	| Device_Function
 
 type ptx_fdecl = {
-	(* Global or Device *)
-	ptx_fdecl_type 								: ptx_function_type;
-
-	(* Name of the function *)
-	ptx_fdecl_name 								: Ast.identifier;
-
-	(* Expected parameters of the function *)
-	ptx_fdecl_params 							: ptx_pdecl list;
-
-	(*ptx can't really return anything, so we will generate a parameter
-		for each ptx fdecl that our c code will need to know how to interface
-		with to use as a return type
-	*)
-	ptx_fdecl_return_type						: ptx_pdecl;
-
-	(* Declares the virtual registers that are needed for the function *)
-	register_decls 								: ptx_vdecl list;
-	(* Statements within the function *)
-	ptx_fdecl_body 								: ptx_statement list;
+	ptx_fdecl_type 								: ptx_function_type; (* Global or Device, might not be needed*)
+	ptx_fdecl_name 								: Ast.identifier; (* Name of the function *)
+	ptx_fdecl_input_params 						: ptx_vdecl list; (* Expected parameters of the function *)
+	ptx_fdecl_return_param						: ptx_vdecl; (* Parameter that is returned *)
+	register_decls 								: ptx_register_declaration list; (* Declares the virtual registers that are needed for the function *)
+	ptx_fdecl_body 								: ptx_statement list; (* Expressions within the function *)
 }
 
-
 type ptx_higher_order_fdecl = {
-	(* Map or reduce *)
-	ptx_higher_order_function_type 				: Ast.identifier; 
-	(* Name of this function  - ex. map123, map1, map2 *)
-	ptx_higher_order_function_name 				: Ast.identifier;
-	(* Name of kernel function that is called by this function *)
-    ptx_applied_kernel_function    				: Ast.identifier;
-	(* List of constants passed in that the function can use *)
-	ptx_higher_order_function_constants 		: ptx_kernel_variable_info list;
-	(* Size of input and return arrays *)
-	ptx_array_length 							: int;
+	ptx_higher_order_function_type 				: Ast.identifier;  	(* Map or reduce *)
+	ptx_higher_order_function_name 				: Ast.identifier;	(* Name of this function  - ex. map123, map1, map2 *)
+    ptx_applied_kernel_function    				: Ast.identifier; 	(* Name of kernel function that is called by this function *)
+	ptx_higher_order_function_constants 		: ptx_vdecl list; 	(* List of constants passed in that the function can use *)
+	ptx_array_length 							: int; 	(* Size of input and return arrays *)
 	(* Input array information 
 		--If an array has no name (just simply passed in as something like {1,2,3}) then it is given a temporary generated name *)
-	ptx_input_arrays_info						: ptx_pdecl list; (* type, host name, kernel name *)
-    (* Return array information *)	
-    ptx_return_array_info              			: ptx_pdecl; (* type, host name, kernel name*) 
-    (* Dependent functions*)
-    ptx_called_functions 						: Ast.identifier list;   
+	ptx_input_arrays_info						: ptx_vdecl list; (* type, host name, kernel name *)
+    ptx_return_array_info              			: ptx_vdecl;     (* Return array information *)	
+    ptx_called_functions 						: Ast.identifier list;     (* Dependent functions*)  
+    ptx_register_decls 							: ptx_register_declaration list;
 }
 (* -----------------------------------------C types -----------------------------------------*)
 type c_binary_operator =

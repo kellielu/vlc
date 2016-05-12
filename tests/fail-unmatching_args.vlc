@@ -1,4 +1,4 @@
-#Unmatching PTX arguments
+/*PTX arguments do not match*/
 int defg add(float x, int y):
     return (x + y)
 

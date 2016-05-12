@@ -1,0 +1,4 @@
+int def main():
+  int[5] a = [1, 2, 3, 4, 5]
+  int c = a + 3
+  return 1

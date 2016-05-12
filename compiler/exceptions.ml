@@ -21,7 +21,7 @@ exception Invalid_environment
 exception Variable_not_found_in_scope of string
 exception Function_not_defined of string
 exception Cannot_pop_empty_variable_scope_stack
-exception Variable_already_declared
+exception Variable_already_declared of string
 exception Not_an_array_expression
 exception Type_mismatch of string
 exception Empty_array_expression_list

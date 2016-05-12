@@ -85,6 +85,7 @@ let generate_function_id id =
 let id_string = Utils.idtos(id) in
   match id_string with
     | "print" -> sprintf "printf"
+    | "random" -> sprintf "rand"
     | _ -> sprintf "%s" id_string
 
  (* Generates CUDA device pointer *)
@@ -129,7 +130,7 @@ let id_string = Utils.idtos(id) in
     sprintf "%s" mem_cpy_string
 
 (* Generates CUDA statement for kernel params *)
- let generate_kernel_params arr_info = 
+ let generate_kernel_params arr_info array_length= 
     let rec get_kernel_names a_info_list name_list = 
       match a_info_list with 
         | [] -> name_list 
@@ -137,7 +138,7 @@ let id_string = Utils.idtos(id) in
     in
     let kernel_names = (get_kernel_names arr_info []) in 
     let kernel_param_string = generate_list generate_id ", &" kernel_names in 
-    sprintf "void *KernelParams[] = { &" ^ kernel_param_string ^ "};"
+    sprintf "void *KernelParams[] = { &" ^ kernel_param_string ^"," ^ string_of_int array_length ^ "};"
 
 (* Generate CUDA memory cleanup *)
 let generate_mem_cleanup arr_info = 
@@ -153,7 +154,7 @@ let generate_param d =
     | Variable_Declaration(vtype,id) ->
       match vtype with
         | Array(t,n) ->
-          let param_string = "VLC_Array<" ^ (generate_variable_type t) ^"," ^ string_of_int n ^ ">" ^ generate_id id  in 
+          let param_string = "VLC_Array<" ^ (generate_variable_type t) ^ ">" ^ generate_id id  in 
           sprintf "%s" param_string
         | Primitive(p) ->
           let param_string = (generate_data_type p) ^ " " ^ (generate_id id) in 
@@ -176,7 +177,7 @@ let rec generate_expression expression  =
     | Sast.Floating_Point_Literal(f) ->
         string_of_float f
     | Sast.Array_Literal(e_list,int_list) -> 
-        "VLC_Array(" ^ string_of_int (List.length e_list) ^ "," ^ string_of_int (List.length int_list) ^"," ^
+        "VLC_Array(" ^ string_of_int (List.length e_list) ^ "," ^ string_of_int (List.length int_list) ^"," ^ string_of_int ((List.length e_list) + (List.length int_list)) ^ "," ^ 
                       (generate_list string_of_int "," int_list) ^ "," ^ 
                       (generate_list generate_expression "," e_list) ^ ")" 
     | Sast.Identifier_Literal(id) -> 
@@ -291,28 +292,28 @@ let rec generate_if_statements_input_arrays input_arrays str index =
     | [] -> ""
     | hd::[] ->
     let statement_string = 
-      if index = 0 then
+         if index = 0 then
         "if(i ==" ^ string_of_int index ^ "){\n" ^ 
-          "\t"^ generate_variable_type hd.variable_type ^ " tmp = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^
-          "\t" ^ Utils.idtos hd.host_name  ^ " = tmp.get_values();\n" ^ 
+         "\t" ^ generate_variable_type hd.variable_type ^ " tmp"^ string_of_int index ^ " = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^
+          "\t" ^ Utils.idtos hd.host_name  ^ " = tmp" ^ string_of_int index ^ ".get_values();\n" ^  
         "}\n"
         else
-        "else{\n" ^ 
-          "\t" ^ generate_variable_type hd.variable_type ^ " tmp = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^
-          "\t" ^ Utils.idtos hd.host_name  ^ " = tmp.get_values();\n" ^ 
+       "else(i ==" ^ string_of_int index ^ "){\n" ^ 
+          "\t" ^ generate_variable_type hd.variable_type ^ " tmp" ^ string_of_int index ^ " = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^
+          "\t" ^ Utils.idtos hd.host_name  ^ " = tmp" ^ string_of_int index ^ ".get_values();\n" ^ 
         "}\n"
       in str ^ statement_string
     | hd::tl ->
     let statement_string = 
       if index = 0 then
         "if(i ==" ^ string_of_int index ^ "){\n" ^ 
-         "\t" ^ generate_variable_type hd.variable_type ^ " tmp = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^
-          "\t" ^ Utils.idtos hd.host_name  ^ " = tmp.get_values();\n" ^ 
+         "\t" ^ generate_variable_type hd.variable_type ^ " tmp"^ string_of_int index ^ " = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^
+          "\t" ^ Utils.idtos hd.host_name  ^ " = tmp" ^ string_of_int index ^ ".get_values();\n" ^ 
         "}\n"
       else
         "else if(i ==" ^ string_of_int index ^ "){\n" ^ 
-          "\t" ^ generate_variable_type hd.variable_type ^ " tmp = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^
-          "\t" ^ Utils.idtos hd.host_name  ^ " = tmp.get_values();\n" ^ 
+          "\t" ^ generate_variable_type hd.variable_type ^ " tmp" ^ string_of_int index ^ " = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^
+          "\t" ^ Utils.idtos hd.host_name  ^ " = tmp" ^ string_of_int index ^ ".get_values();\n" ^ 
         "}\n"
     in generate_if_statements_input_arrays tl (str ^ statement_string) (index+1)
 
@@ -331,9 +332,9 @@ let generate_higher_order_function_decl hof =
                       generate_list generate_function_string_read "\n" hof.called_functions ^ "\n" ^ 
                       generate_function_string_read hof.applied_kernel_function ^ "\n\n" ^ 
                       (* Concatenates them all in one string *)
-                      (Utils.idtos hof.applied_kernel_function) ^ "_str" ^ " = " ^ generate_list (fun x-> (Utils.idtos x) ^ "_str") " +\"\\n\" + " (List.rev(hof.applied_kernel_function::List.rev(hof.called_functions))) ^ "\n\n" ^ 
+                      (Utils.idtos hof.applied_kernel_function) ^ "_str" ^ " = " ^ generate_list (fun x-> (Utils.idtos x) ^ "_str") " +\"\\n\" + " (List.rev(hof.applied_kernel_function::List.rev(hof.called_functions))) ^ ";\n\n" ^ 
                       
-                      "checkCudaErrors(cuModuleLoadDataEx(&cudaModule," ^ (Utils.idtos hof.applied_kernel_function) ^ "_str" ^ ", 0, 0, 0));\n" ^ 
+                      "checkCudaErrors(cuModuleLoadDataEx(&cudaModule," ^ (Utils.idtos hof.applied_kernel_function) ^ "_str.c_str()" ^ ", 0, 0, 0));\n" ^ 
                       "checkCudaErrors(cuModuleGetFunction(&function, cudaModule, \"" ^ (Utils.idtos hof.applied_kernel_function) ^ "\"));\n\n" ^ 
                       "size_t num_constants = " ^ string_of_int (List.length hof.higher_order_function_constants) ^ ";\n" ^
                       "size_t num_input_arrays = " ^ string_of_int (List.length hof.input_arrays_info) ^ ";\n\n" ^ 
@@ -373,7 +374,7 @@ let generate_higher_order_function_decl hof =
                           generate_list generate_mem_cpy_host_to_device hofcall ^
                       "}\n" ^  *)
                       (* Sets Kernel params and other information needed to call cuLaunchKernel *)
-                      generate_kernel_params (List.rev (hof.return_array_info::(List.rev hof.input_arrays_info))) ^ "\n\n" ^
+                      generate_kernel_params (List.rev (hof.return_array_info::(List.rev hof.input_arrays_info))) hof.array_length ^ "\n\n" ^
                       "unsigned int blockSizeX = 16;\n" ^ 
                       "unsigned int blockSizeY = 1;\n" ^
                       "unsigned int blockSizeZ = 1;\n" ^
@@ -383,7 +384,7 @@ let generate_higher_order_function_decl hof =
                       (* Launches kernel *)
                       "checkCudaErrors(cuLaunchKernel(function, gridSizeX, gridSizeY, gridSizeZ, blockSizeX, blockSizeY, blockSizeZ,0, NULL, KernelParams, NULL));\n\n" ^
                       (* Copies result array back to host *)
-                      "checkCudaErrors(cuMemcpyDtoH(" ^ Utils.idtos((hof.return_array_info).host_name) ^ "," ^ Utils.idtos ((hof.return_array_info).kernel_name) ^ ", sizeof(" ^ generate_variable_type ((hof.return_array_info).variable_type) ^ ")*" ^ string_of_int hof.array_length ^ "));\n\n" ^ 
+                      "checkCudaErrors(cuMemcpyDtoH(" ^ Utils.idtos((hof.return_array_info).host_name) ^ "," ^ Utils.idtos ((hof.return_array_info).kernel_name) ^ ", sizeof(" ^ generate_pure_data_type ((hof.return_array_info).variable_type) ^ ")*" ^ string_of_int hof.array_length ^ "));\n\n" ^ 
                       (* Cleanup *)
                       generate_list generate_mem_cleanup "\n" hof.input_arrays_info ^ "\n" ^ 
                       generate_mem_cleanup hof.return_array_info ^ "\n" ^ 
@@ -402,7 +403,7 @@ let generate_variable_statement vstatement =
         (generate_vdecl d) ^ ";\n"
     | Sast.Assignment (e1, e2) -> 
         (match e1 with
-          | Sast.Array_Accessor(e,e_list,array_access,is_lvalue) ->
+          | Sast.Array_Accessor(e,e_list,is_lvalue,array_access) ->
               if array_access = true then (generate_expression e1) ^ ".set_array_value(" ^ (generate_expression e2) ^ "," ^ string_of_int (List.length e_list) ^ ","^(generate_list generate_expression "," e_list )^");\n"
               else (generate_expression e1) ^ ".set_element_value(" ^ (generate_expression e2) ^ "," ^ string_of_int (List.length e_list)^ ");\n"
           | _ -> (generate_expression e1) ^ "=" ^ (generate_expression e2) ^ ";\n")
@@ -411,7 +412,24 @@ let generate_variable_statement vstatement =
 (*     | _ -> raise Exceptions.Unknown_variable_statement *)
   in sprintf "%s" vstatement_string
 
-
+let generate_for_statement for_stmt = 
+  let statement_string = match for_stmt with
+    | Sast.Variable_Statement(vstmt) ->
+      (match vstmt with 
+        | Sast.Declaration(d) ->
+          (generate_vdecl d)
+        | Sast.Assignment(e1,e2) ->
+          (match e1 with
+          | Sast.Array_Accessor(e,e_list,array_access,is_lvalue) ->
+              if array_access = true then (generate_expression e1) ^ ".set_array_value(" ^ (generate_expression e2) ^ "," ^ string_of_int (List.length e_list) ^ ","^(generate_list generate_expression "," e_list )
+              else (generate_expression e1) ^ ".set_element_value(" ^ (generate_expression e2) ^ "," ^ string_of_int (List.length e_list)
+          | _ -> (generate_expression e1) ^ "=" ^ (generate_expression e2))
+        | Sast.Initialization(d,e) ->
+          (generate_vdecl d) ^ "=" ^ (generate_expression e)
+      )
+    | _ -> ""
+(*     | _ -> raise Exceptions.Unknown_variable_statement *)
+  in sprintf "%s" statement_string
 
 (* Generates statements *)
 let rec generate_statement statement  =
@@ -426,7 +444,7 @@ let rec generate_statement statement  =
         | Block([]) -> "if(" ^ (generate_expression e) ^ "){\n" ^ (generate_statement stmt1) ^ "}\n"
         | _ -> "if(" ^ (generate_expression e) ^ "){\n" ^ (generate_statement stmt1) ^ "}\n" ^ "else{\n" ^ (generate_statement stmt2) ^ "}\n")
     | Sast.While(e,stmt) -> "while(" ^ (generate_expression e) ^ "){\n" ^ (generate_statement stmt) ^ "}\n"
-    | Sast.For(stmt1,e,stmt2,stmt3) -> "for(" ^ (generate_statement stmt1) ^ (generate_expression e) ^ ";" ^ (generate_statement stmt2) ^ "){\n" ^ (generate_statement stmt3) ^ "}\n"
+    | Sast.For(stmt1,e,stmt2,stmt3) -> "for(" ^ (generate_for_statement stmt1) ^";"^ (generate_expression e) ^ ";" ^ (generate_for_statement stmt2) ^ "){\n" ^ (generate_statement stmt3) ^ "}\n"
     | Sast.Return(e) ->
         "return " ^ (generate_expression e) ^ ";\n"
     | Sast.Return_Void ->  
@@ -465,8 +483,8 @@ let generate_cuda_file filename program =
   #include <stdlib.h>\n\
   #include \"cuda.h\"\n\
   #include <iostream>\n\
-  #include <vlc>\n\
-  #include <stdargs.h>\n\
+  #include \"vlc.hpp\"\n\
+  #include <stdarg.h>\n\
   CUdevice    device;\n\
   CUmodule    cudaModule;\n\
   CUcontext   context;\n\

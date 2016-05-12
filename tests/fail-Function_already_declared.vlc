@@ -1,0 +1,8 @@
+int def one(int i):
+  return 1
+
+int def one(int i):
+  return 1
+
+int def main():
+  return 1

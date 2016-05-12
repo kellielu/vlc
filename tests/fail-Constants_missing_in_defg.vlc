@@ -1,0 +1,7 @@
+int defg test(int a):
+  scale = 3
+  return a
+
+int def main():
+  int[5] a = [1, 2, 3, 4, 5]
+  int[5] b = ~map(test, a)

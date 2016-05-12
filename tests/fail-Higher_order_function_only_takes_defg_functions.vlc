@@ -1,0 +1,7 @@
+int def test(int b):
+  return 1
+
+int def main():
+  int[3] a = [0, 0, 0]
+  int[3] c = ~map(test, a)
+  return 1

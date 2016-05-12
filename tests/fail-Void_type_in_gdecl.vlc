@@ -1,0 +1,5 @@
+int defg test(string a):
+  return a
+
+int def main():
+  return 1

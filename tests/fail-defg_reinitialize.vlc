@@ -1,4 +1,4 @@
-#Constant input re-initialized in defg
+/*Constant input re-initialized in defg*/
 int defg add(int x, int y):
     int scale = 5
     return scale * (x + y)

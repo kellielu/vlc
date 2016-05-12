@@ -1,0 +1,4 @@
+int[5] a = [1.0, 1]
+
+int def main():
+  return 1

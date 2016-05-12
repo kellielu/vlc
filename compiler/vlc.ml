@@ -14,6 +14,7 @@ let _ =
                                            ("-s", Sast);
                                            ("-c", Compile);] and
 filename = Sys.argv.(2) in
+print_endline filename;
 (* let base_filename = List.hd (Str.split (Str.regexp ".vlc") (List.hd (List.rev (Str.split (Str.regexp "/") filename)))) in
  *)let file_in = open_in filename in
       let lexbuf = Lexing.from_channel file_in in

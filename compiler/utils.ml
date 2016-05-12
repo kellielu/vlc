@@ -91,9 +91,9 @@ let data_type_to_string = function
  (*  | Ast.Byte -> "byte"
   | Ast.Unsigned_Byte -> "ubyte" *)
   | Ast.Integer -> "int"
-  (* | Ast.Unsigned_Integer -> "uint"
-  | Ast.Long -> "long"
-  | Ast.Unsigned_Long -> "ulong" *)
+(*   | Ast.Unsigned_Integer -> "uint" *)
+(*   | Ast.Long -> "long" *)
+(*   | Ast.Unsigned_Long -> "ulong" *)
   | Ast.Float -> "float"
   (* | Ast.Double -> "double" *)
   | Ast.Void -> "void"

@@ -1,4 +1,4 @@
-#Array type not supported
+/*Array type not supported*/
 string[2] wrong_array = ["hi", "hello"]
 
 int def vlc():
