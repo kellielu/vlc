@@ -1157,33 +1157,34 @@ let convert_to_c_variable_statement vstmt env =
   Return Sast.datatype, new env
 *)
 
+let get_vdecl_parts vdecl = 
+    (match vdecl with 
+    | Ast.Variable_Declaration(t,i) -> i,t)
 
-(* let convert_to_ptx_variable_statement vstmt env =
+let convert_to_ptx_variable_statement vstmt env =
     match vstmt with
       | Ast.Declaration(vdecl) ->
           let ptx_vdecl,env =  convert_to_ptx_vdecl vdecl env in 
           Sast.Ptx_Variable_Declaration(ptx_vdecl),env
       | Ast.Initialization(vdecl, e) -> 
           let ptx_vdecl,env = convert_to_ptx_vdecl vdecl env in 
-              (* No need to push and pop for vdecl*)
-              let vdecl_stmt = Sast.Ptx_Variable_Declaration(ptx_vdecl) in
+                (* Push scope for expression stack *)
+                  let env = push_expression_stack env in
+              let vdecl_expr = Sast.Ptx_Variable_Declaration(ptx_vdecl) in
               (* Must save ptx value for vdecl on the stack *)
-                    let id = 
-                       (match vdecl with 
-                        | Ast.Variable_Declaration(type,id) -> id)
-                    in
-                    let ptx_lit = Sast.Identifier_Literal(make_ptx_id id "" 0 false false) in 
+                    let id,vtype = get_vdecl_parts vdecl in
+                    let v_info = get_variable_info (Utils.idtos id) env in
+                    let ptx_lit = Sast.Ptx_Identifier_Literal(make_ptx_id id (get_reg_type v_info.vtype) v_info.register_number true false) in 
                     let env = update_expression_stack ptx_lit env in 
-                  (* Push scope for expression stack *)
-                    let env = push_expression_stack env in
               let ptx_e,env = convert_to_ptx_expression e env in
               (* convert_to_ptx_expression has saved a value in the stack. Let us fetch it and resolve*)
-              let resolve_stmt = Sast.Move(fst(convert_to_ptx_variable_type vtype env),get_from_expression_stack 2 env, get_from_expression_stack 1) in
+              let resolve = Sast.Ptx_Move(fst(convert_to_ptx_variable_type vtype env),get_from_expression_stack 1 env, get_from_expression_stack 0 env) in
               (* Pop the stack *)
                     let env = pop_expression_stack env in 
-            Sast.Block(List.rev (resolve_stmt::(List.rev vdecl_stmt::e_stmt_block))),env
-      | Ast.Assignment(e1, e2) -> 
-          match e1 with 
+                    let expr_block = [vdecl_expr;ptx_e;resolve] in
+            Sast.Ptx_Block(expr_block),env
+      | Ast.Assignment(e1, e2) -> raise Exceptions.C'est_La_Vie
+         (*  match e1 with 
             | Ast.Identifier_Literal(id) -> 
                 (* Ast checking...*)
                 if (check_already_declared (Utils.idtos(id)) env) = false then raise (Exceptions.Name_not_found (Utils.idtos id))
@@ -1206,9 +1207,9 @@ let convert_to_c_variable_statement vstmt env =
                   (* Pop the expression stack *)
                     let env = pop_expression_stack env in 
                   (* Push new variable in current expression stack *)
-                  Sast.Block(List.rev(resolve_stmt::List.rev(e2_stmt_block))),env
-            | Ast.Array_Accessor(e,e_list,is_lvalue)-> raise Exceptions.Not_implemented *)
-                  (*  (match e with 
+                  Sast.Block(List.rev(resolve_stmt::List.rev(e2_stmt_block))),env *)
+            (*| Ast.Array_Accessor(e,e_list,is_lvalue)-> raise Exceptions.Not_implemented
+                    (match e with 
                     | Ast.Identifier_Literal(id) -> 
                         if (check_already_declared (Utils.idtos id) env )= false then raise (Exceptions.Name_not_found (Utils.idtos id))
                         else
@@ -1309,7 +1310,7 @@ let rec convert_to_c_statement stmt env =
 let convert_to_ptx_statement stmt env =
   print_endline "IN PTX STMT";
   match stmt with 
-    | Ast.Variable_Statement(v) -> raise Exceptions.C'est_La_Vie
+    | Ast.Variable_Statement(v) -> convert_to_ptx_variable_statement v env
     | Ast.Expression(e) -> convert_to_ptx_expression e env
     | Ast.Return_Void -> Sast.Ptx_Return_Void, env
     | Ast.Block(stmt_list) -> raise Exceptions.C'est_La_Vie       
