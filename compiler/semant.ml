@@ -556,15 +556,15 @@ let rec convert_to_c_variable_type vtype env =
           let c_p,env = convert_to_c_data_type p env in
           Sast.Primitive(c_p),env
       | Ast.Array(t,n) ->
-          let inside = (match t with 
+          let array_dims = get_array_dimensions vtype [] in
+          let inside,env = (match t with 
             | Ast.Array(t,n) -> 
-                let c_t,env = convert_to_c_variable_type t env in
-                Sast.Array(c_t,n)
+                convert_to_c_variable_type t env
             | Ast.Primitive(p) -> 
                 let c_p,env= convert_to_c_data_type p env in
-                Sast.Primitive(c_p)
+                Sast.Primitive(c_p),env
           ) in
-          Sast.Array(inside, n),env
+          Sast.Array(inside, array_dims),env
 
 (* TO IMPLEMENT *)
 let rec convert_to_ptx_variable_type vtype env = 
@@ -573,8 +573,9 @@ let rec convert_to_ptx_variable_type vtype env =
           let p2,env = convert_to_ptx_data_type p env in
           Sast.Ptx_Primitive(p2),env
       | Ast.Array(t,n) ->  
+          let array_dims = get_array_dimensions vtype [] in
           let c_t,env = convert_to_ptx_variable_type t env in
-          Sast.Ptx_Array(c_t,n),env
+          Sast.Ptx_Array(c_t,array_dims),env
 
 (* Variable Declarations *)
 let convert_to_c_vdecl vdecl env  = 
@@ -992,7 +993,8 @@ let rec convert_to_ptx_expression e env =
           Sast.Ptx_Block([Ptx_Empty]),env
     | Ast.Identifier_Literal(i) -> 
           print_endline "ID_LIT";
-          (* DO SEMANTIC CHECKING *)
+          if(check_already_declared (Utils.idtos i) env) = false then raise (Exceptions.Variable_not_found_in_scope ( Utils.idtos i))
+          else
           let v_info = get_variable_info (Utils.idtos i) env in
           let is_array = match v_info.vtype with | Ast.Primitive(p) -> false | Ast.Array(t,n) -> true in 
           let ptx_lit = Sast.Ptx_Identifier_Literal(make_ptx_id i (get_reg_type (v_info.vtype)) v_info.register_number true is_array) in
@@ -1000,8 +1002,20 @@ let rec convert_to_ptx_expression e env =
           Sast.Ptx_Block([Ptx_Empty]),env  
     | Ast.Binop(e1,o,e2) -> 
           print_endline "BINOP";
-          (* FILL IN WITH SEMANTIC CHECKING *)
-          let vtype = infer_type e1 env in 
+          if((same_types (infer_type e1 env) (infer_type e2 env)) = false) then raise (Exceptions.Type_mismatch "Binop doesn't match")
+          else
+            (match o with 
+              | Ast.And | Ast.Or | Ast.Xor -> 
+                (* Check that type is boolean if using boolean operator *)
+                ignore(same_types (infer_type e1 env) (Ast.Primitive(Ast.Boolean)));
+              | _ -> 
+                (* Check if type is string, array *)
+                  (match (infer_type e1 env) with
+                    | Ast.Primitive(t) -> if t = Ast.String then raise (Exceptions.Cannot_perform_operation_on_string (Utils.binary_operator_to_string o)) else ()
+                    | Ast.Array(t,n) -> raise (Exceptions.Cannot_perform_operation_on_array (Utils.binary_operator_to_string o))
+                  );
+              );
+        let vtype = infer_type e1 env in 
           (* Push stack *)
           let env = push_expression_stack env in 
         let ptx_e1, env = convert_to_ptx_expression e1 env in 
@@ -1021,8 +1035,12 @@ let rec convert_to_ptx_expression e env =
             let ptx_expr_block = [ptx_e1;ptx_e2;resolve] in
         Sast.Ptx_Block(ptx_expr_block),env 
     | Ast.Unop(e,o) -> 
-          print_endline "UNOP";
-          (* DO SEMANTIC CHECKING *)
+          (match o with 
+            | Ast.Not -> 
+              if((infer_type e env)= Ast.Primitive(Ast.Boolean)) = false then raise (Exceptions.Type_mismatch("Must use boolean expression with boolean unop"))
+            | _ -> ());
+              if((infer_type e env) = (Ast.Primitive (Ast.String))) then raise (Exceptions.Cannot_perform_operation_on_string (Utils.unary_operator_to_string o))
+              else
               let vtype = infer_type e env in 
               (* Push stack *)
               let env = push_expression_stack env in 
@@ -1042,7 +1060,6 @@ let rec convert_to_ptx_expression e env =
         Sast.Ptx_Block(ptx_expr_block),env 
     | Ast.Array_Literal(e_list) -> 
         print_endline "ARR_LIT";
-          (* SEMANTIC CHECKING ALREADY ADDED*)
           (* Check all elements of the array are the same type *)
           let type_list = List.map (fun x -> infer_type x env) e_list in 
           ignore(same_types_list type_list);

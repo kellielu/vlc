@@ -97,7 +97,7 @@ let id_string = Utils.idtos(id) in
  let generate_mem_alloc_statement_host_to_device ktype= 
     let arr_length = 
         match ktype.variable_type with 
-          | Sast.Array(t,n) -> n
+          | Sast.Array(t,i_list) -> (List.fold_left (fun x y -> x * y) 1 i_list)
           | _ -> 1
       in
     sprintf "checkCudaErrors(cuMemAlloc(&" ^ Utils.idtos(ktype.kernel_name) ^ ", sizeof(" ^ (generate_pure_data_type ktype.variable_type) ^ ")*" ^ string_of_int arr_length ^ "));"
@@ -115,9 +115,8 @@ let id_string = Utils.idtos(id) in
         | Array(t,n) -> 
               let arr_length = 
                 (match ktype.variable_type with 
-                  | Sast.Array(t,n) -> n
-                  | _ -> 0
-                )
+                  | Sast.Array(t,i_list) -> (List.fold_left (fun x y -> x * y) 1 i_list)
+                  | _ -> 1)
               in
               "checkCudaErrors(cuMemcpyHtoD("^ Utils.idtos(ktype.kernel_name) ^", " ^ Utils.idtos(ktype.host_name) ^ ", sizeof(" ^ (generate_pure_data_type ktype.variable_type) ^ ")*" ^ string_of_int arr_length ^ "));\n"
         | Primitive(t) -> 
@@ -400,7 +399,17 @@ let generate_higher_order_function_decl hof =
 let generate_variable_statement vstatement = 
   let vstatement_string = match vstatement with
     | Sast.Declaration(d)  -> 
-        (generate_vdecl d) ^ ";\n"
+        (match d with 
+          | Variable_Declaration(vtype,id) ->
+            (match vtype with
+              | Sast.Array(t,i_list) -> 
+                  (generate_vdecl d) ^ "= VLC_Array<"^ generate_variable_type t^ ">(" ^ 
+                  string_of_int (List.fold_left (fun x y -> x * y) 1 i_list) ^ "," ^ 
+                  string_of_int (List.length i_list) ^ "," ^ generate_list string_of_int "," i_list ^ ");\n"
+              | Sast.Primitive(p) -> (generate_vdecl d) ^ ";\n"
+            )
+        )
+        
     | Sast.Assignment (e1, e2) -> 
         (match e1 with
           | Sast.Array_Accessor(e,e_list,is_lvalue,array_access) ->
