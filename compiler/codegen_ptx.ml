@@ -170,7 +170,7 @@ let rec generate_ptx_statement statement =
         Utils.idtos(fname) ^ " (" ^ (generate_list generate_ptx_literal "," arglist)^")" ^ ";\n"
     | Ptx_Empty_Call(id, vlist) -> "call " ^ Utils.idtos(id) ^"(" ^(generate_list generate_ptx_literal "," vlist)^")" ^ ";\n"
     | Ptx_Variable_Declaration(vdecl) -> generate_ptx_vdecl vdecl ^ ";\n"
-    | Ptx_Branch(id,sub) -> "@" ^ generate_id id ^" bra " ^ Utils.idtos(sub) ^ ";\n"
+    | Ptx_Branch(id,sub) -> "@" ^ generate_ptx_literal id ^" bra " ^ Utils.idtos(sub) ^ ";\n"
     | Ptx_Block(stmt_list) -> generate_list generate_ptx_statement "" stmt_list
     | Ptx_Subroutine(id,stmt_list)-> Utils.idtos id ^ ": \n" ^ generate_list generate_ptx_statement "\n" stmt_list
     | Ptx_Return_Void -> "ret;\n"
@@ -178,7 +178,7 @@ let rec generate_ptx_statement statement =
         generate_ptx_variable_type(d2) ^ " " ^ generate_ptx_(v1) ^ ", " ^
         generate_ptx_expression(v2) ^ ";\n" *)
     | Ptx_Empty -> ""
-    in sprintf "%s"
+    in sprintf "%s" s
 
 
 let generate_ptx_function_type fun_type =

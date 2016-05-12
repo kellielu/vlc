@@ -6,6 +6,7 @@ type ptx_identifier = {
 	reg_name	: string; (* Register name it is stored in *)
 	reg_num		: int; 	  (* Register number it is stored in *)
 	write_reg 	: bool;   (* Boolean used for codegen to indicate whether we should use the variable name or the register name*)
+	is_ptr 		: bool;   (* Just stores if the identifier is a pointer or not. REALLY IMPORTANT *)
 }
 
 type ptx_data_type =
@@ -22,6 +23,7 @@ type ptx_variable_type =
 	| Ptx_Vector of int (* int refers to length of vector*)
 	| Ptx_Alignment of int (* int refers to address alignment*)
  *)
+
 type ptx_literal = 
 	| Ptx_Signed_Integer of int
 	| Ptx_Signed_Float of float 
@@ -29,6 +31,7 @@ type ptx_literal =
 	| Ptx_Identifier_Literal of ptx_identifier
 	| Ptx_Array_Literal of ptx_literal list
 	| Ptx_Array_Access of ptx_literal * ptx_literal list (* RHS and LHS array access*)
+	| Ptx_Array_Dereference of ptx_literal (* For [reg] statement*)
 
 type ptx_unary_operator = 
     | Ptx_Not  | Ptx_Negate
@@ -54,6 +57,7 @@ type ptx_state_space =
 	| Shared
 	| Param
 	| State_Undefined
+	| Register
 
 type ptx_register_declaration = {
 	reg_type 			: ptx_data_type;
@@ -65,7 +69,7 @@ type ptx_vdecl =
 (* * ptx_variable_option  *)
     | Ptx_Vdecl of ptx_state_space *  ptx_variable_type *  ptx_identifier
 
-type ptx_statement =
+type ptx_expression =
 (* Load,store,move*)
 	| Ptx_Load of ptx_state_space * ptx_variable_type * ptx_literal * ptx_literal
 	| Ptx_Store of ptx_state_space * ptx_variable_type * ptx_literal * ptx_literal
@@ -77,11 +81,11 @@ type ptx_statement =
 	| Ptx_Empty_Call of Ast.identifier * ptx_literal list
 (* Statements and Conditionsals*)
 	| Ptx_Variable_Declaration of ptx_vdecl
-	| Ptx_Branch of ptx_identifier * Ast.identifier
-	| Ptx_Block of ptx_statement list
-	| Ptx_Subroutine of Ast.identifier * ptx_statement list
+	| Ptx_Branch of ptx_literal * Ast.identifier
+	| Ptx_Block of ptx_expression list
+	| Ptx_Subroutine of Ast.identifier * ptx_expression list
 	| Ptx_Return_Void
-	| Ptx_Cast of ptx_variable_type * ptx_variable_type * ptx_identifier * ptx_identifier
+	| Ptx_Cast of ptx_variable_type * ptx_variable_type * ptx_literal * ptx_literal
 	| Ptx_Empty
 	
 type ptx_function_type = 
@@ -94,7 +98,7 @@ type ptx_fdecl = {
 	ptx_fdecl_input_params 						: ptx_vdecl list; (* Expected parameters of the function *)
 	ptx_fdecl_return_param						: ptx_vdecl; (* Parameter that is returned *)
 	register_decls 								: ptx_register_declaration list; (* Declares the virtual registers that are needed for the function *)
-	ptx_fdecl_body 								: ptx_statement list; (* Expressions within the function *)
+	ptx_fdecl_body 								: ptx_expression list; (* Expressions within the function *)
 }
 
 type ptx_higher_order_fdecl = {

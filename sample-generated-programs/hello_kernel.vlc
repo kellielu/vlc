@@ -4,5 +4,7 @@ int defg add(int a,int b):
 int def vlc():
 	int[5] a =  {1,2,3,4,5}
 	int[5] b =  {1,2,3,4,5}
-	int c = ~map(add,consts(scale=4),a,b)
+	int[5] c =  {1,2,3,4,5}
+	int[5] d = ~map(add,consts(scale=4),a,b)
+	print(d)
 
