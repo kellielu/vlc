@@ -562,6 +562,9 @@ let rec convert_to_c_variable_type vtype env =
           Sast.Primitive(c_p),env
       | Ast.Array(t,n) ->
           let array_dims = get_array_dimensions vtype [] in
+(*           print_endline "marker";
+          List.map print_endline (List.map string_of_int array_dims); *)
+
           let inside,env = (match t with 
             | Ast.Array(t,n) -> 
                 convert_to_c_variable_type t env
