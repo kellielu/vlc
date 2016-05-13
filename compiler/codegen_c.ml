@@ -397,7 +397,7 @@ let generate_higher_order_function_decl hof =
                       "checkCudaErrors(cuCtxDestroy(context));\n" ^  
                       "int* dimensions = (int *) malloc(sizeof(int)*1);\n" ^ 
                       "*dimensions = 1;\n" ^ 
-                      "return VLC_Array<" ^ (generate_variable_type hof.return_array_info.variable_type) ^ ">(" ^ string_of_int (hof.array_length) ^ "," ^ Utils.idtos hof.return_array_info.host_name ^ ", 1, dimensions" ^ ");\n" ^  
+                      "return VLC_Array<" ^ (generate_pure_data_type hof.return_array_info.variable_type) ^ ">(" ^ string_of_int (hof.array_length) ^ "," ^ Utils.idtos hof.return_array_info.host_name ^ ", 1, dimensions" ^ ");\n" ^  
                   "}\n\n\n" 
     | _ -> raise Exceptions.Not_implemented_yet
    in sprintf "%s" higher_order_function_decl_string
