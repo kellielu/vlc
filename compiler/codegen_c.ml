@@ -137,7 +137,9 @@ let id_string = Utils.idtos(id) in
     in
     let kernel_names = (get_kernel_names arr_info []) in 
     let kernel_param_string = generate_list generate_id ", &" kernel_names in 
-    sprintf "void *KernelParams[] = { &" ^ kernel_param_string ^"," ^ string_of_int array_length ^ "};"
+    let zero_string = "int* ARRAY_LENGTH;\n" ^ "*ARRAY_LENGTH="  ^ string_of_int array_length ^ ";\n" in
+    let params = zero_string ^ "void *KernelParams[] = { &" ^ kernel_param_string ^", ARRAY_LENGTH};" in
+    sprintf "%s" params
 
 (* Generate CUDA memory cleanup *)
 let generate_mem_cleanup arr_info = 
@@ -262,13 +264,13 @@ let rec generate_if_statements_constants constant_list str index =
       let statement_string = 
         if index = 0 then
           "if(i ==" ^ string_of_int index ^ "){\n" ^ 
-            "\t" ^ Utils.idtos hd.host_name  ^ " = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^ 
+            "\t" ^ Utils.idtos hd.host_name  ^ " = va_arg(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^ 
             "\t" ^ generate_mem_alloc_statement_host_to_device hd ^ "\n" ^
             "\t" ^ generate_mem_cpy_statement_host_to_device hd ^ "\n" ^ 
           "}\n"
         else
           "else{\n" ^ 
-            "\t" ^ Utils.idtos hd.host_name ^ " = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^ 
+            "\t" ^ Utils.idtos hd.host_name ^ " = va_arg(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^ 
             "\t" ^ generate_mem_alloc_statement_host_to_device hd ^ "\n" ^
             "\t" ^ generate_mem_cpy_statement_host_to_device hd ^ "\n" ^ 
           "}\n"
@@ -277,13 +279,13 @@ let rec generate_if_statements_constants constant_list str index =
       let statement_string = 
         if index = 0 then
           "if(i ==" ^ string_of_int index ^ "){\n" ^ 
-            "\t" ^ Utils.idtos hd.host_name  ^ " = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^ 
+            "\t" ^ Utils.idtos hd.host_name  ^ " = va_arg(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^ 
             "\t" ^ generate_mem_alloc_statement_host_to_device hd ^ "\n" ^
             "\t" ^ generate_mem_cpy_statement_host_to_device hd ^ "\n" ^ 
           "}\n"
         else
           "else if(i ==" ^ string_of_int index ^ "){\n" ^ 
-            "\t" ^ Utils.idtos hd.host_name  ^ " = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^ 
+            "\t" ^ Utils.idtos hd.host_name  ^ " = va_arg(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^ 
             "\t" ^ generate_mem_alloc_statement_host_to_device hd ^ "\n" ^
             "\t" ^ generate_mem_cpy_statement_host_to_device hd ^ "\n" ^ 
           "}\n"
@@ -296,12 +298,12 @@ let rec generate_if_statements_input_arrays input_arrays str index =
     let statement_string = 
          if index = 0 then
         "if(i ==" ^ string_of_int index ^ "){\n" ^ 
-         "\t" ^ generate_variable_type hd.variable_type ^ " tmp"^ string_of_int index ^ " = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^
+         "\t" ^ generate_variable_type hd.variable_type ^ " tmp"^ string_of_int index ^ " = va_arg(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^
           "\t" ^ Utils.idtos hd.host_name  ^ " = tmp" ^ string_of_int index ^ ".get_values();\n" ^  
         "}\n"
         else
        "else{\n" ^ 
-          "\t" ^ generate_variable_type hd.variable_type ^ " tmp" ^ string_of_int index ^ " = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^
+          "\t" ^ generate_variable_type hd.variable_type ^ " tmp" ^ string_of_int index ^ " = va_arg(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^
           "\t" ^ Utils.idtos hd.host_name  ^ " = tmp" ^ string_of_int index ^ ".get_values();\n" ^ 
         "}\n"
       in str ^ statement_string
@@ -309,12 +311,12 @@ let rec generate_if_statements_input_arrays input_arrays str index =
     let statement_string = 
       if index = 0 then
         "if(i ==" ^ string_of_int index ^ "){\n" ^ 
-         "\t" ^ generate_variable_type hd.variable_type ^ " tmp"^ string_of_int index ^ " = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^
+         "\t" ^ generate_variable_type hd.variable_type ^ " tmp"^ string_of_int index ^ " = va_arg(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^
           "\t" ^ Utils.idtos hd.host_name  ^ " = tmp" ^ string_of_int index ^ ".get_values();\n" ^ 
         "}\n"
       else
         "else if(i ==" ^ string_of_int index ^ "){\n" ^ 
-          "\t" ^ generate_variable_type hd.variable_type ^ " tmp" ^ string_of_int index ^ " = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^
+          "\t" ^ generate_variable_type hd.variable_type ^ " tmp" ^ string_of_int index ^ " = va_arg(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^
           "\t" ^ Utils.idtos hd.host_name  ^ " = tmp" ^ string_of_int index ^ ".get_values();\n" ^ 
         "}\n"
     in generate_if_statements_input_arrays tl (str ^ statement_string) (index+1)
@@ -393,6 +395,7 @@ let generate_higher_order_function_decl hof =
                       generate_list generate_mem_cleanup "\n" hof.higher_order_function_constants ^ "\n\n" ^
                       "checkCudaErrors(cuModuleUnload(cudaModule));\n" ^ 
                       "checkCudaErrors(cuCtxDestroy(context));\n" ^  
+                      "return host_ptr0;" ^ "\n" ^ 
                   "}\n\n\n" 
     | _ -> raise Exceptions.Not_implemented_yet
    in sprintf "%s" higher_order_function_decl_string
@@ -498,6 +501,7 @@ let generate_cuda_file filename program =
   #include <iostream>\n\
   #include \"vlc.hpp\"\n\
   #include <stdarg.h>\n\
+  #include <fstream>\n\
   CUdevice    device;\n\
   CUmodule    cudaModule;\n\
   CUcontext   context;\n\

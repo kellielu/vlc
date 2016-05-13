@@ -48,8 +48,9 @@ class VLC_Array {
 		// Constructors and Destructors
 		VLC_Array();
 		VLC_Array(size_t num_values, size_t num_dimensions,...); 
+		VLC_Array(size_t num_values, size_t num_dimensions,size_t total_args...); 
 		VLC_Array(size_t num_values, T*values, size_t num_dimensions, size_t *dimensions);																		// For declarations
-		VLC_Array(size_t num_values, size_t num_dimensions,size_t total_args...); 			// For declarations and initializations like size_t a[5] = {1,2,3,4,5}
+			// For declarations and initializations like size_t a[5] = {1,2,3,4,5}
 		VLC_Array(const VLC_Array<T> &vlcarray); 	// For assignments like size_t a[1] = {5}, size_t b[1]={7},  a=b
 		~VLC_Array();
 		
