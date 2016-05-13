@@ -243,7 +243,6 @@ variable_type:
     | data_type                                                         { Primitive($1) }
     | data_type array_dimension_list                            
         { 
-            print_endline "hi";
             let rec create_array vtype dim_list= 
                 match dim_list with
                     | [] -> raise (Exceptions.Array_parsing_error)

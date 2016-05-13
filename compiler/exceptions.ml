@@ -51,6 +51,9 @@ exception Cannot_pop_empty_expression_stack
 exception Cannot_access_empty_expression_stack
 exception Invalid_expression_stack_access
 exception Defg_arrays_must_be_defined_with_constants
+exception Casting_not_allowed_in_defg
+exception Missing_return_type
+exception Return_type_doesn't_match
 (*-------------------------------------Codegen C-------------------------------------*)
 exception Unknown_variable_type
 exception Unknown_operator

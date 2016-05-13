@@ -1,7 +1,5 @@
-int defg add(int a,int b):
-	int x = 1
-	x = 5
-	return
+int defg add(int c,int d):
+	return c + d
 
 int def vlc():
 	int[5] a =  {1,2,3,4,5}
@@ -9,4 +7,5 @@ int def vlc():
 	int[5] c =  {1,2,3,4,5}
 	int[5] d = ~map(add,consts(scale=4),a,b)
 	print(d)
+	return 1
 

@@ -163,7 +163,7 @@ let rec generate_ptx_statement statement =
                 generate_id(id1)  ^ ", " ^ generate_id id2  ^
                 ", 1;\n" *)
         in unop
-    | Ptx_Call(return_val, fname, arglist) -> "call " ^ generate_ptx_literal return_val ^ " " ^
+    | Ptx_Call(return_val, fname, arglist) -> "call (" ^ generate_ptx_literal return_val ^ ") " ^
         Utils.idtos(fname) ^ " (" ^ (generate_list generate_ptx_literal "," arglist)^")" ^ ";\n"
     | Ptx_Empty_Call(id, vlist) -> "call " ^ Utils.idtos(id) ^"(" ^(generate_list generate_ptx_literal "," vlist)^")" ^ ";\n"
     | Ptx_Variable_Declaration(vdecl) -> generate_ptx_vdecl vdecl ^ ";\n"
@@ -202,13 +202,18 @@ let write_ptx filename ptx_string =
 let generate_load_statement vdecl = 
     (match vdecl with 
       | Sast.Ptx_Vdecl(ss,vtype,id) -> 
-        (match vtype with 
-          | Sast.Ptx_Primitive(p) -> "ld" ^ (generate_ptx_state_space ss) ^ (generate_ptx_data_type p ) ^ 
-                                  " " ^ id.reg_name ^ string_of_int id.reg_num ^ "," ^ Utils.idtos id.var_name 
-          | Sast.Ptx_Array(t,n) -> "ld" ^ (generate_ptx_state_space ss) ^ (generate_ptx_variable_type vtype) ^ 
-                                  " %" ^ id.reg_name ^  string_of_int id.reg_num^ "," ^ 
+        match ss with 
+          | Sast.Param -> "ld" ^ (generate_ptx_state_space ss) ^ (generate_ptx_variable_type vtype) ^ " " ^
+                                   id.reg_name ^  string_of_int id.reg_num^ "," ^ 
                                   "[" ^ Utils.idtos id.var_name ^ "];"
-        )
+          | _ ->
+              (match vtype with 
+                | Sast.Ptx_Primitive(p) -> "ld" ^ (generate_ptx_state_space ss) ^ (generate_ptx_data_type p ) ^ 
+                                        " " ^ id.reg_name ^ string_of_int id.reg_num ^ "," ^ Utils.idtos id.var_name 
+                | Sast.Ptx_Array(t,n) -> "ld" ^ (generate_ptx_state_space ss) ^ (generate_ptx_variable_type vtype) ^ 
+                                        " %" ^ id.reg_name ^  string_of_int id.reg_num^ "," ^ 
+                                        "[" ^ Utils.idtos id.var_name ^ "];"
+              )
     )
 
 (* Generates the ptx function string *)
