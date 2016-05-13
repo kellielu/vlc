@@ -178,7 +178,7 @@ let rec generate_expression expression  =
     | Sast.Floating_Point_Literal(f) ->
         string_of_float f
     | Sast.Array_Literal(e_list,int_list) -> 
-        "VLC_Array(" ^ string_of_int (List.fold_left (fun x y -> x * y) 1 int_list) ^ "," ^ string_of_int (List.length int_list) ^ "," ^ string_of_int ((List.fold_left (fun x y -> x * y) 1 int_list)+(List.length int_list)) ^ 
+        "VLC_Array(" ^ string_of_int (List.fold_left (fun x y -> x * y) 1 int_list) ^ "," ^ string_of_int (List.length int_list) ^ "," ^ string_of_int ((List.fold_left (fun x y -> x * y) 1 int_list)+(List.length int_list)) ^ "," ^
                       (generate_list string_of_int "," int_list) ^ "," ^ 
                       (generate_list generate_expression "," e_list) ^ ")" 
     | Sast.Identifier_Literal(id) -> 
@@ -397,7 +397,7 @@ let generate_higher_order_function_decl hof =
                       "checkCudaErrors(cuCtxDestroy(context));\n" ^  
                       "int* dimensions = (int *) malloc(sizeof(int)*1);\n" ^ 
                       "*dimensions = 1;\n" ^ 
-                      "return VLC_Array(" ^ string_of_int (hof.array_length) ^ "," ^ Utils.idtos hof.return_array_info.host_name ^ ", 1, dimensions" ^ ");\n" ^  
+                      "return VLC_Array<" ^ (generate_variable_type hof.return_array_info.variable_type) ^ ">(" ^ string_of_int (hof.array_length) ^ "," ^ Utils.idtos hof.return_array_info.host_name ^ ", 1, dimensions" ^ ");\n" ^  
                   "}\n\n\n" 
     | _ -> raise Exceptions.Not_implemented_yet
    in sprintf "%s" higher_order_function_decl_string
