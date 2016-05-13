@@ -183,18 +183,21 @@ let rec generate_expression expression  =
         (generate_id id)
     | Sast.Cast(vtype,e) ->
         "(" ^ (generate_variable_type vtype) ^ ")" ^ (generate_expression e)
-    | Sast.Binop(e1, o, e2) -> 
-        (generate_expression e1) ^ " " ^ (generate_binary_operator o) ^ " " ^ (generate_expression e2)
+    | Sast.Binop(e1, o, e2) ->
+        (match o with 
+        | Sast.Equal | Sast.Not_Equal | Sast.Greater_Than | Sast.Less_Than | Sast.Greater_Than_Equal | Sast.Less_Than_Equal -> (generate_expression e1) ^ " " ^ (generate_binary_operator o) ^ " " ^ (generate_expression e2)
+        | _ -> "("  ^ (generate_expression e1) ^ " " ^ (generate_binary_operator o) ^ " " ^ (generate_expression e2) ^ ")"
+      )
     | Sast.Unop(e,o) ->
         (match o with 
-        | Sast.Not | Sast.Negate  -> (generate_unary_operator o) ^ (generate_expression e)
-        | Sast.Plus_Plus | Sast.Minus_Minus -> (generate_expression e) ^ (generate_unary_operator o))
+        | Sast.Not | Sast.Negate  -> "("  ^(generate_unary_operator o) ^ (generate_expression e)^ ")"
+        | Sast.Plus_Plus | Sast.Minus_Minus -> "(" ^ (generate_expression e) ^ (generate_unary_operator o))^ ")"
     | Sast.Array_Accessor(e,e_list,is_lvalue,access_array) -> 
         if is_lvalue = false then
           if access_array = true then
-            (generate_expression e) ^ ".get_array_value_host(" ^ string_of_int (List.length e_list) ^ "," ^ generate_list generate_expression "," e_list ^ ")"
+           "("  ^ (generate_expression e) ^ ".get_array_value_host(" ^ string_of_int (List.length e_list) ^ "," ^ generate_list generate_expression "," e_list ^ ")" ^ ")"
           else
-            (generate_expression e) ^ ".get_element_value(" ^ string_of_int (List.length e_list) ^ "," ^ generate_list generate_expression "," e_list ^ ")"
+           "("  ^ (generate_expression e) ^ ".get_element_value(" ^ string_of_int (List.length e_list) ^ "," ^ generate_list generate_expression "," e_list ^ ")"^ ")"
         else (generate_expression e)
     | Sast.Ternary(e1,e2,e3) -> "(" ^ (generate_expression e2) ^ ") ? " ^ (generate_expression e1) ^ ":" ^ (generate_expression e3)
   in sprintf "%s" expr

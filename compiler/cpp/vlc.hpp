@@ -85,12 +85,12 @@ VLC_Array<T>::VLC_Array(size_t num_values, T*values, size_t num_dimensions, size
 	this->num_values = num_values;
 	this->num_dimensions = num_dimensions;
 
-	T *values_copy = (T*)malloc(sizeof(T) * num_values);
+	T *values_copy = (T*)calloc(num_values,sizeof(T));
 	for(size_t i = 0; i < num_values; i++){
 		values_copy[i] = values[i];
 	}
 
-	size_t *dims_copy = (size_t*)malloc(sizeof(size_t) * num_dimensions);
+	size_t *dims_copy = (size_t*)calloc( num_dimensions,sizeof(size_t));
 	for(size_t j = 0; j < num_dimensions; j++){
 		dims_copy[j] = dimensions[j];
 	}
@@ -106,8 +106,8 @@ VLC_Array<T>::VLC_Array(size_t num_values, size_t num_dimensions,...){
 	this->num_dimensions = num_dimensions;
 	this->num_values = num_values;
 
-	this->dimensions = (size_t *)malloc(sizeof(size_t) * num_dimensions);
-	this->values = (T*)malloc(sizeof(T) * num_values);
+	this->dimensions = (size_t *)calloc( num_dimensions,sizeof(size_t));
+	this->values = (T*)calloc( num_values,sizeof(T));
 
 	/* Now access the values that are passed in */
 	std::cout<<num_dimensions<<std::endl;
@@ -124,8 +124,8 @@ VLC_Array<T>::VLC_Array(size_t num_values, size_t num_dimensions,size_t total_ar
 	this->num_dimensions = num_dimensions;
 	this->num_values = num_values;
 
-	this->dimensions = (size_t *)malloc(sizeof(size_t) * num_dimensions);
-	this->values = (T*)malloc(sizeof(T) * num_values);
+	this->dimensions = (size_t *)calloc(num_dimensions,sizeof(size_t));
+	this->values = (T*)calloc( num_values,sizeof(T));
 
 	/* Now access the values that are passed in */
 	va_list args;
@@ -142,8 +142,8 @@ VLC_Array<T>::VLC_Array(const VLC_Array<T> &vlcarray){
 	this->num_values = vlcarray.total_elements();
 	this->num_dimensions = vlcarray.get_num_dimensions();
 
-	this->values = (T *)malloc(sizeof(T) * this->num_values);
-	this->dimensions = (size_t *)malloc(sizeof(size_t) * this->num_dimensions);
+	this->values = (T *)calloc(this->num_values,sizeof(T));
+	this->dimensions = (size_t *)calloc( this->num_dimensions,sizeof(size_t));
 
 	/* Now access the values that are passed in */
 	for(size_t j = 0; j < this->num_values; 	j++)	{ 		this->values[j] 		= vlcarray.get_values()[j]; 			}
@@ -163,12 +163,18 @@ VLC_Array<T>::~VLC_Array(){
 template <class T>
 T VLC_Array<T>::get_element_value(size_t number_accessing_dims,...) const{
 	size_t index = 1;
-
+	size_t corr_dim;
+	printf("num_access_dim%zu\n",number_accessing_dims );
 	va_list dims;
 	va_start(dims,number_accessing_dims);
 	for(size_t i=0; i < number_accessing_dims;i ++){
 		index = va_arg(dims,size_t) * index;
+		printf("index right now is %zu\n",index);
+		corr_dim = this-> dimensions[i];
+		printf("dim right now is%zu\n",corr_dim);
+		index = i * corr_dim + index;
 	}
+	printf("%zu\n",index);
 	va_end(dims);
 	return this->values[index];
 }
@@ -179,10 +185,13 @@ template <class T>
 VLC_Array<T> VLC_Array<T>::get_array_value_host(size_t number_accessing_dims,...) const{ 
 	// Get where new array starts
 	size_t index = 1;
+	size_t corr_dim;
 	va_list dims;
 	va_start(dims,number_accessing_dims);
 	for(size_t i=0; i < number_accessing_dims; i++){
 		index = va_arg(dims,size_t) * index;
+		corr_dim = this-> dimensions[i];
+		index = i * corr_dim + index;
 	}
 	va_end(dims);
 
@@ -209,10 +218,13 @@ template <class T>
 T* VLC_Array<T>::get_array_value_kernel(size_t number_accessing_dims,...) const{
 	// Get where new array starts
 	size_t index = 1;
+	size_t corr_dim;
 	va_list dims;
 	va_start(dims,number_accessing_dims);
 	for(size_t i=0; i < number_accessing_dims; i++){
 		index = va_arg(dims,size_t) * index;
+		corr_dim = this-> dimensions[i];
+		index = i * corr_dim + index;
 	}
 	va_end(dims);
 
@@ -239,14 +251,17 @@ template <class T>
 void VLC_Array<T>::set_element_value(T new_value,size_t number_accessing_dims,...){
 	// Get where new array starts
 	size_t index = 1;
+	size_t corr_dim;
 	va_list dims;
 	va_start(dims,number_accessing_dims);
 	for(size_t i=0; i < number_accessing_dims; i++){
 		index = va_arg(dims,size_t) * index;
+		corr_dim = this-> dimensions[i];
+		index = i * corr_dim + index;
 	}
 	va_end(dims);
-
-	this->values[index] = new_value;
+	printf("new value is %d\n", new_value);
+	this->get_values()[index] = new_value;
 }
 
 // Set Array Value
@@ -255,10 +270,13 @@ template <class T>
 void VLC_Array<T>::set_array_value(const VLC_Array<T> &array,size_t number_accessing_dims,...){
 	// Get where new array starts
 	size_t index = 1;
+	size_t corr_dim;
 	va_list dims;
 	va_start(dims,number_accessing_dims);
 	for(size_t i=0; i < number_accessing_dims; i++){
 		index = va_arg(dims,size_t) * index;
+		corr_dim = this-> dimensions[i];
+		index = i * corr_dim + index;
 	}
 	va_end(dims);
 
@@ -282,12 +300,12 @@ VLC_Array<T> VLC_Array<T>::operator=(const VLC_Array<T> &vlcarray){
 	num_values = vlcarray.total_elements();
 	num_dimensions = vlcarray.get_num_dimensions();
 
-	values = (T*)malloc(sizeof(T) * vlcarray.total_elements());
-	dimensions = (size_t *)malloc(sizeof(size_t) * vlcarray.get_num_dimensions());
+	values = (T*)calloc(sizeof(T) * vlcarray.total_elements());
+	dimensions = (size_t *)calloc(sizeof(size_t) * vlcarray.get_num_dimensions());
 
 	/* Now access the values that are passed in */
 	for(size_t j = 0; j < this->num_values; 	j++)	{ 		this->values[int(j)] 			= vlcarray.get_values()[int(j)]; 			}
-	for(size_t i = 0; i < this->num_dimensions;i++)	{ 			this->dimensions[int(i)] 		= vlcarray.get_dimensions()[int(i)]; 		}
+	for(size_t i = 0; i < this->num_dimensions; i++)	{ 			this->dimensions[int(i)] 		= vlcarray.get_dimensions()[int(i)]; 		}
 	return *this;
 }
 

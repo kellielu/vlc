@@ -137,6 +137,7 @@ type environment = {
   hof_ptx_function_list                             : Sast.ptx_higher_order_fdecl list;
   (* Contains list of ptx_identifiers *)
   expression_stack                                  : Sast.ptx_literal list list;
+  return_lit                                        : Sast.ptx_literal;
 }
 
 (*-----------------------------------Helper functions to check variables and functions in the environment -----------------------------------*)
@@ -191,6 +192,14 @@ in
   let builtin_function_info_structs = List.map create_built_in_function builtin_functions in *)
   add_functions fmap [print_function;random_function]
 
+let make_ptx_id name reg num write_reg is_ptr =
+  {
+    var_name    = name; (* Name as passed as a param or declared *)
+    reg_name    = reg; (* Register name it is stored in *)
+    reg_num     = num;  
+    write_reg   = write_reg;
+    is_ptr      = is_ptr;
+  }
 
 (* Creates a new environment *)
 let init_env = {
@@ -202,11 +211,12 @@ let init_env = {
   hof_c_function_list         = [];
   hof_ptx_function_list       = [];
   expression_stack            = [[]];
+  return_lit                  = Sast.Ptx_Identifier_Literal(make_ptx_id (Ast.Identifier "") "" 0 true true )
 }
 
 
 (* Updates the environment *)
-let update_env vscope_stack kfmap hfmap is_gpu hof_c_list hof_ptx_list ptx_e_stack= {
+let update_env vscope_stack kfmap hfmap is_gpu hof_c_list hof_ptx_list ptx_e_stack rlit= {
   variable_scope_stack        = vscope_stack;
   kernel_function_map         = kfmap;
   host_function_map           = hfmap;
@@ -214,47 +224,51 @@ let update_env vscope_stack kfmap hfmap is_gpu hof_c_list hof_ptx_list ptx_e_sta
   hof_c_function_list         = hof_c_list;
   hof_ptx_function_list       = hof_ptx_list;
   expression_stack            = ptx_e_stack;
+  return_lit                  = rlit;
 }
 
 
 (* Pushes a new scope on top of the  variable_scope_stack *)
 let push_scope env = 
-    update_env (Variable_Map.empty :: env.variable_scope_stack) env.kernel_function_map env.host_function_map env.is_gpu_env env.hof_c_function_list env.hof_ptx_function_list env.expression_stack
+    update_env (Variable_Map.empty :: env.variable_scope_stack) env.kernel_function_map env.host_function_map env.is_gpu_env env.hof_c_function_list env.hof_ptx_function_list env.expression_stack env.return_lit
 
 (* Pops a scope from the top of the variable_scope_stack *)
 let pop_scope env = 
     match env.variable_scope_stack with
-      | [] -> raise Exceptions.Cannot_pop_empty_variable_scope_stack
+      | [] -> raise Exceptions.Cannot_pop_empty_variable_scope_stack 
       | local_scope :: tail ->
-          update_env tail env.kernel_function_map env.host_function_map env.is_gpu_env env.hof_c_function_list env.hof_ptx_function_list env.expression_stack
+          update_env tail env.kernel_function_map env.host_function_map env.is_gpu_env env.hof_c_function_list env.hof_ptx_function_list env.expression_stack env.return_lit
 
 let update_scope updated_scope env = 
     let env = pop_scope env in 
-    update_env (updated_scope::env.variable_scope_stack) env.kernel_function_map env.host_function_map env.is_gpu_env env.hof_c_function_list env.hof_ptx_function_list env.expression_stack
+    update_env (updated_scope::env.variable_scope_stack) env.kernel_function_map env.host_function_map env.is_gpu_env env.hof_c_function_list env.hof_ptx_function_list env.expression_stack env.return_lit
 
 let update_kernel_fmap f_info env = 
     let new_kfmap = Function_Map.add (Utils.idtos(f_info.function_name)) f_info env.kernel_function_map in
-    update_env env.variable_scope_stack new_kfmap env.host_function_map env.is_gpu_env env.hof_c_function_list env.hof_ptx_function_list env.expression_stack
+    update_env env.variable_scope_stack new_kfmap env.host_function_map env.is_gpu_env env.hof_c_function_list env.hof_ptx_function_list env.expression_stack env.return_lit
 
 let update_host_fmap f_info env = 
     let new_hfmap = Function_Map.add (Utils.idtos(f_info.function_name)) f_info env.host_function_map in
-    update_env env.variable_scope_stack env.kernel_function_map new_hfmap env.is_gpu_env env.hof_c_function_list env.hof_ptx_function_list env.expression_stack
+    update_env env.variable_scope_stack env.kernel_function_map new_hfmap env.is_gpu_env env.hof_c_function_list env.hof_ptx_function_list env.expression_stack env.return_lit
 
 let update_hof_lists hof_c_fdecl hof_ptx_fdecl env = 
-    update_env env.variable_scope_stack env.kernel_function_map env.host_function_map env.is_gpu_env (List.rev(hof_c_fdecl::List.rev(env.hof_c_function_list))) (List.rev(hof_ptx_fdecl::List.rev(env.hof_ptx_function_list)))  env.expression_stack
+    update_env env.variable_scope_stack env.kernel_function_map env.host_function_map env.is_gpu_env (List.rev(hof_c_fdecl::List.rev(env.hof_c_function_list))) (List.rev(hof_ptx_fdecl::List.rev(env.hof_ptx_function_list)))  env.expression_stack env.return_lit
+
+let update_return_lit ptx_lit env = 
+    update_env env.variable_scope_stack env.kernel_function_map env.host_function_map env.is_gpu_env env.hof_c_function_list env.hof_ptx_function_list  env.expression_stack ptx_lit
 
 let pop_expression_stack env = 
     match env.expression_stack with
       | [] -> env
-      | hd::tl -> update_env env.variable_scope_stack env.kernel_function_map env.host_function_map env.is_gpu_env  env.hof_c_function_list env.hof_ptx_function_list tl
+      | hd::tl -> update_env env.variable_scope_stack env.kernel_function_map env.host_function_map env.is_gpu_env  env.hof_c_function_list env.hof_ptx_function_list tl env.return_lit
 
 let push_expression_stack env = 
-  update_env env.variable_scope_stack env.kernel_function_map env.host_function_map env.is_gpu_env  env.hof_c_function_list env.hof_ptx_function_list ([]::env.expression_stack)
+  update_env env.variable_scope_stack env.kernel_function_map env.host_function_map env.is_gpu_env  env.hof_c_function_list env.hof_ptx_function_list ([]::env.expression_stack) env.return_lit
 
 let update_expression_stack lit env = 
   let update = lit::(List.hd env.expression_stack) in
   let env = pop_expression_stack env in 
-  update_env env.variable_scope_stack env.kernel_function_map env.host_function_map env.is_gpu_env  env.hof_c_function_list env.hof_ptx_function_list (update::env.expression_stack)
+  update_env env.variable_scope_stack env.kernel_function_map env.host_function_map env.is_gpu_env  env.hof_c_function_list env.hof_ptx_function_list (update::env.expression_stack) env.return_lit
 
 (* Retrieves nth element from head list of expression stack *)
 let get_from_expression_stack nth env =
@@ -292,7 +306,7 @@ let get_variable_type id env =
 let get_variable_info id env = 
   let rec check_scopes scope_stack = 
     match scope_stack with 
-      | [] -> raise (Exceptions.Variable_not_found_in_scope  ( id))
+      | [] -> raise (Exceptions.Variable_not_found_in_scope  (  id))
       | scope::larger_scopes -> 
           if Variable_Map.mem id scope then 
             Variable_Map.find id scope
@@ -354,7 +368,7 @@ let rec infer_type expression env=
        let f expression = infer_type expression env in
       Ast.Array(match_type (List.map f expr_list),(List.length expr_list))
     | Ast.Identifier_Literal(id) -> 
-        if(check_already_declared (Utils.idtos id) env) = false then raise (Exceptions.Variable_not_found_in_scope ( Utils.idtos id)) 
+        if(check_already_declared (Utils.idtos id) env) = false then raise (Exceptions.Variable_not_found_in_scope (( Utils.idtos id)) )
         else (get_variable_type (Utils.idtos id) env)
     | Ast.Binop(e1,op,e2) -> 
         (match op with 
@@ -431,15 +445,6 @@ let rec convert_list func ast_list sast_list env =
       let sast_type, env = func hd env in 
       convert_list func tl (List.rev (sast_type::List.rev(sast_list))) env
 
-
-let make_ptx_id name reg num write_reg is_ptr =
-  {
-    var_name    = name; (* Name as passed as a param or declared *)
-    reg_name    = reg; (* Register name it is stored in *)
-    reg_num     = num;  
-    write_reg   = write_reg;
-    is_ptr      = is_ptr;
-  }
 
 (* Generates a register for every variable type, keeps a counter for the types as well *)
 let generate_reg vtype = 
@@ -980,19 +985,15 @@ let rec convert_to_ptx_expression e env =
     | Ast.String_Literal(s) -> raise Exceptions.NO_STRINGS_ALLOWED_IN_GDECL;
     | Ast.Higher_Order_Function_Call(hof) -> raise Exceptions.No_Hof_Allowed
     | Ast.Integer_Literal(i) -> 
-          print_endline "INT LIT";
           let env = update_expression_stack (Sast.Ptx_Signed_Integer(i)) env in 
           Sast.Ptx_Block([Ptx_Empty]), env
     | Ast.Boolean_Literal(b) -> 
-          print_endline "BOOL_LIT";
           let env = update_expression_stack (Sast.Ptx_Predicate(if b = true then 1 else 0)) env in
           Sast.Ptx_Block([Ptx_Empty]),env
     | Ast.Floating_Point_Literal(f) -> 
-        print_endline "FLOAT_LIT";
           let env = update_expression_stack (Sast.Ptx_Signed_Float f) env in 
           Sast.Ptx_Block([Ptx_Empty]),env
     | Ast.Identifier_Literal(i) -> 
-          print_endline "ID_LIT";
           if(check_already_declared (Utils.idtos i) env) = false then raise (Exceptions.Variable_not_found_in_scope ( Utils.idtos i))
           else
           let v_info = get_variable_info (Utils.idtos i) env in
@@ -1001,7 +1002,6 @@ let rec convert_to_ptx_expression e env =
           let env = update_expression_stack ptx_lit env in
           Sast.Ptx_Block([Ptx_Empty]),env  
     | Ast.Binop(e1,o,e2) -> 
-          print_endline "BINOP";
           if((same_types (infer_type e1 env) (infer_type e2 env)) = false) then raise (Exceptions.Type_mismatch "Binop doesn't match")
           else
             (match o with 
@@ -1059,7 +1059,6 @@ let rec convert_to_ptx_expression e env =
             let ptx_expr_block = [ptx_e;resolve] in
         Sast.Ptx_Block(ptx_expr_block),env 
     | Ast.Array_Literal(e_list) -> 
-        print_endline "ARR_LIT";
           (* Check all elements of the array are the same type *)
           let type_list = List.map (fun x -> infer_type x env) e_list in 
           ignore(same_types_list type_list);
@@ -1079,12 +1078,38 @@ let rec convert_to_ptx_expression e env =
                 let array_lit = Sast.Ptx_Array_Literal ((get_elements(List.hd env.expression_stack) [])) in
             let env = update_expression_stack array_lit env in 
             Sast.Ptx_Block([Ptx_Empty]),env
-    | Ast.Function_Call(id, e_list) -> raise Exceptions.C'est_La_Vie
-          (* DO SEMANTIC CHECKING *)
+    | Ast.Function_Call(id, e_list) -> 
+        if (is_function_in_scope (Utils.idtos id) env) = false then (raise (Exceptions.Function_not_defined (Utils.idtos id)));
+        (* Check that function arguments match that of function declaration *)
+        let f_info = (get_function_info (Utils.idtos id) env) in
+        let f_arg_types = f_info.function_args in 
+              let check_args expected_arg_types f_args =  List.map2 same_types expected_arg_types f_args in
+              ignore(check_args f_arg_types (get_types e_list [] env));
+        let rtype = f_info.function_return_type in
+        (* Push stack *)
+        let env = push_expression_stack env in
+           let lit_list, env = convert_list convert_to_ptx_expression e_list [] env in 
+           (* For a function call, need to define a return register *)
+            let reg_name,reg_num = generate_reg rtype in
+            let ptx_lit = Sast.Ptx_Identifier_Literal(make_ptx_id (Ast.Identifier "") reg_name reg_num true false) in
+            let rec get_elements stack alist = match stack with [] -> alist| hd::tl -> get_elements tl (hd::alist) in
+            let expr = match rtype with 
+              | Ast.Primitive(Ast.Void) -> Sast.Ptx_Empty_Call(id,(get_elements(List.hd env.expression_stack) []))
+              | _ -> Sast.Ptx_Call(ptx_lit, id, (get_elements(List.hd env.expression_stack) []))
+            in
+          let env = pop_expression_stack env in
+          let env = update_expression_stack ptx_lit env in
+        expr,env
+        (* Pop stack *)
           (* For function call, we resolve the expressions and then *)
-    | Ast.Cast(vtype,e)-> raise Exceptions.C'est_La_Vie
+    | Ast.Cast(vtype,e)-> raise Exceptions.Casting_not_allowed_in_defg
     | Ast.Array_Accessor(e,e_list,b)-> raise Exceptions.C'est_La_Vie
     | Ast.Ternary(e1,e2,e3) -> raise Exceptions.C'est_La_Vie
+       (*  if(same_types (infer_type e1 env) (infer_type e3 env)) = false then raise (Exceptions.Type_mismatch("Ternary expression don't match"))
+        else
+          Check e2 is boolean
+          if(same_types (infer_type e2 env) (Ast.Primitive(Ast.Boolean))) = false then (raise (Exceptions.Conditional_must_be_a_boolean))
+          else *)
 
 
 let rec get_array_el_type arr num_dim =
@@ -1304,18 +1329,38 @@ let rec convert_to_c_statement stmt env =
         let c_stmt_list,env = convert_list convert_to_c_statement stmt_list [] env in
          Sast.Block(c_stmt_list),env
 
-let convert_to_ptx_statement stmt env =
-  print_endline "IN PTX STMT";
+let rec convert_to_ptx_statement stmt env =
   match stmt with 
     | Ast.Variable_Statement(v) -> convert_to_ptx_variable_statement v env
     | Ast.Expression(e) -> convert_to_ptx_expression e env
     | Ast.Return_Void -> Sast.Ptx_Return_Void, env
-    | Ast.Block(stmt_list) -> raise Exceptions.C'est_La_Vie       
-
+    | Ast.Return(e) ->
+        let vtype = infer_type e env in 
+        let env = push_expression_stack env in 
+          let ptx_e, env = convert_to_ptx_expression e env in
+          let rlit = env.return_lit in 
+        let expr = Sast.Ptx_Store(Sast.Global,fst(convert_to_ptx_variable_type vtype env),rlit,get_from_expression_stack 0 env) in 
+        let expr_block = [expr;Sast.Ptx_Return_Void] in
+        let env = pop_expression_stack env in 
+        Sast.Ptx_Block(expr_block),env
+    | Ast.Block(stmt_list) -> 
+        let expr_block, env = convert_list convert_to_ptx_statement stmt_list [] env in
+        Sast.Ptx_Block(expr_block),env
     | Ast.If(e, s1, s2) -> raise Exceptions.C'est_La_Vie
+(*               let env = push_expression_stack env in 
+              let vtype = infer_type e env in
+              let ptx_e,env = convert_to_ptx_expression e env in 
+              (*  Create a literal referencing the predicate *)
+              let ptx_lit = Sast.Ptx_Identifier_Literal(make_ptx_id (get_reg_type vtype) (get_predicate_counter ()) true false) in
+              let env = update_expression_stack ptx_lit env in
+          let bool_expr = Sast.Block([ptx_e]) in
+              let env = pop_expression_stack env in
+          let branch = Sast.Branch(get_from_expression_stack 0 env,generate_subroutine_name()) in
+              let  
+
+          Sast.Ptx_Block(expr_block),env *)
     | Ast.While(e, s) -> raise Exceptions.C'est_La_Vie
     | Ast.For(s1, e, s2, s3) -> raise Exceptions.C'est_La_Vie
-    | Ast.Return(e) -> raise Exceptions.C'est_La_Vie
     | Ast.Continue -> raise Exceptions.C'est_La_Vie
     | Ast.Break -> raise Exceptions.C'est_La_Vie
     
@@ -1336,7 +1381,17 @@ let convert_to_c_param vdecl env  =
             let c_vtype, env = convert_to_c_variable_type vtype env in
             Sast.Variable_Declaration(c_vtype,id),env
 
-
+let rec check_rtype rtype body env = 
+    match body with 
+    | [] -> ()
+    | hd::tl-> 
+        match hd with 
+          | Ast.Return_Void -> if(rtype != Ast.Primitive(Ast.Void)) then raise Exceptions.Missing_return_type 
+                            else check_rtype rtype tl env
+          | Ast.Return(e) -> 
+                            if (same_types (infer_type e env) rtype) = false then raise Exceptions.Return_type_doesn't_match 
+                            else check_rtype rtype tl env 
+          | _ -> check_rtype rtype tl env
 
 (* Converts from fdecl to c_fdecl *)
 let convert_to_c_fdecl fdecl env =
@@ -1358,6 +1413,7 @@ let convert_to_c_fdecl fdecl env =
       in
       let env = update_host_fmap host_func_info env in
       (* Push new scope for function *)
+      
       let env = push_scope env in
       (* Do conversion while passing enviroment *)
       let return_type,  env    = convert_to_c_variable_type fdecl.return_type env in
@@ -1370,6 +1426,7 @@ let convert_to_c_fdecl fdecl env =
         c_fdecl_body = body;
       }
       in
+      check_rtype fdecl.return_type fdecl.body env;
       (* Pop the variable scope for the function *)
       let env = pop_scope env in
       c_fdecl, env)
@@ -1380,7 +1437,9 @@ let convert_rtype_to_ptx_vdecl rtype env =
   let reg_name,reg_num = generate_reg rtype in
   let is_array = match rtype with | Ast.Primitive(p) -> false | Ast.Array(t,n) -> true in 
   let ptx_id = make_ptx_id rname reg_name reg_num false false in
-  (Sast.Ptx_Vdecl(Sast.Global,fst (convert_to_ptx_variable_type rtype env), ptx_id)),env
+  let env = update_return_lit (Sast.Ptx_Identifier_Literal(ptx_id)) env in
+  (Sast.Ptx_Vdecl(Sast.Param,fst (convert_to_ptx_variable_type rtype env), ptx_id)),env
+
 
 
 let convert_to_ptx_fdecl fdecl env =
@@ -1413,6 +1472,7 @@ let convert_to_ptx_fdecl fdecl env =
         convert_to_register_declaration (F32) "fl" !signed_float_counter;
         convert_to_register_declaration (Pred) "pr" !predicate_counter;
       ],  env in
+      check_rtype fdecl.return_type fdecl.body env;
       (* Create function item *)
       let ptx_fdecl = {
         ptx_fdecl_type = Sast.Device_Function;
