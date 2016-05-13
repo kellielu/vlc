@@ -300,7 +300,7 @@ let rec generate_if_statements_input_arrays input_arrays str index =
           "\t" ^ Utils.idtos hd.host_name  ^ " = tmp" ^ string_of_int index ^ ".get_values();\n" ^  
         "}\n"
         else
-       "else(i ==" ^ string_of_int index ^ "){\n" ^ 
+       "else{\n" ^ 
           "\t" ^ generate_variable_type hd.variable_type ^ " tmp" ^ string_of_int index ^ " = va_args(constants," ^ generate_variable_type hd.variable_type ^ ");\n" ^
           "\t" ^ Utils.idtos hd.host_name  ^ " = tmp" ^ string_of_int index ^ ".get_values();\n" ^ 
         "}\n"
