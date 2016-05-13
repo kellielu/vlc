@@ -494,6 +494,7 @@ let generate_cuda_file filename program =
   #include <stdio.h>\n\
   #include <stdlib.h>\n\
   #include \"cuda.h\"\n\
+  #include <cassert>\"\n\
   #include <iostream>\n\
   #include \"vlc.hpp\"\n\
   #include <stdarg.h>\n\
@@ -501,6 +502,10 @@ let generate_cuda_file filename program =
   CUmodule    cudaModule;\n\
   CUcontext   context;\n\
   CUfunction  function;\n\
+
+  void checkCudaErrors(CUresult err) {
+    assert(err == CUDA_SUCCESS);
+  }
   %s" cuda_program_body ^
   "int main(void) { return vlc(); }" in
   write_cuda filename cuda_program_string;
