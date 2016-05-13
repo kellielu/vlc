@@ -494,7 +494,7 @@ let generate_cuda_file filename program =
   #include <stdio.h>\n\
   #include <stdlib.h>\n\
   #include \"cuda.h\"\n\
-  #include <cassert>\"\n\
+  #include <cassert>\n\
   #include <iostream>\n\
   #include \"vlc.hpp\"\n\
   #include <stdarg.h>\n\
