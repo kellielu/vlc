@@ -1343,8 +1343,9 @@ let rec convert_to_ptx_statement stmt env =
           let ptx_e, env = convert_to_ptx_expression e env in
           let rlit = env.return_lit in 
         let expr = Sast.Ptx_Store(Sast.Global,fst(convert_to_ptx_variable_type vtype env),rlit,get_from_expression_stack 0 env) in 
-        let expr_block = [expr;Sast.Ptx_Return_Void] in
+        let expr_block = [ptx_e;expr;Sast.Ptx_Return_Void] in
         let env = pop_expression_stack env in 
+        let env = update_expression_stack rlit env in
         Sast.Ptx_Block(expr_block),env
     | Ast.Block(stmt_list) -> 
         let expr_block, env = convert_list convert_to_ptx_statement stmt_list [] env in

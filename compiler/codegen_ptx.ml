@@ -107,7 +107,7 @@ let generate_ptx_param vdecl =
     match vdecl with 
       | Ptx_Vdecl(ss,vtype,id)-> 
           (match vtype with
-            | Ptx_Primitive(p) -> ".param" ^ generate_ptx_variable_type vtype ^ " " ^
+            | Ptx_Primitive(p) -> ".param " ^ generate_ptx_variable_type vtype ^ " " ^
                                   generate_ptx_state_space ss ^ " " ^
                                   generate_id id
             | Ptx_Array(vtype,size) -> ".param .u64 " ^ generate_id id  
@@ -137,7 +137,7 @@ let generate_ptx_vdecl vdecl =
 
 
 
-let rec generate_ptx_statement statement =
+let rec generate_ptx_expression statement =
   let s = match statement with
     | Ptx_Load(ss, d, id1, id2) -> "ld" ^ generate_ptx_state_space(ss) ^ generate_ptx_variable_type(d)
       ^ "     " ^ generate_ptx_literal id1 ^ ",[" ^ generate_ptx_literal id2 ^ "];\n"
@@ -168,8 +168,8 @@ let rec generate_ptx_statement statement =
     | Ptx_Empty_Call(id, vlist) -> "call " ^ Utils.idtos(id) ^"(" ^(generate_list generate_ptx_literal "," vlist)^")" ^ ";\n"
     | Ptx_Variable_Declaration(vdecl) -> generate_ptx_vdecl vdecl ^ ";\n"
     | Ptx_Branch(id,sub) -> "@" ^ generate_ptx_literal id ^" bra " ^ Utils.idtos(sub) ^ ";\n"
-    | Ptx_Block(stmt_list) -> generate_list generate_ptx_statement "" stmt_list
-    | Ptx_Subroutine(id,stmt_list)-> Utils.idtos id ^ ": \n" ^ generate_list generate_ptx_statement "\n" stmt_list
+    | Ptx_Block(stmt_list) -> generate_list generate_ptx_expression "" stmt_list
+    | Ptx_Subroutine(id,stmt_list)-> Utils.idtos id ^ ": \n" ^ generate_list generate_ptx_expression "\n" stmt_list
     | Ptx_Return_Void -> "ret;\n"
   (*   | Ptx_Cast (d1, d2, v1, v2) -> "cvt" ^ generate_ptx_variable_type(d1) ^
         generate_ptx_variable_type(d2) ^ " " ^ generate_ptx_(v1) ^ ", " ^
@@ -225,7 +225,7 @@ let generate_ptx_function f =
     "{\n" ^ 
       (generate_list generate_ptx_register_declaration "\n" f.register_decls ) ^ "\n\n\n" ^ 
       (generate_list generate_load_statement           "\n" (f.ptx_fdecl_return_param::f.ptx_fdecl_input_params)) ^ "\n\n" ^
-      (generate_list generate_ptx_statement "" f.ptx_fdecl_body) ^ 
+      (generate_list generate_ptx_expression "" f.ptx_fdecl_body) ^ 
     "}\n\n"
   in
   let ptx_function_string = sprintf " \
@@ -291,7 +291,7 @@ let generate_ptx_hof_function hof =
                   "ld.param.u32 %asize1, [ARRAY_LENGTH];\n" ^ 
                   (* Move tid *)
                   "mov.u32 %mytid1, %tid.x;\n" ^ 
-                  "setp.ge.s32 %pred1, %mytid1, %asize1\n" ^ 
+                  "setp.ge.s32 %pred1, %mytid1, %asize1;\n" ^ 
                   "@%pred1 bra RETURN;\n" ^ 
                   "mul.wide.s32 %ptr" ^ string_of_int (num_arr_param+1) ^ ",%mytid1, 4;\n\n" ^ 
                   (* Load input arrays *)
