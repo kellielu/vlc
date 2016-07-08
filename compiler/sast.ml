@@ -10,8 +10,10 @@ type ptx_identifier = {
 }
 
 type ptx_data_type =
-	S32 | F32 | Pred | Ptx_Void | U64
-(* 	U8 | U16 | U32 | U64 | S8 | S16 | S32 | S64 | F32 *)
+	| Pred | Ptx_Void
+	| U8 | U16 | U32 | U64 
+	| S8 | S16 | S32 | S64 
+	| F32 | D32
 
 type ptx_variable_type = 
 	| Ptx_Primitive of ptx_data_type
@@ -23,8 +25,14 @@ type ptx_variable_type =
  *)
 
 type ptx_literal = 
+	| Ptx_Signed_Byte of int
+	| Ptx_Unsigned_Byte of int
 	| Ptx_Signed_Integer of int
-	| Ptx_Signed_Float of float 
+	| Ptx_Unsigned_Integer of int
+	| Ptx_Signed_Long of int64
+	| Ptx_Unsigned_Long of int64
+	| Ptx_Float of float 
+	| Ptx_Double of float
 	| Ptx_Predicate of int
 	| Ptx_Identifier_Literal of ptx_identifier
 	| Ptx_Array_Literal of ptx_literal list
@@ -33,20 +41,14 @@ type ptx_literal =
 
 type ptx_unary_operator = 
     | Ptx_Not  | Ptx_Negate
-    | Ptx_Plus_Plus | Ptx_Minus_Minus
 
 type ptx_binary_operator =
-    | Ptx_Add | Ptx_Subtract | Ptx_Multiply | Ptx_Divide | Ptx_Modulo
-(*     | Plus_Equal | Subtract_Equal | Multiply_Equal | Divide_Equal  *)
-(*     | Exp | Dot | Matrix_Multiplication *)
+    | Ptx_Add | Ptx_Subtract | Ptx_Multiply | Ptx_Divide | Ptx_Modulo (* | Ptx_Sqrt *)
     | Ptx_And | Ptx_Or | Ptx_Xor
+    | Ptx_Bitwise_Or | Ptx_Bitwise_And 
  	| Ptx_Bitshift_Right | Ptx_Bitshift_Left 
-    | Ptx_Equal | Ptx_Not_Equal | Ptx_Greater_Than | Ptx_Less_Than | Ptx_Greater_Than_Equal 
-    | Ptx_Less_Than_Equal
-    | Ptx_Bitwise_Or
-    | Ptx_Bitwise_And
-(*     Ptx_Greater_Than_Unsigned | Ptx_Less_Than_unsigned | Ptx_Greater_Than_Equal_Unsigned 
-    | Ptx_Less_Than_Equal_Unsigned  *)
+    | Ptx_Equal | Ptx_Not_Equal | Ptx_Greater_Than | Ptx_Less_Than | Ptx_Greater_Than_Equal | Ptx_Less_Than_Equal
+
 
 type ptx_state_space = 
 	| Constant
@@ -79,7 +81,8 @@ type ptx_expression =
 	| Ptx_Empty_Call of Ast.identifier * ptx_literal list
 (* Statements and Conditionsals*)
 	| Ptx_Variable_Declaration of ptx_vdecl
-	| Ptx_Branch of ptx_literal * Ast.identifier
+	| Ptx_Branch_Conditional of bool * ptx_literal * Ast.identifier (* Boolean tells branch to branch if true or false. e.g. if false, branch*)
+	| Ptx_Branch of Ast.identifier
 	| Ptx_Block of ptx_expression list
 	| Ptx_Subroutine of Ast.identifier * ptx_expression list
 	| Ptx_Return_Void
@@ -115,8 +118,7 @@ type ptx_higher_order_fdecl = {
 (* -----------------------------------------C types -----------------------------------------*)
 type c_binary_operator =
     | Add | Subtract | Multiply | Divide | Modulo
-(*     | Plus_Equal | Subtract_Equal | Multiply_Equal | Divide_Equal  *)
-(*     | Exp | Dot | Matrix_Multiplication *)
+(*     | Sqrt *)
     | And | Or | Xor
     | Equal | Not_Equal | Greater_Than | Less_Than | Greater_Than_Equal | Less_Than_Equal
     | Bitshift_Right | Bitshift_Left 
@@ -124,7 +126,6 @@ type c_binary_operator =
 
 type c_unary_operator = 
     | Not | Negate
-    | Plus_Plus | Minus_Minus
 
 type c_data_type = 
 	| String
@@ -179,6 +180,7 @@ type c_expression =
     | Function_Call of Ast.identifier * c_expression list
     | String_Literal of string
     | Integer_Literal of int
+    | Long_Literal of int64
     | Boolean_Literal of bool
     | Floating_Point_Literal of float
     | Array_Literal of c_expression list * int list

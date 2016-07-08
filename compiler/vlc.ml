@@ -4,10 +4,11 @@ let _ =
 	if Array.length Sys.argv < 2 then
   print_string (
       "Usage: vlc [mode] <VLC program file>\n" ^
+      "\t-r: compiles and runs source_file\n" ^ 
+      "\t-c: compiles VLC program to CUDA C file and PTX files\n" ^ 
       "\t-t: prints tokens read in by scanner\n" ^
       "\t-a: prints ast as a program\n" ^
-      "\t-s: prints sast as a program\n" ^
-      "\t-c: compiles VLC program to CUDA C file and PTX files\n")
+      "\t-s: prints sast as a program\n")
 	else
     let action = List.assoc Sys.argv.(1) [ ("-t", Tokens);
                                            ("-a", Ast);
@@ -16,8 +17,8 @@ let _ =
                                            ("-r", Run)] and
 filename = Sys.argv.(2) in
 print_endline filename;
-(* let base_filename = List.hd (Str.split (Str.regexp ".vlc") (List.hd (List.rev (Str.split (Str.regexp "/") filename)))) in
- *)let file_in = open_in filename in
+let base_filename = List.hd (Str.split (Str.regexp ".vlc") (List.hd (List.rev (Str.split (Str.regexp "/") filename)))) in
+let file_in = open_in filename in
       let lexbuf = Lexing.from_channel file_in in
       let token_list = Processor.get_token_list lexbuf in
       let program = Processor.parser token_list in
@@ -30,8 +31,8 @@ print_endline filename;
         | Sast -> 
             print_string (Utils.sast_to_string sast)
         | Compile ->
-            Codegen_c.generate_program filename sast
+            Codegen_c.generate_program base_filename sast
         | Run -> 
-            Codegen_c.generate_program filename sast
-(*             Sys.command ("nvcc -" ^ filename ^ " " ^ filename ^ ".cu");
-            Sys.command ("./" ^ filename); *)
+            Codegen_c.generate_program base_filename sast;
+            ignore(Sys.command ("nvcc -" ^ base_filename ^ " " ^ base_filename ^ ".cu"));
+            ignore(Sys.command ("./" ^ base_filename));

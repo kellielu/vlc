@@ -28,12 +28,73 @@ let ptx_return_counter = ref 0
 let subroutine_counter = ref 0
 
 (* For generating register counters for datatypes *)
+let signed_byte_counter = ref 1
+let unsigned_byte_counter = ref 1
 let signed_int_counter = ref 1
-let signed_float_counter = ref 1
+let unsigned_int_counter = ref 1
+let signed_long_counter = ref 1
+let unsigned_long_counter = ref 1
+let float_counter = ref 1
+let double_counter = ref 1
 let predicate_counter = ref 1
-let block_counter = ref 1
 let pointer_counter = ref 1
 (*-----------------------------------Generates Symbols Based on Counters-----------------------------------*)
+let get_branch_name () = 
+  let orig = !subroutine_counter in 
+  incr(subroutine_counter);
+  Ast.Identifier("VLCBRANCH" ^ string_of_int orig)
+
+
+let get_signed_byte_counter () = 
+  let orig = !signed_byte_counter in
+    incr(signed_byte_counter);
+    orig
+
+let get_unsigned_byte_counter () = 
+  let orig = !unsigned_byte_counter in
+    incr(unsigned_byte_counter);
+    orig
+
+let get_signed_int_counter () = 
+    let orig = !signed_int_counter in
+    incr(signed_int_counter);
+    orig
+
+let get_unsigned_int_counter () = 
+    let orig = !unsigned_int_counter in
+    incr(unsigned_int_counter);
+    orig
+
+let get_signed_long_counter () = 
+  let orig = !signed_long_counter in
+    incr(signed_long_counter);
+    orig
+
+let get_unsigned_long_counter () = 
+  let orig = !unsigned_long_counter in
+    incr(unsigned_long_counter);
+    orig
+
+let get_float_counter () = 
+    let orig = !float_counter in
+    incr(float_counter);
+    orig
+
+let get_double_counter () = 
+  let orig = !double_counter in
+    incr(double_counter);
+    orig
+
+let get_predicate_counter () = 
+    let orig = !predicate_counter in
+    incr(predicate_counter);
+    orig
+
+let get_pointer_counter () = 
+    let orig = !pointer_counter in 
+    incr(pointer_counter);
+    orig 
+
 let generate_device_pointer_name () = 
     let name = "dev_ptr" ^ (string_of_int !dev_name_counter) in 
     incr dev_name_counter; 
@@ -76,25 +137,7 @@ let generate_subroutine_name () =
     incr subroutine_counter;
     name
 
-let get_signed_int_counter () = 
-    let orig = !signed_int_counter in
-    incr(signed_int_counter);
-    orig
 
-let get_signed_float_counter () = 
-    let orig = !signed_float_counter in
-    incr(signed_float_counter);
-    orig
-
-let get_predicate_counter () = 
-    let orig = !predicate_counter in
-    incr(predicate_counter);
-    orig
-
-let get_pointer_counter () = 
-    let orig = !pointer_counter in 
-    incr(pointer_counter);
-    orig 
 (*-----------------------------------Types for Semantic Analysis-----------------------------------*)
 (* Three types of functions *)
 type cuda_function_type  = 
@@ -137,7 +180,12 @@ type environment = {
   hof_ptx_function_list                             : Sast.ptx_higher_order_fdecl list;
   (* Contains list of ptx_identifiers *)
   expression_stack                                  : Sast.ptx_literal list list;
+  (* Stores return literal for function returns*)
   return_lit                                        : Sast.ptx_literal;
+
+  (* Stores information like the last stack pointer before entering a loop *)
+  loop_info                                         : (Sast.ptx_expression * Sast.ptx_literal * Ast.identifier) list; (* conditional expression, conditional literal, resume branch name. First two are needed for "continue" statements *)
+
 }
 
 (*-----------------------------------Helper functions to check variables and functions in the environment -----------------------------------*)
@@ -211,12 +259,13 @@ let init_env = {
   hof_c_function_list         = [];
   hof_ptx_function_list       = [];
   expression_stack            = [[]];
-  return_lit                  = Sast.Ptx_Identifier_Literal(make_ptx_id (Ast.Identifier "") "" 0 true true )
+  return_lit                  = Sast.Ptx_Identifier_Literal(make_ptx_id (Ast.Identifier "") "" 0 true true );
+  loop_info                   = [];
 }
 
 
 (* Updates the environment *)
-let update_env vscope_stack kfmap hfmap is_gpu hof_c_list hof_ptx_list ptx_e_stack rlit= {
+let update_env vscope_stack kfmap hfmap is_gpu hof_c_list hof_ptx_list ptx_e_stack rlit linfo= {
   variable_scope_stack        = vscope_stack;
   kernel_function_map         = kfmap;
   host_function_map           = hfmap;
@@ -225,50 +274,69 @@ let update_env vscope_stack kfmap hfmap is_gpu hof_c_list hof_ptx_list ptx_e_sta
   hof_ptx_function_list       = hof_ptx_list;
   expression_stack            = ptx_e_stack;
   return_lit                  = rlit;
+  loop_info                   = linfo;
 }
 
 
 (* Pushes a new scope on top of the  variable_scope_stack *)
 let push_scope env = 
-    update_env (Variable_Map.empty :: env.variable_scope_stack) env.kernel_function_map env.host_function_map env.is_gpu_env env.hof_c_function_list env.hof_ptx_function_list env.expression_stack env.return_lit
+    update_env (Variable_Map.empty :: env.variable_scope_stack) env.kernel_function_map env.host_function_map env.is_gpu_env env.hof_c_function_list env.hof_ptx_function_list env.expression_stack env.return_lit env.loop_info
 
 (* Pops a scope from the top of the variable_scope_stack *)
 let pop_scope env = 
     match env.variable_scope_stack with
       | [] -> raise Exceptions.Cannot_pop_empty_variable_scope_stack 
       | local_scope :: tail ->
-          update_env tail env.kernel_function_map env.host_function_map env.is_gpu_env env.hof_c_function_list env.hof_ptx_function_list env.expression_stack env.return_lit
+          update_env tail env.kernel_function_map env.host_function_map env.is_gpu_env env.hof_c_function_list env.hof_ptx_function_list env.expression_stack env.return_lit env.loop_info
 
 let update_scope updated_scope env = 
     let env = pop_scope env in 
-    update_env (updated_scope::env.variable_scope_stack) env.kernel_function_map env.host_function_map env.is_gpu_env env.hof_c_function_list env.hof_ptx_function_list env.expression_stack env.return_lit
+    update_env (updated_scope::env.variable_scope_stack) env.kernel_function_map env.host_function_map env.is_gpu_env env.hof_c_function_list env.hof_ptx_function_list env.expression_stack env.return_lit env.loop_info
 
 let update_kernel_fmap f_info env = 
     let new_kfmap = Function_Map.add (Utils.idtos(f_info.function_name)) f_info env.kernel_function_map in
-    update_env env.variable_scope_stack new_kfmap env.host_function_map env.is_gpu_env env.hof_c_function_list env.hof_ptx_function_list env.expression_stack env.return_lit
+    update_env env.variable_scope_stack new_kfmap env.host_function_map env.is_gpu_env env.hof_c_function_list env.hof_ptx_function_list env.expression_stack env.return_lit env.loop_info
 
 let update_host_fmap f_info env = 
     let new_hfmap = Function_Map.add (Utils.idtos(f_info.function_name)) f_info env.host_function_map in
-    update_env env.variable_scope_stack env.kernel_function_map new_hfmap env.is_gpu_env env.hof_c_function_list env.hof_ptx_function_list env.expression_stack env.return_lit
+    update_env env.variable_scope_stack env.kernel_function_map new_hfmap env.is_gpu_env env.hof_c_function_list env.hof_ptx_function_list env.expression_stack env.return_lit env.loop_info
 
 let update_hof_lists hof_c_fdecl hof_ptx_fdecl env = 
-    update_env env.variable_scope_stack env.kernel_function_map env.host_function_map env.is_gpu_env (List.rev(hof_c_fdecl::List.rev(env.hof_c_function_list))) (List.rev(hof_ptx_fdecl::List.rev(env.hof_ptx_function_list)))  env.expression_stack env.return_lit
+    update_env env.variable_scope_stack env.kernel_function_map env.host_function_map env.is_gpu_env (List.rev(hof_c_fdecl::List.rev(env.hof_c_function_list))) (List.rev(hof_ptx_fdecl::List.rev(env.hof_ptx_function_list)))  env.expression_stack env.return_lit env.loop_info
 
 let update_return_lit ptx_lit env = 
-    update_env env.variable_scope_stack env.kernel_function_map env.host_function_map env.is_gpu_env env.hof_c_function_list env.hof_ptx_function_list  env.expression_stack ptx_lit
+    update_env env.variable_scope_stack env.kernel_function_map env.host_function_map env.is_gpu_env env.hof_c_function_list env.hof_ptx_function_list  env.expression_stack ptx_lit env.loop_info
 
+(* Pops something off the expression stack *)
 let pop_expression_stack env = 
     match env.expression_stack with
       | [] -> env
-      | hd::tl -> update_env env.variable_scope_stack env.kernel_function_map env.host_function_map env.is_gpu_env  env.hof_c_function_list env.hof_ptx_function_list tl env.return_lit
+      | hd::tl -> update_env env.variable_scope_stack env.kernel_function_map env.host_function_map env.is_gpu_env  env.hof_c_function_list env.hof_ptx_function_list tl env.return_lit env.loop_info
 
 let push_expression_stack env = 
-  update_env env.variable_scope_stack env.kernel_function_map env.host_function_map env.is_gpu_env  env.hof_c_function_list env.hof_ptx_function_list ([]::env.expression_stack) env.return_lit
+  update_env env.variable_scope_stack env.kernel_function_map env.host_function_map env.is_gpu_env  env.hof_c_function_list env.hof_ptx_function_list ([]::env.expression_stack) env.return_lit env.loop_info
 
 let update_expression_stack lit env = 
   let update = lit::(List.hd env.expression_stack) in
   let env = pop_expression_stack env in 
-  update_env env.variable_scope_stack env.kernel_function_map env.host_function_map env.is_gpu_env  env.hof_c_function_list env.hof_ptx_function_list (update::env.expression_stack) env.return_lit
+  update_env env.variable_scope_stack env.kernel_function_map env.host_function_map env.is_gpu_env  env.hof_c_function_list env.hof_ptx_function_list (update::env.expression_stack) env.return_lit env.loop_info
+
+(* Gets resume branch from environment.loop_info *)
+let get_loop_info env = 
+  match env.loop_info with 
+    | [] -> raise Exceptions.Cannot_use_break_continue_when_not_in_loop
+    | hd::tl -> hd
+
+(* Adds loop information to environment.loop_info stack *)
+let push_loop_info e lit branch_name env =
+  let update = (e,lit,branch_name) in 
+  update_env env.variable_scope_stack env.kernel_function_map env.host_function_map env.is_gpu_env env.hof_c_function_list env.hof_ptx_function_list env.expression_stack env.return_lit (update::env.loop_info)
+
+let pop_loop_info env = 
+  match env.loop_info with 
+    | [] -> raise Exceptions.Cannot_pop_loop_info_from_empty_stack
+    | hd::tl -> 
+      update_env env.variable_scope_stack env.kernel_function_map env.host_function_map env.is_gpu_env env.hof_c_function_list env.hof_ptx_function_list env.expression_stack env.return_lit tl
 
 (* Retrieves nth element from head list of expression stack *)
 let get_from_expression_stack nth env =
@@ -362,6 +430,7 @@ let rec infer_type expression env=
   match expression with
     | Ast.String_Literal(_) -> Ast.Primitive(Ast.String)
     | Ast.Integer_Literal(_) -> Ast.Primitive(Ast.Integer)
+    | Ast.Long_Literal(_) -> Ast.Primitive(Ast.Long)
     | Ast.Floating_Point_Literal(_) -> Ast.Primitive(Ast.Float)
     | Ast.Boolean_Literal(_) -> Ast.Primitive(Ast.Boolean)
     | Ast.Array_Literal(expr_list) ->
@@ -449,8 +518,14 @@ let rec convert_list func ast_list sast_list env =
 (* Generates a register for every variable type, keeps a counter for the types as well *)
 let generate_reg vtype = 
     match vtype with
-        | Ast.Primitive(Ast.Integer) -> "%si",(get_signed_int_counter())
-        | Ast.Primitive(Ast.Float) -> "%fl", get_signed_float_counter()
+        | Ast.Primitive(Ast.Byte) -> "%byte", get_signed_byte_counter()
+        | Ast.Primitive(Ast.Unsigned_Byte) -> "%ubyte", get_unsigned_byte_counter()
+        | Ast.Primitive(Ast.Integer) -> "%int",get_signed_int_counter()
+        | Ast.Primitive(Ast.Unsigned_Integer) -> "%uint", get_unsigned_int_counter()
+        | Ast.Primitive(Ast.Long) -> "%long", get_signed_long_counter()
+        | Ast.Primitive(Ast.Unsigned_Long) -> "%ulong", get_unsigned_long_counter()
+        | Ast.Primitive(Ast.Float) -> "%fl", get_float_counter()
+        | Ast.Primitive(Ast.Double) -> "%dbl", get_double_counter()
         | Ast.Primitive(Ast.Boolean) -> "%pr", get_predicate_counter()
         | Ast.Primitive(Ast.String) -> raise Exceptions.NO_STRINGS_ALLOWED_IN_GDECL
         | Ast.Primitive(Ast.Void) -> raise Exceptions.Void_type_in_gdecl
@@ -459,8 +534,14 @@ let generate_reg vtype =
 (*Gets the string of the register type*)
 let get_reg_type vtype = 
     match vtype with
-        | Ast.Primitive(Ast.Integer) -> "%si"
+        | Ast.Primitive(Ast.Byte) -> "%byte"
+        | Ast.Primitive(Ast.Unsigned_Byte) -> "%ubyte"
+        | Ast.Primitive(Ast.Integer) -> "%int"
+        | Ast.Primitive(Ast.Unsigned_Integer) -> "%uint"
+        | Ast.Primitive(Ast.Long) -> "%long"
+        | Ast.Primitive(Ast.Unsigned_Long) -> "%ulong"
         | Ast.Primitive(Ast.Float) -> "%fl"
+        | Ast.Primitive(Ast.Double) -> "%dbl"
         | Ast.Primitive(Ast.Boolean) -> "%pr"
         | Ast.Primitive(Ast.String) -> raise Exceptions.NO_STRINGS_ALLOWED_IN_GDECL
         | Ast.Primitive(Ast.Void) -> raise Exceptions.Void_type_in_gdecl
@@ -498,6 +579,7 @@ let convert_to_c_binop binop env =
     | Ast.Bitshift_Left -> Sast.Bitshift_Left,env
     | Ast.Bitwise_Or -> Sast.Bitwise_Or,env
     | Ast.Bitwise_And -> Sast.Bitwise_And,env
+    (* | Ast.Sqrt -> Sast.Sqrt,env *)
     
 let convert_to_ptx_binop binop env = 
   match binop with
@@ -519,6 +601,7 @@ let convert_to_ptx_binop binop env =
     | Ast.Bitshift_Left -> Sast.Ptx_Bitshift_Left,env
     | Ast.Bitwise_Or -> Sast.Ptx_Bitwise_Or,env
     | Ast.Bitwise_And -> Sast.Ptx_Bitwise_And,env
+    (* | Ast.Sqrt -> Sast.Ptx_Sqrt,env *)
     
 
   (* Unop *)
@@ -526,30 +609,38 @@ let convert_to_c_unop unop env =
   match unop with
     | Ast.Not -> Sast.Not,env
     | Ast.Negate -> Sast.Negate,env
-    | Ast.Plus_Plus -> Sast.Plus_Plus,env
-    | Ast.Minus_Minus -> Sast.Minus_Minus,env
     
 let convert_to_ptx_unop unop env =
   match unop with
     | Ast.Not -> Sast.Ptx_Not,env
     | Ast.Negate -> Sast.Ptx_Negate,env
-    | Ast.Plus_Plus -> Sast.Ptx_Plus_Plus,env
-    | Ast.Minus_Minus -> Sast.Ptx_Minus_Minus,env
 
 
 (* Datatype *)
 let convert_to_c_data_type dtype env = 
   match dtype with
+      | Ast.Byte -> Sast.Byte,env
+      | Ast.Unsigned_Byte -> Sast.Unsigned_Byte,env
       | Ast.Integer -> Sast.Integer,env
+      | Ast.Unsigned_Integer -> Sast.Unsigned_Integer,env
+      | Ast.Long -> Sast.Long,env
+      | Ast.Unsigned_Long -> Sast.Unsigned_Long,env
       | Ast.Float -> Sast.Float,env
+      | Ast.Double -> Sast.Double,env
       | Ast.String -> Sast.String,env
       | Ast.Boolean -> Sast.Boolean,env
       | Ast.Void -> Sast.Void,env
       
 let convert_to_ptx_data_type dtype env =
   match dtype with
+    | Ast.Byte -> Sast.S8,env
+    | Ast.Unsigned_Byte -> Sast.U8,env
     | Ast.Integer -> Sast.S32,env
+    | Ast.Unsigned_Integer -> Sast.U32,env
+    | Ast.Long -> Sast.S64,env
+    | Ast.Unsigned_Long -> Sast.U64,env
     | Ast.Float -> Sast.F32,env
+    | Ast.Double -> Sast.D32, env
     | Ast.Boolean -> Sast.Pred,env
     | Ast.String -> raise Exceptions.NO_STRINGS_ALLOWED_IN_GDECL
     | Ast.Void -> Sast.Ptx_Void,env
@@ -829,6 +920,7 @@ let rec convert_to_c_expression e env =
         in Sast.Function_Call(id,c_e_list),env
       | Ast.String_Literal(s) -> Sast.String_Literal(s),env
       | Ast.Integer_Literal(i) -> Sast.Integer_Literal(i),env
+      | Ast.Long_Literal(l) -> Sast.Long_Literal(l),env
       | Ast.Boolean_Literal(b) -> Sast.Boolean_Literal(b),env
       | Ast.Floating_Point_Literal(f) -> Sast.Floating_Point_Literal(f),env
       | Ast.Array_Literal(e_list) -> 
@@ -990,11 +1082,14 @@ let rec convert_to_ptx_expression e env =
     | Ast.Integer_Literal(i) -> 
           let env = update_expression_stack (Sast.Ptx_Signed_Integer(i)) env in 
           Sast.Ptx_Block([Ptx_Empty]), env
+    | Ast.Long_Literal(l) -> 
+          let env = update_expression_stack (Sast.Ptx_Signed_Long(l)) env in 
+          Sast.Ptx_Block([Ptx_Empty]), env
     | Ast.Boolean_Literal(b) -> 
           let env = update_expression_stack (Sast.Ptx_Predicate(if b = true then 1 else 0)) env in
           Sast.Ptx_Block([Ptx_Empty]),env
     | Ast.Floating_Point_Literal(f) -> 
-          let env = update_expression_stack (Sast.Ptx_Signed_Float f) env in 
+          let env = update_expression_stack (Sast.Ptx_Float f) env in 
           Sast.Ptx_Block([Ptx_Empty]),env
     | Ast.Identifier_Literal(i) -> 
           if(check_already_declared (Utils.idtos i) env) = false then raise (Exceptions.Variable_not_found_in_scope ( Utils.idtos i))
@@ -1066,8 +1161,8 @@ let rec convert_to_ptx_expression e env =
           let type_list = List.map (fun x -> infer_type x env) e_list in 
           ignore(same_types_list type_list);
           (* Get array dimensions and pass to sast *)
-          let arr = Ast.Array(infer_type (List.hd e_list) env ,List.length e_list) in
-          let array_dim = get_array_dimensions arr [] in
+          (*let arr = Ast.Array(infer_type (List.hd e_list) env ,List.length e_list) in*)
+          (*let array_dim = get_array_dimensions arr [] in*)
         (* Check that all the expressions are primitives because PTX doesn't allow expressions *)
           let valid_array = (bool_sum (List.map is_constant e_list) 0) = List.length(e_list) in
           if (valid_array = false) then raise Exceptions.Defg_arrays_must_be_defined_with_constants
@@ -1195,16 +1290,17 @@ let convert_to_ptx_variable_statement vstmt env =
           let ptx_vdecl,env =  convert_to_ptx_vdecl vdecl env in 
           Sast.Ptx_Variable_Declaration(ptx_vdecl),env
       | Ast.Initialization(vdecl, e) -> 
-          let ptx_vdecl,env = convert_to_ptx_vdecl vdecl env in 
-                (* Push scope for expression stack *)
-                  let env = push_expression_stack env in
+              (* Push scope for expression stack *)
+              let env = push_expression_stack env in
+              let ptx_e,env = convert_to_ptx_expression e env in
+              let ptx_vdecl,env = convert_to_ptx_vdecl vdecl env in 
               let vdecl_expr = Sast.Ptx_Variable_Declaration(ptx_vdecl) in
               (* Must save ptx value for vdecl on the stack *)
                     let id,vtype = get_vdecl_parts vdecl in
                     let v_info = get_variable_info (Utils.idtos id) env in
                     let ptx_lit = Sast.Ptx_Identifier_Literal(make_ptx_id id (get_reg_type v_info.vtype) v_info.register_number true false) in 
                     let env = update_expression_stack ptx_lit env in 
-              let ptx_e,env = convert_to_ptx_expression e env in
+              
               (* convert_to_ptx_expression has saved a value in the stack. Let us fetch it and resolve*)
               let resolve = Sast.Ptx_Move(fst(convert_to_ptx_variable_type vtype env),get_from_expression_stack 1 env, get_from_expression_stack 0 env) in
               (* Pop the stack *)
@@ -1350,25 +1446,90 @@ let rec convert_to_ptx_statement stmt env =
     | Ast.Block(stmt_list) -> 
         let expr_block, env = convert_list convert_to_ptx_statement stmt_list [] env in
         Sast.Ptx_Block(expr_block),env
-    | Ast.If(e, s1, s2) -> raise Exceptions.C'est_La_Vie
-(*               let env = push_expression_stack env in 
-              let vtype = infer_type e env in
-              let ptx_e,env = convert_to_ptx_expression e env in 
-              (*  Create a literal referencing the predicate *)
-              let ptx_lit = Sast.Ptx_Identifier_Literal(make_ptx_id (get_reg_type vtype) (get_predicate_counter ()) true false) in
-              let env = update_expression_stack ptx_lit env in
-          let bool_expr = Sast.Block([ptx_e]) in
-              let env = pop_expression_stack env in
-          let branch = Sast.Branch(get_from_expression_stack 0 env,generate_subroutine_name()) in
-              let  
+    | Ast.If(e, s1, s2) -> 
+        (* Performs checking - Checks e is a boolean *)
+        ignore(same_types (infer_type e env) (Ast.Primitive(Ast.Boolean)));
+        (* Create branch names for if and else *)
+        let if_branch_name = get_branch_name() in
+        let else_branch_name = get_branch_name() in 
+        let resume_branch_name = get_branch_name() in 
+        (* Resolve conditional expression*)
+        let env = push_expression_stack env in 
+        let ptx_e, env = convert_to_ptx_expression e env in 
+        (* Take care of branching statements *)
+        let conditional = get_from_expression_stack 0 env in 
+        let bra_if = Ptx_Branch_Conditional(true, conditional, if_branch_name) in
+        let bra_else = Ptx_Branch_Conditional(false, conditional, else_branch_name) in 
+        let bra_resume = Ptx_Branch(resume_branch_name) in 
+        let env = pop_expression_stack env in 
+        (* Add if and else subroutines*)
+        let if_subrout_block,env = convert_to_ptx_statement s1 env in 
+        let if_subrout = Ptx_Subroutine(if_branch_name,[if_subrout_block;bra_resume]) in 
+        (*Add resume subroutine*)
+        let else_subrout_block, env = convert_to_ptx_statement s2 env in 
+        let else_subrout = Ptx_Subroutine(else_branch_name,[else_subrout_block;bra_resume]) in 
+        let resume_subrout = Ptx_Subroutine(resume_branch_name,[]) in  
+        Sast.Ptx_Block([ptx_e;bra_if;bra_else;if_subrout;else_subrout;resume_subrout]),env
+    | Ast.While(e, s) -> 
+        (* Performs checking - Checks e is a boolean *)
+        ignore(same_types (infer_type e env) (Ast.Primitive(Ast.Boolean)));
+        (* Creates branch names for while *)
+        let while_branch_name = get_branch_name() in 
+        let resume_branch_name = get_branch_name() in 
+        (* Conditional checking *)
+        let env = push_expression_stack env in 
+        let ptx_e, env = convert_to_ptx_expression e env in 
+        let conditional = get_from_expression_stack 0 env in 
+        let bra_while = Ptx_Branch_Conditional(true, conditional, while_branch_name) in 
+        let env = pop_expression_stack env in 
+        (* Add while subroutine *)
+        let env = push_loop_info ptx_e conditional resume_branch_name env in 
+        let while_subrout_block, env = convert_to_ptx_statement s env in 
+        let while_subrout = Ptx_Subroutine(while_branch_name,[while_subrout_block;ptx_e;bra_while]) in 
+        let resume_subrout = Ptx_Subroutine(resume_branch_name,[]) in 
+        let env = pop_loop_info env in
+        Sast.Ptx_Block([ptx_e;bra_while;while_subrout;resume_subrout]),env
+         
+    | Ast.For(s1, e, s2, s3) -> 
+        (* Check that stmt1 is an initialization expression *)
+          (match s1 with
+            | Ast.Variable_Statement(vstmt) ->
+              (match vstmt with 
+                | Ast.Assignment(e1,e2) -> ()
+                | Ast.Initialization(vdecl,e) -> ()
+                | _ -> raise Exceptions.Invalid_statement_in_for)
+            | _ -> raise Exceptions.Invalid_statement_in_for);
+        (* Create branch names *)
+        let for_branch_name = get_branch_name() in 
+        let resume_branch_name = get_branch_name () in 
+        (* Conditional checking *)
+        let for_init,env = convert_to_ptx_statement s1 env in 
+        let env = push_expression_stack env in 
+        let ptx_e, env = convert_to_ptx_expression e env in 
+        (* Check that e is a boolean expression *)
+        ignore(same_types (infer_type e env) (Ast.Primitive(Ast.Boolean)));
+        (* Create branching statement for bra_for *)
+        let for_conditional = get_from_expression_stack 0 env in 
+        let bra_for = Ptx_Branch_Conditional(true, for_conditional, for_branch_name) in 
 
-          Sast.Ptx_Block(expr_block),env *)
-    | Ast.While(e, s) -> raise Exceptions.C'est_La_Vie
-    | Ast.For(s1, e, s2, s3) -> raise Exceptions.C'est_La_Vie
-    | Ast.Continue -> raise Exceptions.C'est_La_Vie
-    | Ast.Break -> raise Exceptions.C'est_La_Vie
-    
+        (* Add for subroutine *)
+        let env = push_loop_info ptx_e for_conditional resume_branch_name env in 
+        let for_subrout_block, env = convert_to_ptx_statement s3 env in 
+        let for_iterator,env = convert_to_ptx_statement s2 env in 
+        let for_subrout = Ptx_Subroutine(for_branch_name,[for_subrout_block;for_iterator;ptx_e;bra_for]) in 
+        let resume_subrout = Ptx_Subroutine(resume_branch_name,[]) in 
 
+        let env = pop_loop_info env in 
+
+        Sast.Ptx_Block([for_init;ptx_e;bra_for;for_subrout;resume_subrout]),env
+    | Ast.Continue -> 
+        let ptx_e, resume_conditional,resume_branch_name = get_loop_info env in 
+        let bra_resume = Ptx_Branch_Conditional(true,resume_conditional,resume_branch_name) in 
+        Sast.Ptx_Block([ptx_e;bra_resume]),env
+    | Ast.Break -> 
+        let ptx_e, resume_conditional,resume_branch_name = get_loop_info env in 
+        let bra_resume = Ptx_Branch(resume_branch_name) in  
+        Sast.Ptx_Block([bra_resume;]),env
 
 let convert_to_c_param vdecl env  = 
     match vdecl with 
@@ -1439,7 +1600,7 @@ let convert_to_c_fdecl fdecl env =
 let convert_rtype_to_ptx_vdecl rtype env = 
   let rname = Ast.Identifier( generate_ptx_return_name ()) in 
   let reg_name,reg_num = generate_reg rtype in
-  let is_array = match rtype with | Ast.Primitive(p) -> false | Ast.Array(t,n) -> true in 
+  (* let is_array = match rtype with | Ast.Primitive(p) -> false | Ast.Array(t,n) -> true in  *)
   let ptx_id = make_ptx_id rname reg_name reg_num false false in
   let env = update_return_lit (Sast.Ptx_Identifier_Literal(ptx_id)) env in
   (Sast.Ptx_Vdecl(Sast.Param,fst (convert_to_ptx_variable_type rtype env), ptx_id)),env
@@ -1472,8 +1633,14 @@ let convert_to_ptx_fdecl fdecl env =
       let output, env           = convert_rtype_to_ptx_vdecl fdecl.return_type env in
       let body,         env     = convert_list convert_to_ptx_statement fdecl.body   [] env in
       let registers,    env     =  [
-        convert_to_register_declaration (S32) "si" !signed_int_counter;
-        convert_to_register_declaration (F32) "fl" !signed_float_counter;
+        convert_to_register_declaration (U8) "byte" !signed_byte_counter;
+        convert_to_register_declaration (S8) "ubyte" !unsigned_byte_counter;
+        convert_to_register_declaration (S32) "int" !signed_int_counter;
+        convert_to_register_declaration (U32) "uint" !unsigned_int_counter;
+        convert_to_register_declaration (S64) "long" !signed_long_counter;
+        convert_to_register_declaration (U64) "ulong" !unsigned_long_counter;
+        convert_to_register_declaration (F32) "fl" !float_counter;
+        convert_to_register_declaration (D32) "dbl" !double_counter;
         convert_to_register_declaration (Pred) "pr" !predicate_counter;
       ],  env in
       check_rtype fdecl.return_type fdecl.body env;

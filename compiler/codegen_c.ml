@@ -41,8 +41,7 @@ let generate_unary_operator operator =
   let op = match operator with 
     | Not -> "!"
     | Negate -> "-"
-    | Plus_Plus -> "++"
-    | Minus_Minus -> "--"
+(*     | Sqrt ->  *)
   in sprintf "%s" op
 
 (* Generate data type*)
@@ -173,6 +172,8 @@ let rec generate_expression expression  =
         "\"" ^ s ^ "\""
     | Sast.Integer_Literal(i) -> 
         string_of_int i
+    | Sast.Long_Literal(l) -> 
+        Int64.to_string l
     | Sast.Boolean_Literal(b) -> 
         string_of_bool b
     | Sast.Floating_Point_Literal(f) ->
@@ -192,8 +193,7 @@ let rec generate_expression expression  =
       )
     | Sast.Unop(e,o) ->
         (match o with 
-        | Sast.Not | Sast.Negate  -> "("  ^(generate_unary_operator o) ^ (generate_expression e)^ ")"
-        | Sast.Plus_Plus | Sast.Minus_Minus -> "(" ^ (generate_expression e) ^ (generate_unary_operator o))^ ")"
+        | Sast.Not | Sast.Negate  -> "("  ^(generate_unary_operator o) ^ (generate_expression e)^ ")")
     | Sast.Array_Accessor(e,e_list,is_lvalue,access_array) -> 
         if is_lvalue = false then
           if access_array = true then
@@ -470,7 +470,6 @@ let rec generate_statement statement  =
         "continue;\n"
     | Sast.Break ->
         "break;\n"
-(*     | _ -> raise Exceptions.Unknown_type_of_statement *)
   in sprintf "%s" statement_string
 
 (* Generates function declarations *)
@@ -485,7 +484,7 @@ let generate_fdecl f  =
 
 (* Writing out to CUDA file *)
 let write_cuda filename cuda_program_string = 
-  let file = open_out ((String.sub filename 0 ((String.length filename) - 4)) ^ ".cu") in 
+  let file = open_out (filename ^ ".cu") in 
   fprintf file "%s" cuda_program_string
 
 (* Generates the full CUDA file *)
@@ -498,22 +497,23 @@ let generate_cuda_file filename program =
   let cuda_program_string = sprintf "\n\
   #include <stdio.h>\n\
   #include <stdlib.h>\n\
+  #include <stdint.h>\n\
   #include \"cuda.h\"\n\
   #include <cassert>\n\
   #include <iostream>\n\
   #include \"vlc.hpp\"\n\
+  #include <math.h>\n\
   #include <stdarg.h>\n\
   #include <fstream>\n\
   CUdevice    device;\n\
   CUmodule    cudaModule;\n\
   CUcontext   context;\n\
-  CUfunction  function;\n\
-
-  void checkCudaErrors(CUresult err) {
-    assert(err == CUDA_SUCCESS);
-  }
+  CUfunction  function;\n\n\
+  void checkCudaErrors(CUresult err) {\n\
+    assert(err == CUDA_SUCCESS);\n\
+  }\n\n\
   %s" cuda_program_body ^
-  "int main(void) { return vlc(); }" in
+  "int main(void) { return vlc(); }\n" in
   write_cuda filename cuda_program_string;
   print_endline cuda_program_string
 

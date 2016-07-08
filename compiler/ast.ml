@@ -1,7 +1,5 @@
 type binary_operator =
-    | Add | Subtract | Multiply | Divide | Modulo
-(*     | Plus_Equal | Subtract_Equal | Multiply_Equal | Divide_Equal  *)
-(*     | Exp | Dot | Matrix_Multiplication *)
+    | Add | Subtract | Multiply | Divide | Modulo (* |Sqrt  *)
     | And | Or | Xor
     | Equal | Not_Equal | Greater_Than | Less_Than | Greater_Than_Equal | Less_Than_Equal
     | Bitshift_Right | Bitshift_Left 
@@ -9,46 +7,50 @@ type binary_operator =
     
 type unary_operator = 
     | Not  | Negate
-    | Plus_Plus | Minus_Minus
 
-type identifier = 
-    Identifier of string
+type identifier = Identifier of string
 
 type data_type = 
-    | String
+    | Unsigned_Byte
+    | Byte
+    | Unsigned_Integer
     | Integer
+    | Long
+    | Unsigned_Long
     | Float
+    | Double
+    | String
     | Boolean
     | Void
 
 type variable_type = 
     | Primitive of data_type
-    | Array of variable_type * int (* variable type, size *)
+    | Array of variable_type * int
 
-type vdecl = 
-    Variable_Declaration of variable_type * identifier
+type vdecl = Variable_Declaration of variable_type * identifier
 
 type expression =
     | String_Literal of string 
     | Integer_Literal of int
+    | Long_Literal of int64
     | Boolean_Literal of bool
     | Floating_Point_Literal of float
     | Array_Literal of expression list
-    | Identifier_Literal of identifier (* id, is_lvalue *)
+    | Identifier_Literal of identifier 
     | Function_Call of identifier * expression list
     | Higher_Order_Function_Call of higher_order_function_call
     | Cast of variable_type * expression
     | Binop of expression * binary_operator * expression
     | Unop of expression * unary_operator
-    | Array_Accessor of expression * expression list * bool(* array, indexes, is_lvalue *)
+    | Array_Accessor of expression * expression list * bool
     | Ternary of expression * expression * expression
 and constant = 
     | Constant of identifier * expression
 and higher_order_function_call = {
-    hof_type                                        : identifier; (* Map or reduce *)
+    hof_type                                        : identifier;
     kernel_function_name                            : identifier;
     constants                                       : constant list;
-    input_arrays                                    : expression list; (* Check in semantic analyzer that type is array*)
+    input_arrays                                    : expression list; 
 }
 
 type variable_statement = 

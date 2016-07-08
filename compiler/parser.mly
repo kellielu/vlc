@@ -6,8 +6,14 @@
 	| "string" -> String
     | "bool" -> Boolean
     | "void" -> Void
-	| "int" -> Integer
+    | "byte" -> Byte 
+    | "ubyte" -> Unsigned_Byte
+    | "int" -> Integer
+    | "uint" -> Unsigned_Integer
+    | "long" -> Long
+    | "ulong" -> Unsigned_Long
     | "float" -> Float 
+    | "double" -> Double
 	| dtype -> raise (Exceptions.Invalid_data_type dtype)
 
 %}
@@ -17,10 +23,12 @@
 %token <int> DEDENT_EOF, DEDENT_COUNT
 
 %token ADD SUBTRACT MULTIPLY DIVIDE MODULO
-%token PLUS_PLUS MINUS_MINUS
+%token ADD_EQUAL SUBTRACT_EQUAL MULTIPLY_EQUAL DIVIDE_EQUAL
+%token DOT EXPONENT MATRIX_MULTIPLICATION
 %token BITSHIFT_RIGHT BITSHIFT_LEFT
 %token AND OR NOT XOR
 %token EQUAL NOT_EQUAL GREATER_THAN GREATER_THAN_EQUAL LESS_THAN LESS_THAN_EQUAL
+%token NEGATE
 %token IF ELSE WHILE FOR
 %token CONTINUE BREAK 
 %token BITWISE_AND BITWISE_OR
@@ -42,8 +50,10 @@
 %left EQUAL NOT_EQUAL GREATER_THAN GREATER_THAN_EQUAL LESS_THAN LESS_THAN_EQUAL
 %left AND NOT OR XOR
 %left BITSHIFT_RIGHT BITSHIFT_LEFT BITWISE_OR BITWISE_AND
-%left ADD SUBTRACT PLUS_PLUS MINUS_MINUS
+%left ADD_EQUAL SUBTRACT_EQUAL MULTIPLY_EQUAL DIVIDE_EQUAL
+%left ADD SUBTRACT 
 %left MULTIPLY DIVIDE MODULO
+%left DOT EXPONENT MATRIX_MULTIPLICATION
 %right NEGATE 
 
 %start program  
@@ -127,8 +137,12 @@ parameter_list:
 /* Statements */ 
 variable_statement:
     | vdecl TERMINATOR                                                  { Declaration($1) }
-    | assignment_expression ASSIGNMENT expression TERMINATOR            { Assignment( $1, $3 ) }
     | vdecl ASSIGNMENT expression TERMINATOR                            { Initialization ($1, $3) }
+    | assignment_expression ASSIGNMENT expression TERMINATOR            { Assignment($1, $3 ) }
+    | assignment_expression ADD_EQUAL expression TERMINATOR             { Assignment($1, (Binop($1,Add,$3))) }
+    | assignment_expression SUBTRACT_EQUAL expression TERMINATOR        { Assignment($1, (Binop($1,Subtract,$3))) }
+    | assignment_expression MULTIPLY_EQUAL expression TERMINATOR        { Assignment($1, (Binop($1,Multiply,$3))) }
+    | assignment_expression DIVIDE_EQUAL expression TERMINATOR          { Assignment($1, (Binop($1,Divide,$3))) }
 
 for_statement:
     | assignment_expression ASSIGNMENT expression                       { Variable_Statement(Assignment($1,$3 ))}
@@ -188,8 +202,6 @@ expression:
 
     | SUBTRACT expression                                               { Unop($2,Negate) }
     | expression ADD expression                                         { Binop($1, Add, $3) }
-    | expression PLUS_PLUS                                              { Unop($1,Plus_Plus)}
-    | expression MINUS_MINUS                                            { Unop($1, Minus_Minus)}
     | expression SUBTRACT expression                                    { Binop($1, Subtract, $3) }
     | expression MULTIPLY expression                                    { Binop($1, Multiply, $3) }
     | expression DIVIDE expression                                      { Binop($1, Divide, $3) }

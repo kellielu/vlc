@@ -24,7 +24,6 @@ let token_to_string = function
   | DEF -> "DEF" | DEFG -> "DEFG"
   | ASSIGNMENT -> "ASSIGNMENT" 
   | ADD -> "ADD" | SUBTRACT -> "SUBTRACT" | MULTIPLY -> "MULTIPLY" 
-  | PLUS_PLUS -> "PLUS_PLUS" | MINUS_MINUS -> "MINUS_MINUS"
   | DIVIDE -> "DIVIDE" | MODULO -> "MODULO"
   | EOF -> "EOF" 
   | IDENTIFIER(s) -> "IDENTIFIER(" ^ s ^ ")"
@@ -46,6 +45,8 @@ let token_to_string = function
   | IF -> "IF" | ELSE -> "ELSE" | WHILE -> "WHILE" | FOR -> "FOR"
   | CONTINUE -> "CONTINUE" | BREAK -> "BREAK"
   | BITWISE_AND -> "BITWISE_AND" | BITWISE_OR -> "BITWISE_OR"
+  | ADD_EQUAL -> "ADD_EQUAL"| SUBTRACT_EQUAL -> "SUBTRACT_EQUAL" | MULTIPLY_EQUAL -> "MULTIPLY_EQUAL"| DIVIDE_EQUAL -> "DIVIDE_EQUAL"
+  | DOT -> "DOT" | EXPONENT -> "EXPONENT" | MATRIX_MULTIPLICATION -> "MATRIX_MULTIPLICATION" | NEGATE -> "NEGATE"
 
 let token_list_to_string token_list = 
  	let rec helper token_list acc_string = 
@@ -76,30 +77,27 @@ let binary_operator_to_string = function
   | Ast.Bitshift_Right -> "<<"
   | Ast.Bitwise_Or -> "|"
   | Ast.Bitwise_And -> "&"
+  (* | Ast.Sqrt -> "sqrt" *)
 
 let unary_operator_to_string = function
   | Ast.Not -> "not"
   | Ast.Negate -> "-"
-  | Ast.Plus_Plus -> "++"
-  | Ast.Minus_Minus -> "--"
 
 let idtos = function
   | Ast.Identifier(s) -> s
 
 let data_type_to_string = function 
   | Ast.String -> "string"
- (*  | Ast.Byte -> "byte"
-  | Ast.Unsigned_Byte -> "ubyte" *)
+  | Ast.Byte -> "byte"
+  | Ast.Unsigned_Byte -> "ubyte"
   | Ast.Integer -> "int"
-(*   | Ast.Unsigned_Integer -> "uint" *)
-(*   | Ast.Long -> "long" *)
-(*   | Ast.Unsigned_Long -> "ulong" *)
+  | Ast.Unsigned_Integer -> "uint"
+  | Ast.Long -> "long"
+  | Ast.Unsigned_Long -> "ulong"
   | Ast.Float -> "float"
-  (* | Ast.Double -> "double" *)
+  | Ast.Double -> "double"
   | Ast.Void -> "void"
   | Ast.Boolean -> "bool"
-
-
 
 let rec variable_type_to_string = function
   | Ast.Primitive(p) -> data_type_to_string p
@@ -113,6 +111,7 @@ let rec expression_to_string = function
   | Ast.Higher_Order_Function_Call(fcall) -> higher_order_function_call_to_string fcall
   | Ast.String_Literal(s) -> "\"" ^ s ^ "\""
 	| Ast.Integer_Literal(i) -> string_of_int i
+  | Ast.Long_Literal(l) -> Int64.to_string l
   | Ast.Boolean_Literal(b) -> string_of_bool b
   | Ast.Floating_Point_Literal(f)-> string_of_float f
   | Ast.Array_Literal(e_list) -> "{" ^ String.concat "," (List.map expression_to_string e_list) ^ "}"
@@ -123,7 +122,7 @@ let rec expression_to_string = function
     (match o with 
         | Ast.Not -> (unary_operator_to_string o) ^ (expression_to_string e)
         | _ -> (expression_to_string e) ^ (unary_operator_to_string o))
-  | Ast.Array_Accessor(e,e_list,b) -> (expression_to_string e) ^ "[" ^ (String.concat "][" (List.map expression_to_string e_list)) ^ "]"
+  | Ast.Array_Accessor(e,e_list,is_lvalue) -> (expression_to_string e) ^ "[" ^ (String.concat "][" (List.map expression_to_string e_list)) ^ "]"
   | Ast.Ternary(e1,e2,e3) -> (expression_to_string e1) ^ " if(" ^ (expression_to_string e2) ^ ") else " ^ (expression_to_string e3)
 and constant_to_string = function
   | Ast.Constant(id,e) -> (idtos id) ^ "=" ^ (expression_to_string e)

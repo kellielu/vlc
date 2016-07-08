@@ -19,16 +19,16 @@ let generate_id id =
 let generate_ptx_data_type data_type = 
   let t = match data_type with
     | U64 -> ".u64"
- (*    | U8 -> ".u8"
+    | U8 -> ".u8"
     | U16 -> ".u16"
-    | U32 -> ".u32" *)
-(*     | S8 -> ".s8"
-    | S16 -> ".s16" *)
-  
+    | U32 -> ".u32"
+    | S8 -> ".s8"
+    | S16 -> ".s16"
     | S32 -> ".s32"
     | Pred -> ".pred"
-(*     | S64 -> ".s64" *)
+    | S64 -> ".s64"
     | F32 -> ".f32"
+    | D32 -> ".f64"
     | Ptx_Void -> ""
   in
   sprintf "%s" t
@@ -37,28 +37,32 @@ let rec generate_ptx_variable_type vtype =
   let t = match vtype with
     | Ptx_Primitive(p) -> generate_ptx_data_type p
     | Ptx_Array(d, i) -> generate_ptx_variable_type d 
-    | _ -> ""
   in
   sprintf "%s" t
 
 
 let rec generate_ptx_literal literal = 
   let l = match literal with
+    | Ptx_Signed_Byte(b) -> string_of_int(b)
+    | Ptx_Unsigned_Byte(b) -> string_of_int(b)
     | Ptx_Signed_Integer(i) -> string_of_int(i)
-    | Ptx_Signed_Float(f) -> string_of_float(f)
+    | Ptx_Unsigned_Integer(i) -> string_of_int(i)
+    | Ptx_Signed_Long(l) -> Int64.to_string(l)
+    | Ptx_Unsigned_Long(l) -> Int64.to_string(l)
+    | Ptx_Float(f) -> string_of_float(f)
+    | Ptx_Double(f) -> string_of_float(f)
     | Ptx_Predicate(p) -> string_of_int p
     | Ptx_Identifier_Literal(id) -> generate_id id
     | Ptx_Array_Literal(l_list) -> "{" ^ generate_list generate_ptx_literal "," l_list ^ "}"
     | Ptx_Array_Access(l,l_list) -> generate_ptx_literal l ^ "[" ^ generate_list generate_ptx_literal "][" l_list ^ "]"
-  in 
+    | Ptx_Array_Dereference(l) -> "[" ^ generate_ptx_literal l ^ "]"
+  in  
   sprintf "%s" l
 
 let generate_ptx_unary_operator operator =
   let op = match operator with
     | Ptx_Not -> "not"
     | Ptx_Negate -> "neg"
-    | Ptx_Plus_Plus -> ""
-    | Ptx_Minus_Minus -> ""
   in
   sprintf "%s" op
 
@@ -82,6 +86,7 @@ let generate_ptx_binary_operator operator =
     | Ptx_Bitshift_Left -> "shl"
     | Ptx_Bitwise_Or -> "|"
     | Ptx_Bitwise_And -> "&"
+(*     | Ptx_Sqrt -> "sqrt.approx{.ftz}.f32" *)
   in
   sprintf "%s" op
 
@@ -93,7 +98,8 @@ let generate_ptx_state_space space =
     | Shared -> ".shared"
     | State_Undefined -> ""
     | Constant -> ".const"
-    | Param -> ".param"
+    | Param -> ""
+    | Register -> ".reg"
   in
   sprintf "%s" s
 
@@ -119,7 +125,6 @@ let rec get_array_dimensions vtype dimensions =
   | Sast.Ptx_Array(t,n) -> 
       get_array_dimensions t (List.rev(n::List.rev(dimensions)))
   | Sast.Ptx_Primitive(p) -> dimensions
-  | _ -> []
 
 let generate_ptx_vdecl vdecl = 
   let vdecl_string = 
@@ -140,40 +145,34 @@ let generate_ptx_vdecl vdecl =
 let rec generate_ptx_expression statement =
   let s = match statement with
     | Ptx_Load(ss, d, id1, id2) -> "ld" ^ generate_ptx_state_space(ss) ^ generate_ptx_variable_type(d)
-      ^ "     " ^ generate_ptx_literal id1 ^ ",[" ^ generate_ptx_literal id2 ^ "];\n"
+      ^ "     " ^ generate_ptx_literal id1 ^ ",[" ^ generate_ptx_literal id2 ^ "];" ^ "\n"
     | Ptx_Store(ss, d, id1, id2) -> "st" ^ generate_ptx_state_space(ss) ^ generate_ptx_variable_type(d)
-      ^ "     " ^ "[" ^ generate_ptx_literal id1 ^ "]," ^ generate_ptx_literal id2 ^ ";\n"
-    | Ptx_Move(d, id1, id2) -> "mov" ^ generate_ptx_variable_type(d) ^ "     " ^
-      generate_ptx_literal id1 ^ ", " ^ generate_ptx_literal id2 ^ ";\n"
+      ^ "     " ^ "[" ^ generate_ptx_literal id1 ^ "]," ^ generate_ptx_literal id2 ^ ";" ^ "\n"
+    | Ptx_Move(d, id1, id2) -> "mov" ^ generate_ptx_variable_type(d) ^ "     " ^ generate_ptx_literal id1 ^ ", " ^ generate_ptx_literal id2 ^ ";" ^ "\n"
     | Ptx_Binop(o, t, id1, id2, id3) -> generate_ptx_binary_operator(o) ^ generate_ptx_variable_type(t) 
         ^ "     " ^ generate_ptx_literal id1 ^ ", " ^ generate_ptx_literal id2 ^ ", " 
-        ^ generate_ptx_literal id3 ^ ";\n"
+        ^ generate_ptx_literal id3 ^ ";" ^ "\n"
     | Ptx_Unop(o, t, id1, id2) -> 
         let unop = match o with 
             | Ptx_Not -> generate_ptx_unary_operator(o) ^ 
                 generate_ptx_variable_type(t) ^ "     " ^ generate_ptx_literal(id1) 
-                ^ ", " ^ generate_ptx_literal id2 ^ ";\n"
+                ^ ", " ^ generate_ptx_literal id2 ^ ";" ^ "\n"
             | Ptx_Negate -> generate_ptx_unary_operator(o) ^ 
                 generate_ptx_variable_type(t) ^ "     " ^ generate_ptx_literal(id1)  
-                ^ ", " ^ generate_ptx_literal id2  ^ ";\n"
-            (* | Ptx_Plus_Plus -> "add" ^ generate_ptx_variable_type(t) ^ "     " ^
-                generate_id(id1)  ^ ", " ^ generate_id id2  ^
-                ", 1;\n"
-            | Ptx_Minus_Minus -> "sub" ^ generate_ptx_variable_type(t) ^ "     " ^
-                generate_id(id1)  ^ ", " ^ generate_id id2  ^
-                ", 1;\n" *)
+                ^ ", " ^ generate_ptx_literal id2  ^ ";" ^ "\n"
         in unop
     | Ptx_Call(return_val, fname, arglist) -> "call (" ^ generate_ptx_literal return_val ^ ") " ^
-        Utils.idtos(fname) ^ " (" ^ (generate_list generate_ptx_literal "," arglist)^")" ^ ";\n"
-    | Ptx_Empty_Call(id, vlist) -> "call " ^ Utils.idtos(id) ^"(" ^(generate_list generate_ptx_literal "," vlist)^")" ^ ";\n"
-    | Ptx_Variable_Declaration(vdecl) -> generate_ptx_vdecl vdecl ^ ";\n"
-    | Ptx_Branch(id,sub) -> "@" ^ generate_ptx_literal id ^" bra " ^ Utils.idtos(sub) ^ ";\n"
+        Utils.idtos(fname) ^ " (" ^ (generate_list generate_ptx_literal "," arglist)^")" ^ ";" ^ "\n"
+    | Ptx_Empty_Call(id, vlist) -> "call " ^ Utils.idtos(id) ^"(" ^(generate_list generate_ptx_literal "," vlist)^")" ^ ";" ^ "\n"
+    | Ptx_Variable_Declaration(vdecl) -> generate_ptx_vdecl vdecl ^ ";" ^ "\n"
+    | Ptx_Branch_Conditional(cond,id,sub) -> "@" ^ (if(cond = false) then "!" else "") ^ generate_ptx_literal id ^" bra " ^ Utils.idtos(sub) ^ ";" ^ "\n"
+    | Ptx_Branch(sub) -> "bra " ^ Utils.idtos(sub) ^ ";" ^ "\n"
     | Ptx_Block(stmt_list) -> generate_list generate_ptx_expression "" stmt_list
-    | Ptx_Subroutine(id,stmt_list)-> Utils.idtos id ^ ": \n" ^ generate_list generate_ptx_expression "\n" stmt_list
-    | Ptx_Return_Void -> "ret;\n"
-  (*   | Ptx_Cast (d1, d2, v1, v2) -> "cvt" ^ generate_ptx_variable_type(d1) ^
-        generate_ptx_variable_type(d2) ^ " " ^ generate_ptx_(v1) ^ ", " ^
-        generate_ptx_expression(v2) ^ ";\n" *)
+    | Ptx_Subroutine(id,stmt_list)-> "\n\n\n\n" ^ Utils.idtos id ^ ": \n" ^ generate_list generate_ptx_expression "" stmt_list ^ "\n"
+    | Ptx_Return_Void -> "ret;" ^ "\n"
+    | Ptx_Cast (d1, d2, l1, l2) -> "cvt" ^ generate_ptx_variable_type(d1) ^
+        generate_ptx_variable_type(d2) ^ " " ^ generate_ptx_literal(l1) ^ ", " ^
+        generate_ptx_literal(l2) ^ ";" ^ "\n"
     | Ptx_Empty -> ""
     in sprintf "%s" s
 
@@ -222,13 +221,14 @@ let generate_ptx_function f =
     ".visible " ^ generate_ptx_function_type(f.ptx_fdecl_type) ^ 
     " (" ^ generate_ptx_param f.ptx_fdecl_return_param ^ ") " ^ (Utils.idtos f.ptx_fdecl_name) ^ 
     "(" ^ (generate_list generate_ptx_param "," f.ptx_fdecl_input_params) ^ ")\n\n" ^ 
-    "{\n" ^ 
-      (generate_list generate_ptx_register_declaration "\n" f.register_decls ) ^ "\n\n\n" ^ 
-      (generate_list generate_load_statement           "\n" (f.ptx_fdecl_return_param::f.ptx_fdecl_input_params)) ^ "\n\n" ^
+    "{\n\n" ^ 
+      "START:\n" ^ 
+      (generate_list generate_ptx_register_declaration "\n" f.register_decls ) ^ "\n\n" ^ 
+      (generate_list generate_load_statement           "\n" f.ptx_fdecl_input_params) ^ "\n\n" ^
       (generate_list generate_ptx_expression "" f.ptx_fdecl_body) ^ 
     "}\n\n"
   in
-  let ptx_function_string = sprintf " \
+  let ptx_function_string = sprintf "\
   //Generated by VLC\n\
   .version 4.1\n\
   .target sm_20\n\
@@ -302,7 +302,7 @@ let generate_ptx_hof_function hof =
                   "RETURN:\n" ^ 
                   "\t ret;\n" ^  
                   "}\n\n\n"    
-          in sprintf " \
+          in sprintf "\
           //Generated by VLC\n\
           .version 4.1\n\
           .target sm_20\n\

@@ -1,6 +1,7 @@
+(* Notes: Need to add exceptions for scanner errors *)
 { 
 	open Parser 
-	(*open Exceptions*)
+	(* open Exceptions *)
 
 	let indent_stack = Stack.create()
 
@@ -39,12 +40,20 @@ rule token = parse
 	| '*' 		{ MULTIPLY }
 	| '/' 		{ DIVIDE }
 	| '%' 		{ MODULO }
+	| '.'		{ DOT }
+	| '^' 		{ EXPONENT }
+	| "**" 		{ MATRIX_MULTIPLICATION }
+
+	| "+=" 		{ ADD_EQUAL }
+	| "-="		{ SUBTRACT_EQUAL } 
+	| "/="		{ DIVIDE_EQUAL }
+	| "*="		{ MULTIPLY_EQUAL }
+
+	(* Bit Operators *)
 	| ">>" 		{ BITSHIFT_RIGHT }
 	| "<<"		{ BITSHIFT_LEFT }
-	| "++"		{ PLUS_PLUS }
-	| "--"		{ MINUS_MINUS }
 	| "&"		{ BITWISE_AND}
-	| "|" 		{ BITWISE_OR}
+	| "|" 		{ BITWISE_OR }
 
 	(* Logic Operators *)
 	| "and"  	{ AND }
@@ -58,18 +67,17 @@ rule token = parse
 	| ">"		{ GREATER_THAN }
 	| ">="		{ GREATER_THAN_EQUAL }
 	| "<"		{ LESS_THAN }
-	| "<=" 		{ LESS_THAN_EQUAL}
+	| "<=" 		{ LESS_THAN_EQUAL }
 
 	(* Datatypes *)
-	| ("string" 
+	| (   "string"  
+		| "float" 	| "double"
 		| "bool" 	| "void" 
-		| "ubyte" 	| "byte" 
+		| "ubyte" 	| "byte"
 		| "uint"	| "int" 
-		| "ulong" 	| "long"
-		| "float"	| "double") as input { DATATYPE(input) }
+		| "ulong" 	| "long" ) as input { DATATYPE(input) }
 
 	(* Conditionals and Loops *)
-	(* 	| "elif" 		{ ELSEIF }*)
 	| "if" 			{ IF }
 	| "else"   		{ ELSE }
 	| "for" 		{ FOR }
@@ -84,11 +92,11 @@ rule token = parse
 	| "defg"   		{ DEFG }
 	| "consts" 		{ CONSTS }
 
-	| ("true" | "false") as booleanlit 																											{ BOOLEAN_LITERAL(bool_of_string booleanlit)}
+	| ("true" | "false") as booleanlit 																											{ BOOLEAN_LITERAL(bool_of_string booleanlit) }
 	| '"' (([' '-'!' '#'-'&' '('-'[' ']'-'~'] | '\\' [ '\\' '"' 'n' 'r' 't' '''])* as stringlit) '"' 											{ STRING_LITERAL(stringlit) }
 	| digit+ as intlit 																															{ INTEGER_LITERAL(int_of_string intlit) }
 	| (digit+ '.' digit* | '.' digit+ | digit+ ('.' digit*)? 'e' '-'? digit+ | '.' digit+ 'e' '-'? digit+) as fplit 							{ FLOATING_POINT_LITERAL(float_of_string fplit) }
-	| (letter | '_')(letter | digit | '_')* as id { IDENTIFIER(id) }
+	| (letter | '_')(letter | digit | '_')* as id 																								{ IDENTIFIER(id) }
 	| eof 																																		{ get_eof() }
 
 (* Blocks for comments *)
@@ -104,8 +112,8 @@ and multi_line_comment = parse
 
 (* Block for handling white space delimiting *)
 and indent = parse
-	| whitespace* newline       { indent lexbuf }
-	| whitespace* eof 			{ get_eof() }
+	| whitespace* newline       		{ indent lexbuf }
+	| whitespace* eof 					{ get_eof() }
 	| whitespace* as indentation
 		{
 	        let indent_length = (String.length indentation) in

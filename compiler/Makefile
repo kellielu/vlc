@@ -1,4 +1,4 @@
-OBJS = ast.cmo sast.cmo exceptions.ml utils.cmo semant.cmo codegen_ptx.cmo codegen_c.cmo parser.cmo scanner.cmo processor.cmo vlc.cmo 
+OBJS = str.cma ast.cmo sast.cmo exceptions.ml utils.cmo semant.cmo codegen_ptx.cmo codegen_c.cmo parser.cmo scanner.cmo processor.cmo vlc.cmo 
 
 .PHONY:all
 all: clean vlc

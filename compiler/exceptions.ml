@@ -54,6 +54,8 @@ exception Defg_arrays_must_be_defined_with_constants
 exception Casting_not_allowed_in_defg
 exception Missing_return_type
 exception Return_type_doesn't_match
+exception Cannot_pop_loop_info_from_empty_stack
+exception Cannot_use_break_continue_when_not_in_loop
 (*-------------------------------------Codegen C-------------------------------------*)
 exception Unknown_variable_type
 exception Unknown_operator

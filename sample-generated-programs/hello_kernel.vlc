@@ -1,11 +1,21 @@
 int defg add(int c,int d):
-	return c + d * 2
+    int j = 1
+    int k = 4
+    for(k =k +  1, k < 10, k = k + 1):
+        if(j < 1):
+            break
+    return j * 3 + 2
 
 int def vlc():
-	int[5] a =  {1,2,3,4,5}
-	int[5] b =  {1,2,3,4,5}
-	int[5] c =  {1,2,3,4,5}
-	int[5] d = ~map(add,consts(scale=4),a,b)
-	print(d)
-	return 1
+    int[5] a =  {1,2,3,4,5}
+    int[5] b =  {1,2,3,4,5}
+    int[5] c =  {1,2,3,4,5}
+    int[5] d = ~map(add,consts(scale=4),a,b)
+    print(d)
+
+    int k = 2
+    int j = 1
+    if(k < 5):
+        j = 2
+    return 1
 
